@@ -69,14 +69,12 @@ export default function RegisterForm() {
   const password = form.watch('password');
 
   useEffect(() => {
-    if (password) {
-      setPasswordCriteria(prev =>
-        prev.map(criteria => ({
-          ...criteria,
-          met: criteria.regex.test(password),
-        }))
-      );
-    }
+    setPasswordCriteria(prev =>
+      prev.map(criteria => ({
+        ...criteria,
+        met: password !== '' && criteria.regex.test(password),
+      }))
+    );
   }, [password]);
 
   async function onSubmit(data: FormData) {
@@ -85,7 +83,6 @@ export default function RegisterForm() {
       await register(data.name, data.email, data.password);
       navigate('/journals');
     } catch (error) {
-      // Error is handled in the auth context
       console.error('Registration failed', error);
     } finally {
       setIsLoading(false);

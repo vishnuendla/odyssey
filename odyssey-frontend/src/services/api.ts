@@ -1,8 +1,7 @@
-
 import { User, JournalEntry, Location } from '@/types';
 
-// Base API URL - change this to your Spring Boot backend URL when deployed
-const API_BASE_URL = 'http://localhost:9090/api';
+// Base API URL - using the proxy configuration from vite.config.ts
+const API_BASE_URL = '/api';
 
 
 // Helper function to handle API responses

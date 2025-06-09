@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -14,14 +13,17 @@ export interface JournalEntry {
   id: string;
   title: string;
   content: string;
-  location: Location;
-  images: string[];
-  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
   userId: string;
-  reactions: Reaction[];
-  comments: Comment[];
+  isPublic: boolean;
+  location?: Location;
+  images?: string[];
+  reactions: Array<{
+    type: string;
+    count: number;
+  }>;
+  comments?: Comment[];
 }
 
 export interface Location {
@@ -31,15 +33,16 @@ export interface Location {
   longitude: number;
   country?: string;
   city?: string;
+  placeName?: string;
 }
 
 export interface Comment {
   id: string;
   content: string;
   userId: string;
-  userName: string;
-  userAvatar?: string;
   createdAt: string;
+  userName?: string;
+  userAvatar?: string;
 }
 
 export interface Reaction {

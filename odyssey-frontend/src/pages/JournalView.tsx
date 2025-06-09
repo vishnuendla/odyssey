@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,66 +32,70 @@ import {
   Loader2 
 } from 'lucide-react';
 
+const API_BASE_URL = '/api';
+
 const JournalView = () => {
+  console.log('JournalView component rendering');
   const { id } = useParams<{ id: string }>();
+  console.log('Journal ID from params:', id);
+  
   const [journal, setJournal] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const GEMINI_API_KEY = "AIzaSyCDkWv9Lw5FiIXTbjfZ4Q26VveoSeQvSgM";
+
   useEffect(() => {
+    console.log('useEffect triggered');
     const fetchJournal = async () => {
-      if (!id) return;
+      if (!id) {
+        console.log('No ID provided');
+        setError('No journal ID provided');
+        setLoading(false);
+        return;
+      }
       
       try {
+        console.log('Fetching journal with ID:', id);
         setLoading(true);
-        const journalData = await journalApi.getJournalById(id);
+        setError(null);
+        const response = await fetch(`${API_BASE_URL}/journals/${id}`, {
+          credentials: 'include'
+        });
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Failed to load journal' }));
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        
+        const journalData = await response.json();
+        console.log('Journal data received:', journalData);
         setJournal(journalData);
       } catch (error) {
         console.error('Failed to fetch journal:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load journal. It may be private or no longer exist.');
         toast({
           variant: "destructive",
-          description: 'Failed to load journal. It may be private or no longer exist.',
+          description: error instanceof Error ? error.message : 'Failed to load journal. It may be private or no longer exist.',
         });
-        navigate('/journals');
       } finally {
         setLoading(false);
       }
     };
   
     fetchJournal();
-  }, [id, toast, navigate]);
+  }, [id, toast]);
 
-  const handleViewMap = async () => {
-    try {
-      const place = journal?.location?.name.replace(/\s+/g, '+');
-      
-      const nominatimRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${place}`
-      );
-      const results = await nominatimRes.json();
-  
-      let lat=0.0, lon=0.0;
-      if (results.length > 0) {
-        lat = parseFloat(results[0].lat);
-        lon = parseFloat(results[0].lon);
-      }
-  
-      console.log("lat:", lat, "lon:", lon);
-  
-      if (lat && lon) {
-        const mapUrl = `https://www.google.com/maps/place/${place}/@${lat},${lon},15z`;
-
-        window.open(mapUrl, "_blank");
-      } else {
-        console.error("Coordinates not found for the given location.");
-      }
-    } catch (error) {
-      console.error("Error getting coordinates:", error);
-    }
+  const handleViewMap = () => {
+    if (!journal?.location) return;
+    
+    const { latitude, longitude } = journal.location;
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    window.open(mapUrl, '_blank');
   };
   
   const handleAddComment = async () => {
@@ -126,7 +129,6 @@ const JournalView = () => {
     try {
       await socialApi.addReaction(id, type);
       
-      // Refetch the journal to get updated reactions
       const updatedJournal = await journalApi.getJournalById(id);
       setJournal(updatedJournal);
     } catch (error) {
@@ -147,7 +149,7 @@ const JournalView = () => {
         toast({
           description: 'Journal deleted successfully',
         });
-        navigate('/journals', { state: { refresh: Date.now() } });
+        navigate('/journals');
       } catch (error) {
         console.error('Failed to delete journal:', error);
         toast({
@@ -158,7 +160,10 @@ const JournalView = () => {
     }
   };
 
+  console.log('Current state:', { loading, error, journal });
+
   if (loading) {
+    console.log('Rendering loading state');
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -172,14 +177,15 @@ const JournalView = () => {
     );
   }
 
-  if (!journal) {
+  if (error || !journal) {
+    console.log('Rendering error state:', error);
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto py-8 px-4">
           <div className="flex flex-col justify-center items-center min-h-[50vh]">
             <h1 className="text-2xl font-bold mb-4">Journal not found</h1>
-            <p className="mb-6">This journal may have been removed or is private.</p>
+            <p className="mb-6">{error || 'This journal may have been removed or is private.'}</p>
             <Button asChild>
               <Link to="/journals">Back to Journals</Link>
             </Button>
@@ -189,6 +195,7 @@ const JournalView = () => {
     );
   }
 
+  console.log('Rendering journal content');
   const isOwner = user?.id === journal.userId;
   const formattedDate = new Date(journal.createdAt).toLocaleDateString();
   const formattedTime = new Date(journal.createdAt).toLocaleTimeString();
@@ -200,22 +207,22 @@ const JournalView = () => {
         <div className="max-w-4xl mx-auto">
           {/* Journal header */}
           <div className="flex justify-between items-start mb-6">
-            
             <h1 className="text-3xl font-bold">{journal.title}</h1>
             <div className="flex items-center gap-2">
               {isOwner && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/journal/edit/${journal.id}`}><Edit className="h-4 w-4 mr-2" /> Edit</Link>
-                </Button>
-                <Button variant="destructive" size="sm" onClick={handleDeleteJournal}>
-                  <Trash className="h-4 w-4 mr-2" /> Delete
-                </Button>
-              </div>
-            )}
-            <ShareJournal journalId={journal.id} title={journal.title} />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/journal/edit/${journal.id}`}>
+                      <Edit className="h-4 w-4 mr-2" /> Edit
+                    </Link>
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={handleDeleteJournal}>
+                    <Trash className="h-4 w-4 mr-2" /> Delete
+                  </Button>
+                </div>
+              )}
+              <ShareJournal journalId={journal.id} title={journal.title} />
             </div>
-            
           </div>
           
           {/* Journal metadata */}
@@ -307,15 +314,8 @@ const JournalView = () => {
               </div>
               
               {journal.location && (
-                <Button onClick={handleViewMap} variant="outline" size="sm" asChild>
-                  
-                  <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${journal.location.latitude},${journal.location.longitude}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    <MapPin className="h-4 w-4 mr-1" /> View on Map
-                  </a>
+                <Button onClick={handleViewMap} variant="outline" size="sm">
+                  <MapPin className="h-4 w-4 mr-1" /> View on Map
                 </Button>
               )}
             </CardFooter>
@@ -359,7 +359,7 @@ const JournalView = () => {
                   <CardHeader className="py-3">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={comment.userAvatar} alt={comment.userName} />
+                        <AvatarImage src={comment.userAvatar} alt={comment.userName || 'User'} />
                         <AvatarFallback>{comment.userName?.charAt(0) || 'U'}</AvatarFallback>
                       </Avatar>
                       <div>
