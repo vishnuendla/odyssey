@@ -20,13 +20,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState<ThemeMode>('light');
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('odyssey-theme') as ThemeMode | null;
-    if (storedTheme) {
-      setTheme(storedTheme);
-    } else {
-      // Default to light theme
-      setTheme('light');
-    }
+    // Clear any stored theme preference and set to light
+    localStorage.removeItem('odyssey-theme');
+    setTheme('light');
   }, []);
 
   useEffect(() => {
@@ -34,7 +30,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
 
-    localStorage.setItem('odyssey-theme', theme);
+    // Only store theme if it's not light (user preference)
+    if (theme !== 'light') {
+      localStorage.setItem('odyssey-theme', theme);
+    }
   }, [theme]);
 
   return (

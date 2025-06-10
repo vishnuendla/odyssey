@@ -1,4 +1,3 @@
-
 package com.odyssey.service;
 
 import com.odyssey.dto.*;
@@ -178,10 +177,13 @@ public class JournalService {
             journal.getLocation().setCity(journalRequest.getLocation().getCity());
         }
         
-        if (journalRequest.getImages() != null) {
+        // Update images only if new images are provided
+        if (journalRequest.getImages() != null && !journalRequest.getImages().isEmpty()) {
+            // Clear existing images
             imageRepository.deleteAll(journal.getImages());
             journal.getImages().clear();
             
+            // Add new images
             for (String imageUrl : journalRequest.getImages()) {
                 Image image = new Image();
                 image.setUrl(imageUrl);

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { JournalEntry, Comment } from '@/types';
-import { journalApi, socialApi } from '@/services/api';
+import { JournalEntry, Comment, User } from '@/types';
+import { journalApi, socialApi, accountApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import ShareJournal from '@/components/sharing/ShareJournal';
 
@@ -28,7 +28,7 @@ import {
   MapPin, 
   ThumbsUp, 
   Trash, 
-  User,
+  User as UserIcon,
   Loader2 
 } from 'lucide-react';
 
@@ -40,6 +40,7 @@ const JournalView = () => {
   console.log('Journal ID from params:', id);
   
   const [journal, setJournal] = useState<JournalEntry | null>(null);
+  const [author, setAuthor] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
@@ -75,6 +76,15 @@ const JournalView = () => {
         const journalData = await response.json();
         console.log('Journal data received:', journalData);
         setJournal(journalData);
+        
+        // Fetch author information
+        try {
+          const authorData = await accountApi.getUser(journalData.userId);
+          setAuthor(authorData);
+        } catch (error) {
+          console.error('Failed to fetch author information:', error);
+          setAuthor(null);
+        }
       } catch (error) {
         console.error('Failed to fetch journal:', error);
         setError(error instanceof Error ? error.message : 'Failed to load journal. It may be private or no longer exist.');
@@ -236,8 +246,8 @@ const JournalView = () => {
               <span>{formattedTime}</span>
             </div>
             <div className="flex items-center">
-              <User className="h-4 w-4 mr-1" />
-              <span>By: {journal.userId}</span>
+              <UserIcon className="h-4 w-4 mr-1" />
+              <span>By: {author?.name || 'Anonymous'}</span>
             </div>
             <div className="flex items-center">
               <Globe className="h-4 w-4 mr-1" />

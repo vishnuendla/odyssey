@@ -56,6 +56,7 @@ const JournalEdit = () => {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
 
   const form = useForm<JournalFormValues>({
     resolver: zodResolver(journalSchema),
@@ -94,13 +95,16 @@ const JournalEdit = () => {
             return;
           }
           
+          // Set existing images
+          setExistingImages(journalData.images || []);
+          
           // Populate form with journal data
           form.reset({
             title: journalData.title,
             content: journalData.content,
             isPublic: journalData.isPublic,
             location: journalData.location,
-            images: journalData.images,
+            images: journalData.images || [],
           });
         }
       } catch (error) {
@@ -177,7 +181,7 @@ const JournalEdit = () => {
     
     const updatedImages = [...uploadedImages, ...newImages];
     setUploadedImages(updatedImages);
-    form.setValue('images', updatedImages);
+    form.setValue('images', [...existingImages, ...updatedImages]);
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
@@ -185,7 +189,7 @@ const JournalEdit = () => {
     const updatedFiles = uploadedFiles.filter((_, index) => index !== indexToRemove);
     setUploadedImages(updatedImages);
     setUploadedFiles(updatedFiles);
-    form.setValue('images', updatedImages);
+    form.setValue('images', [...existingImages, ...updatedImages]);
   };
 
   const onSubmit = async (data: JournalFormValues) => {
@@ -199,7 +203,9 @@ const JournalEdit = () => {
       }
 
       const updatedData = {
-        ...data,
+        title: data.title,
+        content: data.content,
+        isPublic: data.isPublic,
         location: data.location && data.location.latitude !== undefined && data.location.longitude !== undefined
           ? {
               name: data.location.name || 'Unnamed Location',
@@ -209,7 +215,7 @@ const JournalEdit = () => {
               city: data.location.city,
             }
           : undefined,
-        images: imageUrls,
+        images: [...existingImages, ...imageUrls],
       };
       
       await journalApi.updateJournal(id, updatedData);
@@ -379,8 +385,34 @@ const JournalEdit = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {/* Display existing images */}
+                    {existingImages.map((image, index) => (
+                      <div key={`existing-${index}`} className="relative aspect-square group">
+                        <img
+                          src={image}
+                          alt={`Existing ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            const updatedExistingImages = existingImages.filter((_, i) => i !== index);
+                            setExistingImages(updatedExistingImages);
+                            form.setValue('images', [...updatedExistingImages, ...uploadedImages]);
+                          }}
+                          disabled={submitting}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    
+                    {/* Display newly uploaded images */}
                     {uploadedImages.map((image, index) => (
-                      <div key={index} className="relative aspect-square group">
+                      <div key={`new-${index}`} className="relative aspect-square group">
                         <img
                           src={image}
                           alt={`Upload ${index + 1}`}
@@ -398,6 +430,7 @@ const JournalEdit = () => {
                         </Button>
                       </div>
                     ))}
+                    
                     <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
                       <input
                         type="file"

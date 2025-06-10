@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User } from '../types';
 import { useToast } from '@/hooks/use-toast';
@@ -30,45 +29,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAuthStatus = async () => {
+    const checkSession = async () => {
       try {
-        // Try to get current user from the API
         const currentUser = await authApi.getCurrentUser();
         setUser(currentUser);
         setIsAuthenticated(true);
       } catch (error) {
-        // If API call fails, user is not authenticated
-        console.log("User not authenticated");
+        // Session is invalid or expired
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     };
-    
-    checkAuthStatus();
+
+    checkSession();
   }, []);
 
   const login = async (email: string, password: string) => {
-      setIsLoading(true);
-      try {
-    const { user, token } = await authApi.login(email, password);
-    localStorage.setItem("token", token);
-    setUser(user);
-    setIsAuthenticated(true);
-    toast({
-      description: `Welcome back, ${user.name}!`,
-    });
-  } catch (error: any) {
-    toast({
-      variant: "destructive",
-      description: error.message || 'Login failed',
-    });
-    throw error;
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setIsLoading(true);
+    try {
+      const { user, token } = await authApi.login(email, password);
+      // Remove localStorage token storage
+      setUser(user);
+      setIsAuthenticated(true);
+      toast({
+        description: `Welcome back, ${user.name}!`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        description: error.message || 'Login failed',
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -92,14 +90,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await authApi.logout();
-    } catch (error) {
-      console.error("Error logging out", error);
-    } finally {
+      // Clear any remaining auth state
       setUser(null);
       setIsAuthenticated(false);
       toast({
         description: 'You have been logged out',
       });
+    } catch (error) {
+      console.error("Error logging out", error);
+      // Still clear local state even if server logout fails
+      setUser(null);
+      setIsAuthenticated(false);
     }
   };
 
