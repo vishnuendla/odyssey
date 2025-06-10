@@ -189,11 +189,9 @@ export const journalApi = {
   },
   
   deleteJournal: async (id: string) => {
-    const res = await fetch(`/api/journals/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/journals/${id}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
+      credentials: 'include'
     });
   
     console.log('Response status:', res.status); // helpful debug
