@@ -1,4 +1,3 @@
-
 package com.odyssey.controller;
 
 import com.odyssey.dto.AuthRequest;
@@ -62,6 +61,12 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         UserDto user = authService.getCurrentUser(userDetails.getUsername());
+        return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<UserDto> getUserById(@PathVariable String userId) {
+        UserDto user = authService.getUserById(userId);
         return ResponseEntity.ok(user);
     }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { journalApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { JournalEntry, Location } from '@/types';
+import { getCoordinatesFromPlaceName, debounce } from '@/utils/geocoding';
 
 import Navbar from '@/components/layout/Navbar';
 import {
@@ -23,7 +24,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, MapPin, Plus, X } from 'lucide-react';
+import { Loader2, MapPin, Plus, X, ImagePlus } from 'lucide-react';
+import { Icons } from '@/components/shared/Icons';
 
 const journalSchema = z.object({
   title: z.string().min(3, { message: 'Title must be at least 3 characters.' }),
@@ -48,6 +50,13 @@ const JournalEdit = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<Location[]>([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
 
   const form = useForm<JournalFormValues>({
     resolver: zodResolver(journalSchema),
@@ -86,13 +95,16 @@ const JournalEdit = () => {
             return;
           }
           
+          // Set existing images
+          setExistingImages(journalData.images || []);
+          
           // Populate form with journal data
           form.reset({
             title: journalData.title,
             content: journalData.content,
             isPublic: journalData.isPublic,
             location: journalData.location,
-            images: journalData.images,
+            images: journalData.images || [],
           });
         }
       } catch (error) {
@@ -110,28 +122,107 @@ const JournalEdit = () => {
     fetchJournal();
   }, [id, user, isAuthenticated, navigate, toast, form]);
 
+  const handleLocationSearch = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim() || query.length < 3) {
+        setLocationSuggestions([]);
+        return;
+      }
+
+      setLocationQuery(query);
+      setIsSearchingLocation(true);
+      setIsGeocoding(true);
+      
+      try {
+        const coordinates = await getCoordinatesFromPlaceName(query);
+        if (coordinates) {
+          setLocationSuggestions([{
+            name: query,
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+            placeName: query
+          }]);
+        } else {
+          setLocationSuggestions([]);
+        }
+      } catch (error) {
+        console.error('Error searching for locations:', error);
+        setLocationSuggestions([]);
+        toast({
+          variant: "destructive",
+          description: 'Failed to get location coordinates. Please try again.',
+        });
+      } finally {
+        setIsSearchingLocation(false);
+        setIsGeocoding(false);
+      }
+    }, 500),
+    [toast]
+  );
+
+  const handleLocationSelect = (loc: Location) => {
+    form.setValue('location', loc);
+    setLocationQuery(loc.name);
+    setLocationSuggestions([]);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    const newFiles = Array.from(files);
+    setUploadedFiles(prev => [...prev, ...newFiles]);
+    
+    const newImages: string[] = [];
+    newFiles.forEach(file => {
+      const imageUrl = URL.createObjectURL(file);
+      newImages.push(imageUrl);
+    });
+    
+    const updatedImages = [...uploadedImages, ...newImages];
+    setUploadedImages(updatedImages);
+    form.setValue('images', [...existingImages, ...updatedImages]);
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    const updatedImages = uploadedImages.filter((_, index) => index !== indexToRemove);
+    const updatedFiles = uploadedFiles.filter((_, index) => index !== indexToRemove);
+    setUploadedImages(updatedImages);
+    setUploadedFiles(updatedFiles);
+    form.setValue('images', [...existingImages, ...updatedImages]);
+  };
+
   const onSubmit = async (data: JournalFormValues) => {
     if (!id || !user) return;
     
     setSubmitting(true);
     try {
+      let imageUrls: string[] = [];
+      if (uploadedFiles.length > 0) {
+        imageUrls = await journalApi.uploadImages(uploadedFiles);
+      }
+
       const updatedData = {
-        ...data,
+        title: data.title,
+        content: data.content,
+        isPublic: data.isPublic,
         location: data.location && data.location.latitude !== undefined && data.location.longitude !== undefined
           ? {
-              name: data.location.name || 'Unnamed Location', // Ensure name is defined
+              name: data.location.name || 'Unnamed Location',
               latitude: data.location.latitude,
               longitude: data.location.longitude,
               country: data.location.country,
               city: data.location.city,
             }
           : undefined,
+        images: [...existingImages, ...imageUrls],
       };
+      
       await journalApi.updateJournal(id, updatedData);
       toast({
         description: 'Journal updated successfully',
       });
-      navigate(`/journal/${id}`);
+      navigate(`/journals/${id}`);
     } catch (error) {
       console.error('Failed to update journal:', error);
       toast({
@@ -141,43 +232,6 @@ const JournalEdit = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleAddImage = () => {
-    const imageUrl = window.prompt('Enter image URL:');
-    if (imageUrl) {
-      const currentImages = form.getValues('images') || [];
-      form.setValue('images', [...currentImages, imageUrl]);
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    const currentImages = form.getValues('images') || [];
-    form.setValue('images', currentImages.filter((_, i) => i !== index));
-  };
-
-  const handleSetLocation = () => {
-    // In a real app, this would open a map selection UI
-    // For this example, we'll use a simple prompt
-    const locationName = window.prompt('Enter location name:');
-    const latitude = parseFloat(window.prompt('Enter latitude:') || '0');
-    const longitude = parseFloat(window.prompt('Enter longitude:') || '0');
-    const country = window.prompt('Enter country:');
-    const city = window.prompt('Enter city:');
-    
-    if (locationName && !isNaN(latitude) && !isNaN(longitude)) {
-      form.setValue('location', {
-        name: locationName,
-        latitude,
-        longitude,
-        country: country || undefined,
-        city: city || undefined,
-      });
-    }
-  };
-
-  const handleClearLocation = () => {
-    form.setValue('location', undefined);
   };
 
   if (loading) {
@@ -264,79 +318,134 @@ const JournalEdit = () => {
               
               <Card>
                 <CardHeader>
-                  <CardTitle>Images</CardTitle>
+                  <CardTitle>Location</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {form.watch('images')?.map((image, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={image}
-                            alt={`Journal image ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-md"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleRemoveImage(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                  <div className="grid gap-3">
+                    <div className="relative">
+                      <Input
+                        placeholder="Enter a location..."
+                        value={locationQuery}
+                        onChange={(e) => {
+                          setLocationQuery(e.target.value);
+                          handleLocationSearch(e.target.value);
+                        }}
+                        disabled={submitting}
+                      />
+                      {(isSearchingLocation || isGeocoding) && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <Icons.spinner className="h-4 w-4 animate-spin text-muted-foreground" />
                         </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-32 flex flex-col items-center justify-center"
-                        onClick={handleAddImage}
-                      >
-                        <Plus className="h-8 w-8 mb-2" />
-                        <span>Add Image</span>
-                      </Button>
+                      )}
                     </div>
+
+                    {locationSuggestions.length > 0 && (
+                      <div className="relative">
+                        <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg">
+                          {locationSuggestions.map((loc, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              className="w-full px-4 py-2 text-left hover:bg-accent"
+                              onClick={() => handleLocationSelect(loc)}
+                            >
+                              {loc.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {form.watch('location') && (
+                      <div className="flex items-center justify-between p-3 border rounded-md bg-accent/50">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{form.watch('location.name')}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            form.setValue('location', undefined);
+                            setLocationQuery('');
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardHeader>
-                  <CardTitle>Location</CardTitle>
+                  <CardTitle>Images</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {form.watch('location') ? (
-                    <div className="space-y-4">
-                      <div className="p-4 border rounded-md">
-                        <h3 className="font-medium mb-2">
-                          {form.watch('location.name') || 'Selected Location'}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {form.watch('location.city') && form.watch('location.country')
-                            ? `${form.watch('location.city')}, ${form.watch('location.country')}`
-                            : `Lat: ${form.watch('location.latitude')}, Lng: ${form.watch('location.longitude')}`}
-                        </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {/* Display existing images */}
+                    {existingImages.map((image, index) => (
+                      <div key={`existing-${index}`} className="relative aspect-square group">
+                        <img
+                          src={image}
+                          alt={`Existing ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            const updatedExistingImages = existingImages.filter((_, i) => i !== index);
+                            setExistingImages(updatedExistingImages);
+                            form.setValue('images', [...updatedExistingImages, ...uploadedImages]);
+                          }}
+                          disabled={submitting}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={handleClearLocation}
-                      >
-                        Clear Location
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      onClick={handleSetLocation}
-                      className="flex items-center"
-                    >
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Set Location
-                    </Button>
-                  )}
+                    ))}
+                    
+                    {/* Display newly uploaded images */}
+                    {uploadedImages.map((image, index) => (
+                      <div key={`new-${index}`} className="relative aspect-square group">
+                        <img
+                          src={image}
+                          alt={`Upload ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemoveImage(index)}
+                          disabled={submitting}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    
+                    <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={submitting}
+                      />
+                      <div className="text-center p-4">
+                        <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Add Images</span>
+                      </div>
+                    </label>
+                  </div>
                 </CardContent>
               </Card>
               
@@ -344,7 +453,7 @@ const JournalEdit = () => {
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => navigate(`/journal/${id}`)}
+                  onClick={() => navigate(`/journals/${id}`)}
                 >
                   Cancel
                 </Button>

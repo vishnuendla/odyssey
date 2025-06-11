@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,11 +15,21 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/shared/Icons';
+import { Check, X } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
+  email: z.string()
+    .email({ message: 'Please enter a valid email address' })
+    .refine(email => email.endsWith('@gmail.com'), {
+      message: 'Please use a Gmail address',
+    }),
+  password: z.string()
+    .min(8, { message: 'Password must be at least 8 characters' })
+    .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+    .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number' })
+    .regex(/[^A-Za-z0-9]/, { message: 'Password must contain at least one special character' }),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -29,10 +38,23 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+interface PasswordCriteria {
+  label: string;
+  regex: RegExp;
+  met: boolean;
+}
+
 export default function RegisterForm() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [passwordCriteria, setPasswordCriteria] = useState<PasswordCriteria[]>([
+    { label: 'At least 8 characters', regex: /.{8,}/, met: false },
+    { label: 'At least one uppercase letter', regex: /[A-Z]/, met: false },
+    { label: 'At least one lowercase letter', regex: /[a-z]/, met: false },
+    { label: 'At least one number', regex: /[0-9]/, met: false },
+    { label: 'At least one special character', regex: /[^A-Za-z0-9]/, met: false },
+  ]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -43,6 +65,19 @@ export default function RegisterForm() {
       confirmPassword: '',
     },
   });
+
+  const password = form.watch('password');
+
+  useEffect(() => {
+    if (password) {
+      setPasswordCriteria(prev =>
+        prev.map(criteria => ({
+          ...criteria,
+          met: criteria.regex.test(password),
+        }))
+      );
+    }
+  }, [password]);
 
   async function onSubmit(data: FormData) {
     try {
@@ -92,7 +127,7 @@ export default function RegisterForm() {
                 <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="your.email@example.com"
+                    placeholder="your.email@gmail.com"
                     {...field}
                     disabled={isLoading}
                   />
@@ -116,6 +151,20 @@ export default function RegisterForm() {
                     disabled={isLoading}
                   />
                 </FormControl>
+                <div className="mt-2 space-y-1">
+                  {passwordCriteria.map((criteria, index) => (
+                    <div key={index} className="flex items-center text-sm">
+                      {criteria.met ? (
+                        <Check className="h-4 w-4 text-green-500 mr-2" />
+                      ) : (
+                        <X className="h-4 w-4 text-red-500 mr-2" />
+                      )}
+                      <span className={criteria.met ? 'text-green-500' : 'text-red-500'}>
+                        {criteria.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
                 <FormMessage />
               </FormItem>
             )}

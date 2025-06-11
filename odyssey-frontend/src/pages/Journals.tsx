@@ -1,5 +1,4 @@
-
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useJournal } from '@/contexts/JournalContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,17 +8,33 @@ import JournalList from '@/components/journals/JournalList';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { User } from '@/types';
 
 const JournalsPage = () => {
   const { getUserJournals, isLoading } = useJournal();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [userMap, setUserMap] = useState<Record<string, User>>({});
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      setUserMap({
+        [user.id]: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          createdAt: new Date().toISOString()
+        }
+      });
+    }
+  }, [user]);
 
   const userJournals = getUserJournals();
 
@@ -58,9 +73,11 @@ const JournalsPage = () => {
             ))}
           </div>
         ) : (
-          <JournalList explore="false"
+          <JournalList 
+            explore="false"
             journals={userJournals} 
             emptyMessage="You haven't created any journals yet. Click 'New Journal' to get started!"
+            userMap={userMap}
           />
         )}
         

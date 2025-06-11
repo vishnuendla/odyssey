@@ -1,22 +1,59 @@
-
 import { User, JournalEntry, Location } from '@/types';
 
-// Base API URL - change this to your Spring Boot backend URL when deployed
-const API_BASE_URL = 'http://localhost:9090/api';
+// Base API URL - using the proxy configuration from vite.config.ts
+const API_BASE_URL = '/api';
 
 
 // Helper function to handle API responses
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
-    throw new Error(error.message || `API error: ${response.status}`);
+    
+    // Handle specific HTTP status codes
+    switch (response.status) {
+      case 401:
+        throw new Error('Authentication required. Please log in.');
+      case 403:
+        throw new Error('You do not have permission to perform this action.');
+      case 404:
+        throw new Error('The requested resource was not found.');
+      case 413:
+        throw new Error('The file size is too large.');
+      case 429:
+        throw new Error('Too many requests. Please try again later.');
+      default:
+        throw new Error(error.message || `API error: ${response.status}`);
+    }
   }
   return response.json();
 };
 
+// Add request timeout
+const TIMEOUT_DURATION = 10000; // 10 seconds
+
+const fetchWithTimeout = async (url: string, options: RequestInit = {}) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_DURATION);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+    throw error;
+  }
+};
+
 export const accountApi = {
   getUser: async (userId: string): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/auth/users/${userId}`, {
       credentials: 'include'
     });
     return handleResponse(response);
@@ -93,7 +130,7 @@ export const authApi = {
 // Journal API calls
 export const journalApi = {
   getAllJournals: async (): Promise<JournalEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/journals`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/journals`, {
       credentials: 'include'
     });
     return handleResponse(response);
@@ -152,11 +189,9 @@ export const journalApi = {
   },
   
   deleteJournal: async (id: string) => {
-    const res = await fetch(`/api/journals/${id}`, {
+    const res = await fetch(`${API_BASE_URL}/journals/${id}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
+      credentials: 'include'
     });
   
     console.log('Response status:', res.status); // helpful debug
@@ -171,12 +206,15 @@ export const journalApi = {
   
   // Image upload endpoint
   uploadImages: async (files: File[]): Promise<string[]> => {
+    // Validate all files before upload
+    files.forEach(validateFile);
+
     const formData = new FormData();
     files.forEach(file => {
       formData.append('images', file);
     });
     
-    const response = await fetch(`${API_BASE_URL}/storage/upload`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/storage/upload`, {
       method: 'POST',
       body: formData,
       credentials: 'include'
@@ -229,5 +267,19 @@ export const socialApi = {
       credentials: 'include'
     });
     return handleResponse(response);
+  }
+};
+
+// Add file validation
+const validateFile = (file: File) => {
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('File size must be less than 5MB');
+  }
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new Error('Only JPEG, PNG, and GIF images are allowed');
   }
 };

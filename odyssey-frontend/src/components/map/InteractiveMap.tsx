@@ -1,165 +1,246 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { JournalEntry } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react';
 
-// Mock implementation of a map component
-export default function InteractiveMap({ journals }: { journals: JournalEntry[] }) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [selectedJournal, setSelectedJournal] = useState<JournalEntry | null>(null);
+// Fix for default marker icons in Leaflet with Next.js
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+interface InteractiveMapProps {
+  journals: JournalEntry[];
+  onJournalSelect: (journal: JournalEntry) => void;
+  selectedJournal: JournalEntry | null;
+}
+
+export default function InteractiveMap({ journals, onJournalSelect, selectedJournal }: InteractiveMapProps) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<L.Map | null>(null);
+  const [markers, setMarkers] = useState<L.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
 
-  // Define fixed locations with approximate map positions
-  const fixedLocations = [
-    {
-      name: 'New York',
-      latitude: 40.7128, // Approximate latitude
-      longitude: -74.0060, // Approximate longitude
-    },
-    {
-      name: 'Tokyo',
-      latitude: 35.6762,
-      longitude: 139.6503,
-    },
-    {
-      name: 'Montmartre', // Using Paris coordinates, focusing on Montmartre area
-      latitude: 48.8867,
-      longitude: 2.3431,
-    },
-  ];
-
-  // Assign each journal a location and position, cycling through fixedLocations
-  const journalPositions = useMemo(() => {
-    return journals.map((journal, index) => {
-      const location = fixedLocations[index % fixedLocations.length];
-      // Convert lat/lon to percentage-based positions for the mock map
-      const left = `${((location.longitude + 180) / 360) * 100}%`;
-      const top = `${((90 - location.latitude) / 180) * 100}%`;
-      return {
-        ...journal,
-        location: {
-          name: location.name,
-          latitude: location.latitude,
-          longitude: location.longitude,
-        },
-        position: { left, top },
-      };
-    });
-  }, [journals]);
-
+  // Initialize map
   useEffect(() => {
-    // Simulate map loading
-    const timer = setTimeout(() => {
-      setMapLoaded(true);
-      if (journalPositions.length > 0) {
-        setSelectedJournal(journalPositions[0]);
+    if (!mapRef.current || map) return;
+
+    // Define world bounds (southwest and northeast corners)
+    const southWest = L.latLng(-90, -180);
+    const northEast = L.latLng(90, 180);
+    const bounds = L.latLngBounds(southWest, northEast);
+
+    const initialMap = L.map(mapRef.current, {
+      minZoom: 2,
+      maxZoom: 18,
+      zoomControl: false,
+      maxBounds: bounds,
+      maxBoundsViscosity: 1.0 // Makes the bounds "solid"
+    }).setView([0, 0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      noWrap: true // Prevents the map from wrapping around
+    }).addTo(initialMap);
+
+    // Add zoom control to the top right
+    L.control.zoom({
+      position: 'topright'
+    }).addTo(initialMap);
+
+    setMap(initialMap);
+    setMapLoaded(true);
+
+    // Select a random journal by default if there are journals
+    if (journals.length > 0) {
+      const randomIndex = Math.floor(Math.random() * journals.length);
+      const randomJournal = journals[randomIndex];
+      onJournalSelect(randomJournal);
+      
+      // Smooth zoom to the random journal's location
+      if (randomJournal.location?.latitude && randomJournal.location?.longitude) {
+        setTimeout(() => {
+          initialMap.flyTo(
+            [randomJournal.location.latitude, randomJournal.location.longitude],
+            12,
+            {
+              duration: 2,
+              easeLinearity: 0.25
+            }
+          );
+        }, 500); // Small delay to ensure map is fully loaded
       }
-    }, 1000);
+    }
 
-    return () => clearTimeout(timer);
-  }, [journalPositions]);
+    return () => {
+      initialMap.remove();
+    };
+  }, []);
 
-  const selectNextJournal = () => {
-    if (!selectedJournal) return;
-    const currentIndex = journalPositions.findIndex(j => j.id === selectedJournal.id);
-    const nextIndex = (currentIndex + 1) % journalPositions.length;
-    setSelectedJournal(journalPositions[nextIndex]);
-  };
+  // Handle selected journal changes
+  useEffect(() => {
+    if (!map || !mapLoaded || !selectedJournal?.location) return;
 
-  const selectPrevJournal = () => {
-    if (!selectedJournal) return;
-    const currentIndex = journalPositions.findIndex(j => j.id === selectedJournal.id);
-    const prevIndex = (currentIndex - 1 + journalPositions.length) % journalPositions.length;
-    setSelectedJournal(journalPositions[prevIndex]);
+    const { latitude, longitude } = selectedJournal.location;
+    
+    // Ensure the coordinates are valid numbers
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      console.error('Invalid coordinates:', { latitude, longitude });
+      return;
+    }
+
+    // Get current center and zoom
+    const currentCenter = map.getCenter();
+    const currentZoom = map.getZoom();
+
+    // First zoom out from current location
+    map.flyTo(
+      currentCenter,
+      2, // Zoom out to level 4
+      {
+        duration: 2,
+        easeLinearity: 0.25
+      }
+    );
+
+    // After zooming out, move to new location while staying zoomed out
+    setTimeout(() => {
+      map.flyTo(
+        [latitude, longitude],
+        4, // Keep zoom level 4
+        {
+          duration: 0.5,
+          easeLinearity: 0.25
+        }
+      );
+
+      // Finally zoom in to the new location
+      setTimeout(() => {
+        map.flyTo(
+          [latitude, longitude],
+          12,
+          {
+            duration: 1,
+            easeLinearity: 0.25
+          }
+        );
+      }, 500);
+    }, 500);
+  }, [selectedJournal, map, mapLoaded]);
+
+  // Update markers when journals change
+  useEffect(() => {
+    if (!map || !mapLoaded) return;
+
+    // Clear existing markers
+    markers.forEach(marker => marker.remove());
+    const newMarkers: L.Marker[] = [];
+
+    journals.forEach(journal => {
+      if (journal.location?.latitude && journal.location?.longitude) {
+        const marker = L.marker([
+          journal.location.latitude,
+          journal.location.longitude
+        ]).addTo(map);
+
+        marker.bindPopup(journal.title);
+        marker.on('click', () => {
+          onJournalSelect(journal);
+          // Get current center and zoom
+          const currentCenter = map.getCenter();
+          const currentZoom = map.getZoom();
+
+          // First zoom out from current location
+          map.flyTo(
+            currentCenter,
+            4, // Zoom out to level 4
+            {
+              duration: 0.5,
+              easeLinearity: 0.25
+            }
+          );
+
+          // After zooming out, move to new location while staying zoomed out
+          setTimeout(() => {
+            map.flyTo(
+              [journal.location.latitude, journal.location.longitude],
+              4, // Keep zoom level 4
+              {
+                duration: 0.5,
+                easeLinearity: 0.25
+              }
+            );
+
+            // Finally zoom in to the new location
+            setTimeout(() => {
+              map.flyTo(
+                [journal.location.latitude, journal.location.longitude],
+                12,
+                {
+                  duration: 1,
+                  easeLinearity: 0.25
+                }
+              );
+            }, 500);
+          }, 500);
+        });
+
+        newMarkers.push(marker);
+      }
+    });
+
+    setMarkers(newMarkers);
+
+    // Fit map to show all markers with padding
+    if (newMarkers.length > 0) {
+      const group = L.featureGroup(newMarkers);
+      map.fitBounds(group.getBounds().pad(0.1));
+    }
+  }, [map, journals, mapLoaded, onJournalSelect]);
+
+  const handleReset = () => {
+    if (!map) return;
+    
+    // Fit map to show all markers with padding
+    if (markers.length > 0) {
+      const group = L.featureGroup(markers);
+      map.flyToBounds(group.getBounds().pad(0.1), {
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
+    } else {
+      // If no markers, reset to world view
+      map.flyTo([0, 0], 2, {
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
+    }
   };
 
   return (
     <div className="w-full h-full relative overflow-hidden rounded-lg border">
       <div
-        ref={mapContainerRef}
-        className="w-full h-full bg-gray-200 relative"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2874&auto=format&fit=crop')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
+        ref={mapRef}
+        className="w-full h-full z-0"
       >
         {!mapLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         )}
-
-        {mapLoaded &&
-          journalPositions.map((journal, index) => (
-            <div
-              key={journal.id}
-              className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 ${
-                selectedJournal?.id === journal.id ? 'z-10 scale-125' : 'z-0 scale-100'
-              }`}
-              style={{
-                left: journal.position.left,
-                top: journal.position.top,
-              }}
-              onClick={() => setSelectedJournal(journal)}
-            >
-              <div
-                className={`w-4 h-4 rounded-full ${
-                  selectedJournal?.id === journal.id ? 'bg-primary shadow-lg' : 'bg-accent-foreground'
-                }`}
-              >
-                <div
-                  className={`absolute animate-ping w-4 h-4 rounded-full bg-primary/30 ${
-                    selectedJournal?.id === journal.id ? 'opacity-100' : 'opacity-0'
-                  }`}
-                ></div>
-              </div>
-            </div>
-          ))}
       </div>
-
-      {/* Journal card overlay */}
-      {selectedJournal && (
-        <Card className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-card/95 shadow-lg backdrop-blur-sm">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-bold text-lg line-clamp-1">{selectedJournal.title}</h3>
-              <div className="flex space-x-1">
-                <Button size="icon" variant="ghost" onClick={selectPrevJournal}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={selectNextJournal}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {selectedJournal.images && selectedJournal.images.length > 0 && (
-              <div className="mb-2 h-32 rounded-md overflow-hidden">
-                <img
-                  src={selectedJournal.images[0]}
-                  alt={selectedJournal.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
-            <div className="flex justify-between items-center text-sm text-muted-foreground mb-1">
-              <span>{selectedJournal.location.name}</span>
-              <span>{new Date(selectedJournal.createdAt).toLocaleDateString()}</span>
-            </div>
-
-            <p className="text-sm line-clamp-2">{selectedJournal.content}</p>
-
-            <div className="mt-3">
-              <Button size="sm" variant="outline" asChild className="w-full">
-                <a href={`/journals/${selectedJournal.id}`}>View Journal</a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Button
+        variant="outline"
+        size="icon"
+        className="absolute bottom-4 right-4 z-[1000] bg-background/80 backdrop-blur-sm hover:bg-background"
+        onClick={handleReset}
+      >
+        <RefreshCcw className="h-4 w-4" />
+      </Button>
     </div>
   );
 }

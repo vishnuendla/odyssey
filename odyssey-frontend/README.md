@@ -1,140 +1,161 @@
-# Odyssey - Travel Journal Web App
+# Odyssey Frontend
 
-Odyssey is a full-stack travel journaling platform where users can create, tag, and share their travel experiences with text, images, maps, and more. Built with **React (TypeScript)** and **Spring Boot (Java)**, it offers a seamless, interactive travel log experience.
+The frontend of the Odyssey travel journal application, built with React, TypeScript, and modern web technologies.
 
----
+## 🚀 Quick Start
 
-## 🚀 Tech Stack
+```bash
+# Install dependencies
+npm install
 
-### Frontend:
-- **React (TypeScript)**
-- **Vite**
-- **Tailwind CSS / ShadCN**
-- **Axios**
-- **React Router**
-- **Leaflet** (for maps)
+# Start development server
+npm run dev
 
-### Backend:
-- **Spring Boot 3.4.4** (Java 21)
-- **Spring Security** (JWT, Role-based)
-- **MySQL**
-- **JPA & Hibernate**
-- **REST APIs**
+# Build for production
+npm run build
 
----
-
-## 📦 Features
-- 🔐 **User Authentication** (JWT-based)
-- 📝 **Create, Edit, Delete Travel Journals**
-- 📸 **Media Uploads**
-- 📍 **Location Tagging with Maps**
-- 📅 **Timeline View**
-- 💬 **Comments & Reactions**
-- 🌐 **Multilingual Support**
-- 🌗 **Light/Dark Theming**
-- 🖱️ **Animated Custom Cursor**
-
----
-
-## 🛠️ Setup Instructions
-
-### 🧪 Backend (Spring Boot)
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/your-username/odyssey.git
-    cd odyssey/backend
-    ```
-2. Update DB credentials in `application.properties`:
-    ```properties
-    spring.datasource.url=jdbc:mysql://localhost:3306/odyssey_db?allowPublicKeyRetrieval=true&useSSL=false
-    spring.datasource.username=root
-    spring.datasource.password=root
-    spring.jpa.hibernate.ddl-auto=update
-    ```
-3. Run the server:
-    ```bash
-    ./mvnw clean install
-    ./mvnw spring-boot:run
-    ```
-    Server runs on: [http://localhost:9090](http://localhost:9090)
-
-### 💻 Frontend (React + Vite)
-1. Navigate to the frontend folder:
-    ```bash
-    cd ../frontend
-    ```
-2. Install dependencies:
-    ```bash
-    npm install
-    ```
-3. Start the development server:
-    ```bash
-    npm run dev
-    ```
-    App runs on: [http://localhost:3000](http://localhost:3000)
-
----
-
-## 🔄 Vite Proxy Config (`vite.config.ts`)
-```ts
-export default defineConfig({
-  plugins: [react()],
-  server: {
-     port: 3000,
-     proxy: {
-        '/api': {
-          target: 'http://localhost:9090',
-          changeOrigin: true,
-          rewrite: path => path.replace(/^\/api/, ''),
-        },
-     },
-  },
-});
+# Preview production build
+npm run preview
 ```
 
----
+## 🏗️ Project Structure
 
-## 🔐 CORS Config (Spring Boot)
-```java
-@Configuration
-public class WebConfig {
-     @Bean
-     public WebMvcConfigurer corsConfigurer() {
-          return new WebMvcConfigurer() {
-                public void addCorsMappings(CorsRegistry registry) {
-                     registry.addMapping("/**")
-                                .allowedOrigins("http://localhost:3000")
-                                .allowedMethods("*")
-                                .allowCredentials(true);
-                }
-          };
-     }
+```
+src/
+├── components/        # Reusable UI components
+├── pages/            # Page components
+├── hooks/            # Custom React hooks
+├── services/         # API services
+├── utils/            # Utility functions
+├── types/            # TypeScript type definitions
+├── context/          # React context providers
+├── assets/           # Static assets
+└── styles/           # Global styles
+```
+
+## 🛠️ Technology Stack
+
+- **Framework**: React 18
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: React Query
+- **Routing**: React Router
+- **Maps**: Leaflet.js
+- **Forms**: React Hook Form
+- **Validation**: Zod
+- **HTTP Client**: Axios
+- **Build Tool**: Vite
+
+## 📦 Key Dependencies
+
+```json
+{
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.x",
+    "react-query": "^4.x",
+    "leaflet": "^1.9.x",
+    "axios": "^1.x",
+    "react-hook-form": "^7.x",
+    "zod": "^3.x",
+    "tailwindcss": "^3.x"
+  }
 }
 ```
 
----
+## 🔧 Configuration
 
-## 📁 Folder Structure
-```plaintext
-/odyssey
-├── /backend (Spring Boot app)
-├── /frontend (React + Vite app)
+### Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+VITE_API_URL=http://localhost:8080
+VITE_MAPBOX_TOKEN=your_mapbox_token
 ```
 
----
+### API Configuration
 
-## 📸 Screenshots
-*(Add some screenshots here when ready — UI, maps, journals, etc.)*
+API endpoints are configured in `src/config/api.ts`:
 
----
+```typescript
+export const API_BASE_URL = import.meta.env.VITE_API_URL;
+export const API_ENDPOINTS = {
+  auth: '/api/auth',
+  journals: '/api/journals',
+  // ... other endpoints
+};
+```
 
-## 🤝 Contributors
-- **Dussa Pranay Saketh** – Developer
+## 🎨 Styling
 
----
+The project uses Tailwind CSS for styling. Key configuration files:
 
-## 📌 TODO (Next Steps)
-- [ ] Unit & Integration Tests
-- [ ] Mobile Responsiveness
-- [ ] Dockerize App
-- [ ] CI/CD with GitHub Actions
+- `tailwind.config.js`: Tailwind configuration
+- `src/styles/globals.css`: Global styles
+- `src/styles/animations.css`: Custom animations
+
+## 🗺️ Map Integration
+
+The application uses Leaflet.js for map functionality:
+
+- Map components are in `src/components/map/`
+- Map utilities in `src/utils/map.ts`
+- Map types in `src/types/map.ts`
+
+## 🔐 Authentication
+
+Authentication is handled using JWT tokens:
+
+- Token management in `src/utils/auth.ts`
+- Protected routes in `src/components/auth/ProtectedRoute.tsx`
+- Auth context in `src/context/AuthContext.tsx`
+
+## 📱 Responsive Design
+
+The application is fully responsive with breakpoints:
+
+- Mobile: < 640px
+- Tablet: 640px - 1024px
+- Desktop: > 1024px
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+npm run test
+
+# Run e2e tests
+npm run test:e2e
+```
+
+## 📦 Build and Deployment
+
+```bash
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## 🐛 Debugging
+
+- React Developer Tools
+- Redux DevTools (if using Redux)
+- Network tab for API debugging
+- Console logging with proper log levels
+
+## 🤝 Contributing
+
+1. Follow the TypeScript style guide
+2. Write meaningful commit messages
+3. Add tests for new features
+4. Update documentation as needed
+
+## 📚 Documentation
+
+- Component documentation in `src/components/README.md`
+- API integration guide in `src/services/README.md`
+- Type definitions in `src/types/README.md`

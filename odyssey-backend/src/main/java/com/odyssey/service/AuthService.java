@@ -1,4 +1,3 @@
-
 package com.odyssey.service;
 
 import com.odyssey.dto.AuthRequest;
@@ -63,6 +62,12 @@ public class AuthService {
 
     public UserDto getCurrentUser(String email) {
         User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
+        return convertToDto(user);
+    }
+
+    public UserDto getUserById(String userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         return convertToDto(user);
     }

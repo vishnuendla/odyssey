@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,10 +18,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Icons } from '@/components/shared/Icons';
-import { MapPin, X, ImagePlus } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { MapPin, X, ImagePlus, ChevronLeft } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Location } from '@/types';
 import { journalApi } from '@/services/api';
+import { getCoordinatesFromPlaceName, debounce } from '@/utils/geocoding';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   title: z.string().min(1, { message: 'Title is required' }).max(100),
@@ -32,6 +33,7 @@ const formSchema = z.object({
     name: z.string().min(1, { message: 'Location name is required' }),
     latitude: z.number(),
     longitude: z.number(),
+    placeName: z.string().optional(),
     country: z.string().optional().nullable().default(null),
     city: z.string().optional().nullable().default(null),
   }).optional(),  
@@ -40,13 +42,17 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export default function CreateJournalForm() {
+const MIN_SEARCH_LENGTH = 3; // Minimum characters before searching
+
+const CreateJournalForm = () => {
   const { createJournal } = useJournal();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -63,78 +69,67 @@ export default function CreateJournalForm() {
   const [locationSuggestions, setLocationSuggestions] = useState<Location[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
-  const handleLocationSearch = async (query: string) => {
-    if (!query.trim()) {
-      setLocationSuggestions([]);
-      return;
-    }
-    
-    setLocationQuery(query);
-    setIsSearchingLocation(true);
-    try {
-      // Use the API service instead of the mock function
-      const suggestions = await journalApi.searchLocations(query);
-      setLocationSuggestions(suggestions);
-    } catch (error) {
-      console.error('Error searching for locations:', error);
-    } finally {
-      setIsSearchingLocation(false);
-    }
-  };
+  const handleLocationSearch = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim() || query.length < MIN_SEARCH_LENGTH) {
+        setLocationSuggestions([]);
+        return;
+      }
 
-  const fetchLocationDetails = async (lat: string, lon: string) => {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-    return {
-      country: data.address.country,
-      city: data.address.city || data.address.town || data.address.village,
-    };
-  };
-  
+      setLocationQuery(query);
+      setIsSearchingLocation(true);
+      setIsGeocoding(true);
+      
+      try {
+        const coordinates = await getCoordinatesFromPlaceName(query);
+        if (coordinates) {
+          setLocationSuggestions([{
+            name: query,
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+            placeName: query
+          }]);
+        } else {
+          setLocationSuggestions([]);
+        }
+      } catch (error) {
+        console.error('Error searching for locations:', error);
+        setLocationSuggestions([]);
+        toast({
+          variant: "destructive",
+          description: 'Failed to get location coordinates. Please try again.',
+        });
+      } finally {
+        setIsSearchingLocation(false);
+        setIsGeocoding(false);
+      }
+    }, 500),
+    [toast]
+  );
 
-  const handleLocationSelect = async (loc: {
-    name: string;
-    latitude: number;
-    longitude: number;
-  }) => {
+  const handleLocationSelect = (loc: Location) => {
     setSelectedLocation(loc);
     setLocationQuery(loc.name);
-  
-    let city = '', country = '';
-  
-    try {
-      const details = await fetchLocationDetails(
-        loc.latitude.toString(),
-        loc.longitude.toString()
-      );
-      city = details.city;
-      country = details.country;
-    } catch (error) {
-      console.warn("Reverse geocoding failed", error);
-    }
-  
-    const fullLoc: Location = {
-      name: loc.name,
-      latitude: loc.latitude,
-      longitude: loc.longitude,
-      city,
-      country,
-    };
-  
-    form.setValue('location', fullLoc);
+    form.setValue('location', loc);
     setLocationSuggestions([]);
   };
-  
+
+  const handleBack = () => {
+    // Clear location state when going back
+    setLocationQuery('');
+    setSelectedLocation(null);
+    setLocationSuggestions([]);
+    form.setValue('location', undefined);
+    navigate(-1);
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
-    // Store files for later upload during form submission
     const newFiles = Array.from(files);
     setUploadedFiles(prev => [...prev, ...newFiles]);
     
-    // Create temporary preview URLs
     const newImages: string[] = [];
     newFiles.forEach(file => {
       const imageUrl = URL.createObjectURL(file);
@@ -155,11 +150,9 @@ export default function CreateJournalForm() {
   };
 
   async function onSubmit(data: FormData) {
-    console.log("Form submission data:", data);
     try {
       setIsSubmitting(true);
       
-      // Upload images first
       let imageUrls: string[] = [];
       if (uploadedFiles.length > 0) {
         imageUrls = await journalApi.uploadImages(uploadedFiles);
@@ -182,167 +175,168 @@ export default function CreateJournalForm() {
       navigate('/journals');
     } catch (error) {
       console.error('Failed to create journal', error);
+      toast({
+        variant: "destructive",
+        description: 'Failed to create journal',
+      });
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="My Amazing Adventure"
-                  {...field}
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormDescription>
-                Give your journal entry a memorable title
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="content"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Content</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Tell your story..."
-                  className="min-h-[200px]"
-                  {...field}
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormDescription>
-                Write about your experience, thoughts, and memories
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormItem className="space-y-3">
-  <FormLabel>Location</FormLabel>
-  <div className="grid gap-3 relative">
-    {/* Input Box */}
-    <div className="relative">
-      <Input
-        type="text"
-        placeholder="Search for a location..."
-        value={locationQuery}
-        onChange={e => handleLocationSearch(e.target.value)}
-        className="pr-10"
-        disabled={isSubmitting || !!selectedLocation}
-      />
-      {isSearchingLocation && (
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          <Icons.spinner className="h-4 w-4 animate-spin text-muted-foreground" />
+    <div className="container mx-auto py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="sm" onClick={handleBack}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
         </div>
-      )}
-    </div>
 
-    {/* Suggestions Dropdown */}
-    {locationQuery && !selectedLocation && (
-      <Card className="absolute z-50 top-[100%] left-0 w-full mt-1 max-h-[200px] overflow-auto shadow-lg border rounded-md bg-background">
-        <ul className="space-y-1">
-          {locationSuggestions.map((loc, index) => (
-            <li
-              key={index}
-              className="p-2 hover:bg-accent rounded-md cursor-pointer flex items-center"
-              onClick={() => handleLocationSelect(loc)}
-            >
-              <MapPin className="h-4 w-4 mr-2 text-primary" />
-              <span>{loc.name}</span>
-            </li>
-          ))}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter journal title" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {/* Fallback option */}
-          {locationSuggestions.length === 0 && !isSearchingLocation && (
-            <li
-              className="p-2 text-muted-foreground hover:bg-accent rounded-md cursor-pointer"
-              onClick={() =>
-                handleLocationSelect({
-                  name: locationQuery,
-                  latitude: 0,
-                  longitude: 0,
-                })
-              }
-            >
-              Use "<strong>{locationQuery}</strong>" as location
-            </li>
-          )}
-        </ul>
-      </Card>
-    )}
+            <FormField
+              control={form.control}
+              name="content"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Content</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Write your journal entry..."
+                      className="min-h-[200px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-    {/* Selected Location Display */}
-    {selectedLocation && (
-      <div className="flex items-center justify-between p-3 border rounded-md bg-accent/50">
-        <div className="flex items-center">
-          <MapPin className="h-4 w-4 mr-2 text-primary" />
-          <span>{selectedLocation.name}</span>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            setSelectedLocation(null);
-            form.setValue('location', undefined);
-            setLocationQuery('');
-          }}
-          disabled={isSubmitting}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-    )}
-  </div>
-  <FormDescription>
-    Tag the location of your travel experience
-  </FormDescription>
-</FormItem>
+            <FormField
+              control={form.control}
+              name="isPublic"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Public Journal</FormLabel>
+                    <FormDescription>
+                      Make this journal visible to other users
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <div className="grid gap-3 relative">
+                    <div className="relative">
+                      <Input
+                        placeholder="Enter a location..."
+                        value={locationQuery}
+                        onChange={(e) => {
+                          setLocationQuery(e.target.value);
+                          handleLocationSearch(e.target.value);
+                        }}
+                        disabled={isSubmitting || !!selectedLocation}
+                      />
+                      {(isSearchingLocation || isGeocoding) && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <Icons.spinner className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
 
-        <FormItem className="space-y-3">
-          <FormLabel>Images</FormLabel>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center hover:border-primary transition-colors">
-                  <ImagePlus className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Click to upload images</p>
-                  <p className="text-xs text-muted-foreground">JPG, PNG, GIF up to 10MB</p>
-                </div>
-                <Input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageUpload}
-                  disabled={isSubmitting}
-                />
-              </label>
-            </div>
-            
-            {uploadedImages.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {locationQuery && !selectedLocation && locationQuery.length >= MIN_SEARCH_LENGTH && (
+                      <Card className="absolute z-50 top-[100%] left-0 w-full mt-1 max-h-[200px] overflow-auto shadow-lg border rounded-md bg-background">
+                        <CardContent className="p-2">
+                          {locationSuggestions.length > 0 ? (
+                            <ul className="space-y-1">
+                              {locationSuggestions.map((loc, index) => (
+                                <li
+                                  key={index}
+                                  className="p-2 hover:bg-accent rounded-md cursor-pointer"
+                                  onClick={() => handleLocationSelect(loc)}
+                                >
+                                  {loc.name}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : isSearchingLocation ? (
+                            <div className="p-2 text-muted-foreground">
+                              Searching...
+                            </div>
+                          ) : (
+                            <div className="p-2 text-muted-foreground">
+                              No locations found
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {selectedLocation && (
+                      <div className="flex items-center justify-between p-3 border rounded-md bg-accent/50">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{selectedLocation.name}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedLocation(null);
+                            setLocationQuery('');
+                            form.setValue('location', undefined);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormItem className="space-y-3">
+              <FormLabel>Images</FormLabel>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {uploadedImages.map((image, index) => (
-                  <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
-                    <img src={image} alt={`Uploaded ${index + 1}`} className="w-full h-full object-cover" />
+                  <div key={index} className="relative aspect-square group">
+                    <img
+                      src={image}
+                      alt={`Upload ${index + 1}`}
+                      className="w-full h-full object-cover rounded-md"
+                    />
                     <Button
                       type="button"
                       variant="destructive"
@@ -355,49 +349,41 @@ export default function CreateJournalForm() {
                     </Button>
                   </div>
                 ))}
+                <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={isSubmitting}
+                  />
+                  <div className="text-center p-4">
+                    <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Add Images</span>
+                  </div>
+                </label>
               </div>
-            )}
-          </div>
-          <FormDescription>
-            Add photos from your travel experience
-          </FormDescription>
-        </FormItem>
-        
-        <FormField
-          control={form.control}
-          name="isPublic"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Public Journal</FormLabel>
-                <FormDescription>
-                  Make your journal visible to everyone
-                </FormDescription>
-              </div>
-              <FormControl>
-              <Switch
-                checked={field.value ?? false}
-                onCheckedChange={(val) => form.setValue("isPublic", val)}
-                disabled={isSubmitting}
-              />
-              </FormControl>
+              <FormDescription>
+                Upload images from your travel experience
+              </FormDescription>
             </FormItem>
-          )}
-        />
-        
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Journal'
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Journal...
+                </>
+              ) : (
+                'Create Journal'
+              )}
+            </Button>
+          </form>
+        </Form>
+      </div>
+    </div>
   );
-}
+};
+
+export default CreateJournalForm;
