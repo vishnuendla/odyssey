@@ -5,6 +5,7 @@ import { JournalEntry, Comment, User } from '@/types';
 import { journalApi, socialApi, accountApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import ShareJournal from '@/components/sharing/ShareJournal';
+import { useJournal } from '@/contexts/JournalContext';
 
 import Navbar from '@/components/layout/Navbar';
 import {
@@ -48,6 +49,7 @@ const JournalView = () => {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { deleteJournal } = useJournal();
 
   useEffect(() => {
     console.log('useEffect triggered');
@@ -155,7 +157,7 @@ const JournalView = () => {
     
     if (window.confirm('Are you sure you want to delete this journal? This action cannot be undone.')) {
       try {
-        await journalApi.deleteJournal(id);
+        await deleteJournal(id);
         toast({
           description: 'Journal deleted successfully',
         });

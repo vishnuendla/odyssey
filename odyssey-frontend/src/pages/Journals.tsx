@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { User } from '@/types';
 
 const JournalsPage = () => {
-  const { getUserJournals, isLoading } = useJournal();
+  const { journals, getUserJournals, isLoading } = useJournal();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [userMap, setUserMap] = useState<Record<string, User>>({});

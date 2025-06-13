@@ -29,8 +29,8 @@ const JournalCard = memo(({
   const coverImage = journal.images?.[0] || '/placeholder-journal.jpg';
 
   return (
-    <div className="group relative bg-card rounded-lg overflow-hidden border transition-all duration-200 hover:shadow-lg">
-      <Link to={`/journals/${journal.id}`} className="block">
+    <Link to={`/journals/${journal.id}`} className="block">
+      <div className="group relative bg-card rounded-lg overflow-hidden border transition-all duration-200 hover:shadow-lg h-full">
         <div className="relative aspect-[16/9] overflow-hidden">
           <OptimizedImage
             src={coverImage}
@@ -39,60 +39,58 @@ const JournalCard = memo(({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
-      </Link>
 
-      <div className="p-4">
-        <div className="flex items-center mb-3">
-          <div className="flex items-center space-x-2">
-            {userAvatar ? (
-              <img
-                src={userAvatar}
-                alt={userName}
-                className="w-8 h-8 rounded-full"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary">
-                  {getInitials(userName)}
-                </span>
+        <div className="p-4">
+          <div className="flex items-center mb-3">
+            <div className="flex items-center space-x-2">
+              {userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  className="w-8 h-8 rounded-full"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-medium text-primary">
+                    {getInitials(userName)}
+                  </span>
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-medium">By: {userName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(journal.createdAt), { addSuffix: true })}
+                </p>
               </div>
-            )}
-            <div>
-              <p className="text-sm font-medium">By: {userName}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(journal.createdAt), { addSuffix: true })}
-              </p>
             </div>
           </div>
-        </div>
 
-        <Link to={`/journals/${journal.id}`} className="block">
           <h3 className="text-lg font-semibold mb-2 line-clamp-2">{journal.title}</h3>
           <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
             {journal.content}
           </p>
-        </Link>
 
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center">
-              <Heart className="h-4 w-4 mr-1" />
-              <span>{reactionCount}</span>
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <Heart className="h-4 w-4 mr-1" />
+                <span>{reactionCount}</span>
+              </div>
+              <div className="flex items-center">
+                <MessageCircle className="h-4 w-4 mr-1" />
+                <span>{commentCount}</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <MessageCircle className="h-4 w-4 mr-1" />
-              <span>{commentCount}</span>
-            </div>
+            {journal.location && (
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-1" />
+                <span>{journal.location.name}</span>
+              </div>
+            )}
           </div>
-          {journal.location && (
-            <div className="flex items-center">
-              <MapPin className="h-4 w-4 mr-1" />
-              <span>{journal.location.name}</span>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 });
 
