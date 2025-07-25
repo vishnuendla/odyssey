@@ -1,6 +1,7 @@
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\controller\AuthController.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\service\CommentService.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\service\ReactionService.java
+D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\config\CacheConfig.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\dto\JournalDto.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\dto\UserDto.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\config\SecurityConfig.java

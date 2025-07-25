@@ -1,0 +1,30 @@
+{
+  "common": {
+    "welcome": "ようこそ",
+    "login": "ログイン",
+    "signup": "新規登録",
+    "logout": "ログアウト",
+    "profile": "プロフィール",
+    "settings": "設定",
+    "language": "言語"
+  },
+  "navigation": {
+    "home": "ホーム",
+    "explore": "探索",
+    "messages": "メッセージ",
+    "notifications": "通知"
+  },
+  "auth": {
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "forgotPassword": "パスワードをお忘れですか？",
+    "rememberMe": "ログイン状態を保持",
+    "noAccount": "アカウントをお持ちでないですか？",
+    "hasAccount": "すでにアカウントをお持ちですか？"
+  },
+  "errors": {
+    "required": "この項目は必須です",
+    "invalidEmail": "無効なメールアドレスです",
+    "invalidPassword": "パスワードは6文字以上必要です"
+  }
+} 

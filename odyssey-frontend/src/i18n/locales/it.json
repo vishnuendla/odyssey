@@ -1,0 +1,30 @@
+{
+  "common": {
+    "welcome": "Benvenuto",
+    "login": "Accedi",
+    "signup": "Registrati",
+    "logout": "Esci",
+    "profile": "Profilo",
+    "settings": "Impostazioni",
+    "language": "Lingua"
+  },
+  "navigation": {
+    "home": "Home",
+    "explore": "Esplora",
+    "messages": "Messaggi",
+    "notifications": "Notifiche"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Password dimenticata?",
+    "rememberMe": "Ricordami",
+    "noAccount": "Non hai un account?",
+    "hasAccount": "Hai già un account?"
+  },
+  "errors": {
+    "required": "Questo campo è obbligatorio",
+    "invalidEmail": "Indirizzo email non valido",
+    "invalidPassword": "La password deve contenere almeno 6 caratteri"
+  }
+} 

@@ -1,4 +1,3 @@
-
 package com.odyssey.controller;
 
 import com.odyssey.dto.JournalDto;
@@ -7,6 +6,10 @@ import com.odyssey.dto.UserDto;
 import com.odyssey.entity.Journal;
 import com.odyssey.service.JournalService;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,8 +35,18 @@ public class JournalController {
     }
 
     @GetMapping("/public")
-    public ResponseEntity<List<JournalDto>> getPublicJournals() {
-        return ResponseEntity.ok(journalService.getPublicJournals());
+    public ResponseEntity<Page<Journal>> getPublicJournals(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        
+        Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? 
+            Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        
+        Page<Journal> journals = journalService.getPublicJournals(pageable);
+        return ResponseEntity.ok(journals);
     }
 
     @GetMapping("/my")

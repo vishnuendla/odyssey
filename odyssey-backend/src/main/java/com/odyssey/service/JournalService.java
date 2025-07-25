@@ -5,6 +5,8 @@ import com.odyssey.entity.*;
 import com.odyssey.exception.ResourceNotFoundException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,10 +46,8 @@ public class JournalService {
                 .collect(Collectors.toList());
     }
 
-    public List<JournalDto> getPublicJournals() {
-        return journalRepository.findByIsPublicTrue().stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+    public Page<Journal> getPublicJournals(Pageable pageable) {
+        return journalRepository.findByIsPublicTrue(pageable);
     }
 
     public UserDto updateUser(String id, UserDto request) {

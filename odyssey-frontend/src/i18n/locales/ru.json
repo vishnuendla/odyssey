@@ -1,0 +1,30 @@
+{
+  "common": {
+    "welcome": "Добро пожаловать",
+    "login": "Войти",
+    "signup": "Регистрация",
+    "logout": "Выйти",
+    "profile": "Профиль",
+    "settings": "Настройки",
+    "language": "Язык"
+  },
+  "navigation": {
+    "home": "Главная",
+    "explore": "Обзор",
+    "messages": "Сообщения",
+    "notifications": "Уведомления"
+  },
+  "auth": {
+    "email": "Электронная почта",
+    "password": "Пароль",
+    "forgotPassword": "Забыли пароль?",
+    "rememberMe": "Запомнить меня",
+    "noAccount": "Нет аккаунта?",
+    "hasAccount": "Уже есть аккаунт?"
+  },
+  "errors": {
+    "required": "Это поле обязательно",
+    "invalidEmail": "Неверный адрес электронной почты",
+    "invalidPassword": "Пароль должен содержать не менее 6 символов"
+  }
+} 

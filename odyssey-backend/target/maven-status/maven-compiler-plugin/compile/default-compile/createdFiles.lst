@@ -7,6 +7,7 @@ com\odyssey\security\JwtAuthenticationFilter.class
 com\odyssey\config\SecurityConfig.class
 com\odyssey\dto\UserDto.class
 com\odyssey\entity\Journal.class
+com\odyssey\config\CacheConfig.class
 com\odyssey\entity\User.class
 com\odyssey\controller\StorageController.class
 com\odyssey\dto\ReactionSummaryDto.class
