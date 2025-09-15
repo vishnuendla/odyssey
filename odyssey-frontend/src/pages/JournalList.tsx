@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+// ...existing code...
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Plus } from 'lucide-react';
 import { useJournals } from '@/hooks/use-journals';
 
 export function JournalList() {
-  const { t } = useTranslation();
+// ...existing code...
   const navigate = useNavigate();
   const { journals, isLoading } = useJournals();
 
@@ -18,14 +18,14 @@ export function JournalList() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {t('journal.list.title')}
+              Journal List
             </h1>
             <Button
               onClick={() => navigate('/journals/create')}
               className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              {t('journal.list.createNew')}
+              Create New Journal
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -56,14 +56,14 @@ export function JournalList() {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('journal.list.title')}
+            Journal List
           </h1>
           <Button
             onClick={() => navigate('/journals/create')}
             className="flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            {t('journal.list.createNew')}
+            Create New Journal
           </Button>
         </div>
 
@@ -81,7 +81,7 @@ export function JournalList() {
                     {!journal.isPublic && (
                       <div className="absolute top-2 right-2">
                         <Badge variant="secondary">
-                          {t('journal.list.private')}
+                          Private
                         </Badge>
                       </div>
                     )}
@@ -107,7 +107,7 @@ export function JournalList() {
                       size="sm"
                       onClick={() => navigate(`/journals/${journal.id}`)}
                     >
-                      {t('common.readMore')}
+                      Read More
                     </Button>
                   </div>
                 </CardContent>
@@ -116,14 +116,14 @@ export function JournalList() {
           ) : (
             <div className="col-span-full text-center py-12">
               <p className="text-muted-foreground mb-4">
-                {t('journal.list.noJournals')}
+                No journals found.
               </p>
               <Button
                 onClick={() => navigate('/journals/create')}
                 className="flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                {t('journal.list.createNew')}
+                Create New Journal
               </Button>
             </div>
           )}

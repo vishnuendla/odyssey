@@ -35,7 +35,7 @@ public class JournalController {
     }
 
     @GetMapping("/public")
-    public ResponseEntity<Page<Journal>> getPublicJournals(
+    public ResponseEntity<Page<JournalDto>> getPublicJournals(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -45,7 +45,7 @@ public class JournalController {
             Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         
-        Page<Journal> journals = journalService.getPublicJournals(pageable);
+        Page<JournalDto> journals = journalService.getPublicJournals(pageable);
         return ResponseEntity.ok(journals);
     }
 

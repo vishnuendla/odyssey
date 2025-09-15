@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+// ...existing code...
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
-import { Icons } from '@/components/icons';
+import { Icons } from '@/components/shared/Icons';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -27,7 +27,7 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export function Signup() {
-  const { t } = useTranslation();
+// ...existing code...
   const navigate = useNavigate();
   const { signup, signInWithGoogle, signInWithGithub } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -85,10 +85,10 @@ export function Signup() {
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('auth.signup')}
+            Sign Up
           </h1>
           <p className="text-muted-foreground mt-2">
-            {t('auth.createAccount')}
+            Create your account
           </p>
         </div>
 
@@ -100,7 +100,7 @@ export function Signup() {
             disabled={isLoading}
           >
             <Icons.google className="w-4 h-4 mr-2" />
-            {t('auth.continueWithGoogle')}
+            Continue with Google
           </Button>
 
           <Button
@@ -110,7 +110,7 @@ export function Signup() {
             disabled={isLoading}
           >
             <Icons.github className="w-4 h-4 mr-2" />
-            {t('auth.continueWithGithub')}
+            Continue with GitHub
           </Button>
 
           <div className="relative">
@@ -119,14 +119,14 @@ export function Signup() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                {t('auth.orContinueWith')}
+                or continue with
               </span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">{t('auth.name')}</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
                 type="text"
@@ -139,7 +139,7 @@ export function Signup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">{t('auth.email')}</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -152,7 +152,7 @@ export function Signup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">{t('auth.password')}</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -166,7 +166,7 @@ export function Signup() {
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">
-                {t('auth.confirmPassword')}
+                Confirm Password
               </Label>
               <Input
                 id="confirmPassword"
@@ -191,7 +191,7 @@ export function Signup() {
                 htmlFor="agreeToTerms"
                 className="text-sm text-muted-foreground"
               >
-                {t('auth.agreeToTerms')}
+                I agree to the terms and conditions
               </Label>
             </div>
             {errors.agreeToTerms && (
@@ -209,17 +209,17 @@ export function Signup() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? t('auth.signingUp') : t('auth.signup')}
+              {isLoading ? 'Signing Up...' : 'Sign Up'}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            {t('auth.hasAccount')}{' '}
+            Already have an account?{' '}
             <Link
               to="/login"
               className="text-primary hover:underline"
             >
-              {t('auth.login')}
+              Log In
             </Link>
           </p>
         </div>

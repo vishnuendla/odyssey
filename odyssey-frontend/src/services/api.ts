@@ -150,7 +150,9 @@ export const journalApi = {
     const response = await fetch(`${API_BASE_URL}/journals/public`, {
       credentials: 'include'
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    // Backend returns paginated response, extract content array
+    return Array.isArray(data) ? data : data.content || [];
   },
   
   getUserJournals: async (): Promise<JournalEntry[]> => {

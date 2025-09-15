@@ -60,7 +60,11 @@ export const JournalProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setIsLoading(true);
       const publicJournals = await journalApi.getPublicJournals();
-      setJournals(publicJournals);
+      // Handle paginated response - extract content array
+      const journalsArray = Array.isArray(publicJournals) 
+        ? publicJournals 
+        : (publicJournals as any)?.content || [];
+      setJournals(journalsArray);
       setError(null);
     } catch (error) {
       setError('Failed to fetch public journals');
@@ -162,11 +166,15 @@ export const JournalProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const getUserJournals = () => {
     if (!user) return [];
-    return journals.filter(journal => journal.userId === user.id);
+    // Ensure journals is an array before filtering
+    const journalsArray = Array.isArray(journals) ? journals : [];
+    return journalsArray.filter(journal => journal.userId === user.id);
   };
 
   const getPublicJournals = () => {
-    return journals.filter(journal => journal.isPublic);
+    // Ensure journals is an array before filtering
+    const journalsArray = Array.isArray(journals) ? journals : [];
+    return journalsArray.filter(journal => journal.isPublic);
   };
 
   const value = {

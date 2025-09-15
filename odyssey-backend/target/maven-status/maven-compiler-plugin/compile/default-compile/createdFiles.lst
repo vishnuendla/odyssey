@@ -1,3 +1,4 @@
+com\odyssey\dto\PublicJournalDto.class
 com\odyssey\entity\Reaction.class
 com\odyssey\dto\CommentDto.class
 com\odyssey\entity\Location.class

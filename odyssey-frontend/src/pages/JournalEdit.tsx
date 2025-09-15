@@ -33,8 +33,8 @@ const journalSchema = z.object({
   isPublic: z.boolean().default(true),
   location: z.object({
     name: z.string().optional(),
-    latitude: z.number(),
-    longitude: z.number(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
     country: z.string().optional(),
     city: z.string().optional(),
   }).optional(),
@@ -98,14 +98,12 @@ const JournalEdit = () => {
           // Set existing images
           setExistingImages(journalData.images || []);
           
-          // Populate form with journal data
-          form.reset({
-            title: journalData.title,
-            content: journalData.content,
-            isPublic: journalData.isPublic,
-            location: journalData.location,
-            images: journalData.images || [],
-          });
+          // Populate form fields individually to preserve dirty state
+          form.setValue('title', journalData.title);
+          form.setValue('content', journalData.content);
+          form.setValue('isPublic', journalData.isPublic);
+          form.setValue('location', journalData.location);
+          form.setValue('images', journalData.images || []);
         }
       } catch (error) {
         console.error('Failed to fetch journal:', error);
@@ -143,14 +141,26 @@ const JournalEdit = () => {
             placeName: query
           }]);
         } else {
-          setLocationSuggestions([]);
+          // If geocoding fails, still allow location with name only
+          setLocationSuggestions([{
+            name: query,
+            latitude: 0, // Default coordinates
+            longitude: 0,
+            placeName: query
+          }]);
         }
       } catch (error) {
         console.error('Error searching for locations:', error);
-        setLocationSuggestions([]);
+        // On geocoding error, still allow location with name only
+        setLocationSuggestions([{
+          name: query,
+          latitude: 0, // Default coordinates
+          longitude: 0,
+          placeName: query
+        }]);
         toast({
           variant: "destructive",
-          description: 'Failed to get location coordinates. Please try again.',
+          description: 'Geocoding service temporarily unavailable. Location saved with name only.',
         });
       } finally {
         setIsSearchingLocation(false);
@@ -193,8 +203,8 @@ const JournalEdit = () => {
   };
 
   const onSubmit = async (data: JournalFormValues) => {
+    console.log('onSubmit called with:', data);
     if (!id || !user) return;
-    
     setSubmitting(true);
     try {
       let imageUrls: string[] = [];
@@ -206,18 +216,18 @@ const JournalEdit = () => {
         title: data.title,
         content: data.content,
         isPublic: data.isPublic,
-        location: data.location && data.location.latitude !== undefined && data.location.longitude !== undefined
+        location: data.location && data.location.name
           ? {
               name: data.location.name || 'Unnamed Location',
-              latitude: data.location.latitude,
-              longitude: data.location.longitude,
+              latitude: data.location.latitude || 0,
+              longitude: data.location.longitude || 0,
               country: data.location.country,
               city: data.location.city,
             }
           : undefined,
         images: [...existingImages, ...imageUrls],
       };
-      
+      console.log('Sending updatedData:', updatedData);
       await journalApi.updateJournal(id, updatedData);
       toast({
         description: 'Journal updated successfully',
@@ -268,7 +278,14 @@ const JournalEdit = () => {
                       <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="Journal title" {...field} />
+                          <Input 
+                            placeholder="Journal title" 
+                            {...field}
+                            onChange={(e) => {
+                              console.log('Title changed to:', e.target.value);
+                              field.onChange(e);
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -285,7 +302,11 @@ const JournalEdit = () => {
                           <Textarea 
                             placeholder="Write about your experience..." 
                             className="min-h-[200px]"
-                            {...field} 
+                            {...field}
+                            onChange={(e) => {
+                              console.log('Content changed to:', e.target.value);
+                              field.onChange(e);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
@@ -301,7 +322,10 @@ const JournalEdit = () => {
                         <FormControl>
                           <Checkbox
                             checked={field.value}
-                            onCheckedChange={field.onChange}
+                            onCheckedChange={(checked) => {
+                              console.log('isPublic changed to:', checked);
+                              field.onChange(checked);
+                            }}
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">
@@ -329,6 +353,21 @@ const JournalEdit = () => {
                         onChange={(e) => {
                           setLocationQuery(e.target.value);
                           handleLocationSearch(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          // Allow manual entry by pressing Enter
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (locationQuery.trim()) {
+                              const manualLocation = {
+                                name: locationQuery,
+                                latitude: 0,
+                                longitude: 0,
+                                placeName: locationQuery
+                              };
+                              handleLocationSelect(manualLocation);
+                            }
+                          }
                         }}
                         disabled={submitting}
                       />
@@ -457,7 +496,17 @@ const JournalEdit = () => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submitting}>
+                <Button 
+                  type="submit" 
+                  disabled={submitting}
+                  onClick={(e) => {
+                    console.log('Submit button clicked');
+                    console.log('Form errors:', form.formState.errors);
+                    console.log('Form values:', form.getValues());
+                    console.log('Form dirty fields:', form.formState.dirtyFields);
+                    console.log('Form is valid:', form.formState.isValid);
+                  }}
+                >
                   {submitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -29,6 +29,7 @@ D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\entity\Reaction.ja
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\service\StorageService.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\dto\CommentDto.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\repository\CommentRepository.java
+D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\dto\PublicJournalDto.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\dto\ReactionSummaryDto.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\repository\UserRepository.java
 D:\PROJECTS\odyssey\odyssey-backend\src\main\java\com\odyssey\service\LocationService.java

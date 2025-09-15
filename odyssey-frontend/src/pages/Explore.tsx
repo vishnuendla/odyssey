@@ -30,8 +30,11 @@ const ExplorePage = () => {
   useEffect(() => {
     const fetchJournals = async () => {
       try {
+        console.log('Fetching public journals for Explore page...');
         const data = await journalApi.getPublicJournals();
+        console.log('Public journals data:', data);
         const filtered = data.filter(journal => journal.userId !== user?.id);
+        console.log('Filtered journals (excluding user journals):', filtered);
         setDemoJournals(filtered);
 
         // Fetch user information for all unique authors

@@ -46,8 +46,9 @@ public class JournalService {
                 .collect(Collectors.toList());
     }
 
-    public Page<Journal> getPublicJournals(Pageable pageable) {
-        return journalRepository.findByIsPublicTrue(pageable);
+    public Page<JournalDto> getPublicJournals(Pageable pageable) {
+        Page<Journal> journalPage = journalRepository.findByIsPublicTrue(pageable);
+        return journalPage.map(this::convertToDto);
     }
 
     public UserDto updateUser(String id, UserDto request) {
@@ -177,13 +178,13 @@ public class JournalService {
             journal.getLocation().setCity(journalRequest.getLocation().getCity());
         }
         
-        // Update images only if new images are provided
-        if (journalRequest.getImages() != null && !journalRequest.getImages().isEmpty()) {
+        // Update images - always process the images list from request
+        if (journalRequest.getImages() != null) {
             // Clear existing images
             imageRepository.deleteAll(journal.getImages());
             journal.getImages().clear();
             
-            // Add new images
+            // Add new images (even if list is empty - this allows image removal)
             for (String imageUrl : journalRequest.getImages()) {
                 Image image = new Image();
                 image.setUrl(imageUrl);
