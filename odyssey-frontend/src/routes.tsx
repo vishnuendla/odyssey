@@ -15,6 +15,10 @@ import JournalEdit from '@/pages/JournalEdit';
 import Profile from '@/pages/Profile';
 import Timeline from '@/pages/Timeline';
 import Settings from '@/pages/Settings';
+import About from '@/pages/About';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import TermsOfService from '@/pages/TermsOfService';
+import ContactUs from '@/pages/ContactUs';
 
 export const AppRoutes = () => (
   <Routes>
@@ -30,6 +34,10 @@ export const AppRoutes = () => (
     <Route path="/journal/edit/:id" element={<ProtectedRoute><JournalEdit /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+    <Route path="/about" element={<About />} />
+    <Route path="/privacy" element={<PrivacyPolicy />} />
+    <Route path="/terms" element={<TermsOfService />} />
+    <Route path="/contact" element={<ContactUs />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

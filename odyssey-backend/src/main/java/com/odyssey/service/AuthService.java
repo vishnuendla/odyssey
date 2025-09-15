@@ -5,7 +5,6 @@ import com.odyssey.dto.UserDto;
 import com.odyssey.entity.User;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.UserRepository;
-import com.odyssey.security.JwtTokenProvider;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -17,14 +16,12 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       JwtTokenProvider tokenProvider, AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.tokenProvider = tokenProvider;
         this.authenticationManager = authenticationManager;
     }
 

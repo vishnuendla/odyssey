@@ -46,16 +46,16 @@ const FeaturedJournals = () => {
   return (
     <section className="py-12">
       <div className="container">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8">
           <div>
             <h2 className="text-2xl font-bold mb-2">Featured Journals</h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4 md:mb-0">
               Discover inspiring travel stories from our community
             </p>
           </div>
           <Link
             to="/explore"
-            className="text-primary hover:underline"
+            className="text-primary hover:underline md:mt-0"
           >
             View all journals
           </Link>

@@ -65,12 +65,12 @@ const JournalCard = memo(({
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-2 line-clamp-2">{journal.title}</h3>
+          <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">{journal.title}</h3>
           <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
             {journal.content}
           </p>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground space-y-2 sm:space-y-0">
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 <Heart className="h-4 w-4 mr-1" />
@@ -84,7 +84,7 @@ const JournalCard = memo(({
             {journal.location && (
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-1" />
-                <span>{journal.location.name}</span>
+                <span className="truncate">{journal.location.name}</span>
               </div>
             )}
           </div>

@@ -3,19 +3,16 @@ package com.odyssey.controller;
 import com.odyssey.dto.JournalDto;
 import com.odyssey.dto.JournalRequest;
 import com.odyssey.dto.UserDto;
-import com.odyssey.entity.Journal;
 import com.odyssey.service.JournalService;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 @CrossOrigin(origins = "*")

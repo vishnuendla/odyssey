@@ -27,17 +27,16 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .cors().and().csrf().disable()
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            .authorizeHttpRequests()
-            .requestMatchers("/api/auth/login", "/api/auth/register", "/api/journals/public").permitAll()
-            .anyRequest().authenticated()
-            .and()
-            .addFilterBefore(new JwtAuthenticationFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);
-        
-        return http.build();
+        return http
+            .cors(cors -> cors.configure(http))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/journals/public").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(new JwtAuthenticationFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
 
     @Bean

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import Navbar from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -90,14 +91,17 @@ export default function RegisterForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold">Create an account</h1>
-        <p className="text-muted-foreground">Enter your details to get started with Odyssey</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-md space-y-6">
+          <div className="space-y-2 text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold">Create an account</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Enter your details to get started with Odyssey</p>
+          </div>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
           <FormField
             control={form.control}
             name="name"
@@ -109,6 +113,7 @@ export default function RegisterForm() {
                     placeholder="John Doe"
                     {...field}
                     disabled={isLoading}
+                    className="h-11"
                   />
                 </FormControl>
                 <FormMessage />
@@ -127,6 +132,7 @@ export default function RegisterForm() {
                     placeholder="your.email@gmail.com"
                     {...field}
                     disabled={isLoading}
+                    className="h-11"
                   />
                 </FormControl>
                 <FormMessage />
@@ -146,17 +152,18 @@ export default function RegisterForm() {
                     placeholder="••••••••"
                     {...field}
                     disabled={isLoading}
+                    className="h-11"
                   />
                 </FormControl>
                 <div className="mt-2 space-y-1">
                   {passwordCriteria.map((criteria, index) => (
-                    <div key={index} className="flex items-center text-sm">
+                    <div key={index} className="flex items-center text-xs sm:text-sm">
                       {criteria.met ? (
-                        <Check className="h-4 w-4 text-green-500 mr-2" />
+                        <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-2 flex-shrink-0" />
                       ) : (
-                        <X className="h-4 w-4 text-red-500 mr-2" />
+                        <X className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 mr-2 flex-shrink-0" />
                       )}
-                      <span className={criteria.met ? 'text-green-500' : 'text-red-500'}>
+                      <span className={`${criteria.met ? 'text-green-500' : 'text-red-500'} leading-tight`}>
                         {criteria.label}
                       </span>
                     </div>
@@ -179,6 +186,7 @@ export default function RegisterForm() {
                     placeholder="••••••••"
                     {...field}
                     disabled={isLoading}
+                    className="h-11"
                   />
                 </FormControl>
                 <FormMessage />
@@ -186,7 +194,7 @@ export default function RegisterForm() {
             )}
           />
           
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full h-11 text-base" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
@@ -204,6 +212,8 @@ export default function RegisterForm() {
         <Link to="/login" className="text-primary hover:underline">
           Sign in
         </Link>
+      </div>
+        </div>
       </div>
     </div>
   );

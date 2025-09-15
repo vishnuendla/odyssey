@@ -7,6 +7,21 @@
   user-select: none;
 }
 
+/* Prevent horizontal overflow on mobile */
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Ensure images don't overflow containers */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
 ::-webkit-scrollbar{
   display: none;
 }

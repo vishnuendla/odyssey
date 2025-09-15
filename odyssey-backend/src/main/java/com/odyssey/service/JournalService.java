@@ -23,21 +23,15 @@ public class JournalService {
     private final UserRepository userRepository;
     private final LocationRepository locationRepository;
     private final ImageRepository imageRepository;
-    private final CommentRepository commentRepository;
-    private final ReactionRepository reactionRepository;
 
     public JournalService(JournalRepository journalRepository,
                           UserRepository userRepository,
                           LocationRepository locationRepository,
-                          ImageRepository imageRepository,
-                          CommentRepository commentRepository,
-                          ReactionRepository reactionRepository) {
+                          ImageRepository imageRepository) {
         this.journalRepository = journalRepository;
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
         this.imageRepository = imageRepository;
-        this.commentRepository = commentRepository;
-        this.reactionRepository = reactionRepository;
     }
 
     public List<JournalDto> getAllJournals() {

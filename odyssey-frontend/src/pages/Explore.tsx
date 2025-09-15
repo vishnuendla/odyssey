@@ -104,17 +104,17 @@ const ExplorePage = () => {
   return (
     <>
       <Navbar />
-      <main className="container py-12">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+      <main className="container py-6 sm:py-12 px-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Explore Journals</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Explore Journals</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Discover travel stories from around the world
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -122,11 +122,11 @@ const ExplorePage = () => {
                 placeholder="Search journals..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 text-sm sm:text-base"
               />
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
             <Select value={locationFilter} onValueChange={setLocationFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by location" />

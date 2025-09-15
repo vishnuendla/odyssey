@@ -34,7 +34,12 @@ public class StorageService {
         List<String> fileUrls = new ArrayList<>();
         
         for (MultipartFile file : files) {
-            String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+            String originalFileName = file.getOriginalFilename();
+            if (originalFileName == null) {
+                throw new RuntimeException("File name cannot be null");
+            }
+            
+            String fileName = StringUtils.cleanPath(originalFileName);
             
             // Check if the file's name contains invalid characters
             if (fileName.contains("..")) {

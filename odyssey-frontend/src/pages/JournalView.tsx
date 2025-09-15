@@ -218,9 +218,9 @@ const JournalView = () => {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Journal header */}
-          <div className="flex justify-between items-start mb-6">
-            <h1 className="text-3xl font-bold">{journal.title}</h1>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6">
+            <h1 className="text-3xl font-bold mb-4 md:mb-0">{journal.title}</h1>
+            <div className="flex flex-wrap items-center gap-2">
               {isOwner && (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild>
