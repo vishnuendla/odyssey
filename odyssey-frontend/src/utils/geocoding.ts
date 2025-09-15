@@ -1,77 +1,158 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-if (!GEMINI_API_KEY) {
-  console.error('GEMINI_API_KEY is not set in environment variables. Please add it to your .env file.');
-  throw new Error('GEMINI_API_KEY is required for geocoding functionality');
+if (!GEOAPIFY_API_KEY) {
+  console.error('VITE_GEOAPIFY_API_KEY is not set in environment variables. Please add it to your .env file.');
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+export interface GeoapifyLocation {
+  formatted: string;
+  lat: number;
+  lon: number;
+  country?: string;
+  city?: string;
+  state?: string;
+  place_id?: string;
+}
 
+export interface LocationSuggestion {
+  name: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  city?: string;
+  placeName: string;
+}
+
+/**
+ * Get autocomplete suggestions using Geoapify Autocomplete API
+ */
+export const getLocationSuggestions = async (query: string): Promise<LocationSuggestion[]> => {
+  if (!GEOAPIFY_API_KEY) {
+    console.error('Geoapify API key is not set');
+    return [];
+  }
+
+  if (!query || query.length < 3) {
+    return [];
+  }
+
+  console.log('Searching for:', query); // Debug log
+
+  try {
+    const response = await fetch(
+      `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&limit=8&apiKey=${GEOAPIFY_API_KEY}`
+    );
+
+    console.log('API Response status:', response.status); // Debug log
+
+    if (!response.ok) {
+      throw new Error(`Geoapify API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('API Response data:', data); // Debug log
+    
+    if (!data.features || !Array.isArray(data.features)) {
+      console.log('No features in response'); // Debug log
+      return [];
+    }
+
+    // Filter and deduplicate results
+    const seenLocations = new Set<string>();
+    const uniqueResults: LocationSuggestion[] = [];
+
+    for (const feature of data.features) {
+      const props = feature.properties;
+      
+      // Create a clean, readable name
+      let cleanName = '';
+      if (props.name && props.city && props.country) {
+        cleanName = `${props.name}, ${props.city}, ${props.country}`;
+      } else if (props.city && props.country) {
+        cleanName = `${props.city}, ${props.country}`;
+      } else if (props.name && props.country) {
+        cleanName = `${props.name}, ${props.country}`;
+      } else if (props.formatted) {
+        // Remove postal codes and excessive details
+        cleanName = props.formatted
+          .replace(/,?\s*\d{5,}/g, '') // Remove postal codes
+          .replace(/,\s*,/g, ',') // Remove double commas
+          .trim();
+      } else {
+        cleanName = props.name || query;
+      }
+
+      // Skip if we've already seen this location (deduplicate)
+      const locationKey = `${props.name}-${props.city}-${props.country}`;
+      if (seenLocations.has(locationKey)) {
+        continue;
+      }
+      seenLocations.add(locationKey);
+
+      uniqueResults.push({
+        name: cleanName,
+        latitude: feature.geometry.coordinates[1],
+        longitude: feature.geometry.coordinates[0],
+        country: props.country,
+        city: props.city || props.town || props.village,
+        placeName: cleanName
+      });
+
+      // Limit to 5 unique results
+      if (uniqueResults.length >= 5) {
+        break;
+      }
+    }
+
+    console.log('Returning suggestions:', uniqueResults); // Debug log
+    return uniqueResults;
+  } catch (error) {
+    console.error('Error fetching location suggestions:', error);
+    return [];
+  }
+};
+
+/**
+ * Get precise coordinates for a location using Geoapify Geocoding API
+ */
 export const getCoordinatesFromPlaceName = async (placeName: string) => {
-  if (!GEMINI_API_KEY) {
-    console.error('GEMINI_API_KEY is not set');
+  if (!GEOAPIFY_API_KEY) {
+    console.error('Geoapify API key is not set');
+    return null;
+  }
+
+  if (!placeName || placeName.trim().length === 0) {
     return null;
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    
-    const prompt = `You are a geocoding service. Given the place name "${placeName}", provide the latitude and longitude coordinates.
-    Important rules:
-    1. Return ONLY a JSON object in this exact format:
-    {
-      "latitude": number,
-      "longitude": number
+    const response = await fetch(
+      `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(placeName)}&limit=1&apiKey=${GEOAPIFY_API_KEY}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Geoapify API error: ${response.status}`);
     }
-    2. Use decimal degrees format for coordinates
-    3. If the place is not found or ambiguous, return null
-    4. For major cities, use their central coordinates
-    5. For countries, use their capital city coordinates
-    6. Ensure coordinates are valid (latitude: -90 to 90, longitude: -180 to 180)
-    
-    Example valid response for "London":
-    {
-      "latitude": 51.5074,
-      "longitude": -0.1278
-    }`;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    try {
-      // Clean the response text to ensure it's valid JSON
-      const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-      const coordinates = JSON.parse(cleanText);
-      
-      if (!coordinates || typeof coordinates.latitude !== 'number' || typeof coordinates.longitude !== 'number') {
-        console.error('Invalid coordinates format:', coordinates);
-        return null;
-      }
 
-      // Validate coordinate ranges
-      if (coordinates.latitude < -90 || coordinates.latitude > 90 || 
-          coordinates.longitude < -180 || coordinates.longitude > 180) {
-        console.error('Coordinates out of valid range:', coordinates);
-        return null;
-      }
-
-      return {
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        placeName: placeName
-      };
-    } catch (error) {
-      console.error('Error parsing coordinates:', error);
+    const data = await response.json();
+    
+    if (!data.features || data.features.length === 0) {
+      console.warn('No coordinates found for:', placeName);
       return null;
     }
-  } catch (error: any) {
+
+    const feature = data.features[0];
+    const coordinates = feature.geometry.coordinates; // [lon, lat] in GeoJSON format
+
+    return {
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+      placeName: feature.properties.formatted || placeName,
+      country: feature.properties.country,
+      city: feature.properties.city || feature.properties.town || feature.properties.village
+    };
+  } catch (error) {
     console.error('Error getting coordinates:', error);
-    if (error.message?.includes('API_KEY_INVALID')) {
-      console.error('Invalid Gemini API key. Please check your .env file and ensure VITE_GEMINI_API_KEY is set correctly.');
-    }
     return null;
   }
 };

@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { journalApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { JournalEntry, Location } from '@/types';
-import { getCoordinatesFromPlaceName, debounce } from '@/utils/geocoding';
+import { getCoordinatesFromPlaceName, getLocationSuggestions, debounce } from '@/utils/geocoding';
 
 import Navbar from '@/components/layout/Navbar';
 import {
@@ -31,13 +31,7 @@ const journalSchema = z.object({
   title: z.string().min(3, { message: 'Title must be at least 3 characters.' }),
   content: z.string().min(10, { message: 'Content must be at least 10 characters.' }),
   isPublic: z.boolean().default(true),
-  location: z.object({
-    name: z.string().optional(),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
-    country: z.string().optional(),
-    city: z.string().optional(),
-  }).optional(),
+  location: z.any().optional(),
   images: z.array(z.string()).default([]),
 });
 
@@ -129,42 +123,34 @@ const JournalEdit = () => {
 
       setLocationQuery(query);
       setIsSearchingLocation(true);
-      setIsGeocoding(true);
       
       try {
-        const coordinates = await getCoordinatesFromPlaceName(query);
-        if (coordinates) {
-          setLocationSuggestions([{
-            name: query,
-            latitude: coordinates.latitude,
-            longitude: coordinates.longitude,
-            placeName: query
-          }]);
+        // Use the proper autocomplete function
+        const suggestions = await getLocationSuggestions(query);
+        if (suggestions && suggestions.length > 0) {
+          // Convert suggestions to the Location interface format
+          const locations: Location[] = suggestions.map(suggestion => ({
+            name: suggestion.name,
+            latitude: suggestion.latitude,
+            longitude: suggestion.longitude,
+            placeName: suggestion.placeName,
+            country: suggestion.country,
+            city: suggestion.city
+          }));
+          setLocationSuggestions(locations);
         } else {
-          // If geocoding fails, still allow location with name only
-          setLocationSuggestions([{
-            name: query,
-            latitude: 0, // Default coordinates
-            longitude: 0,
-            placeName: query
-          }]);
+          // If no suggestions found, clear the list
+          setLocationSuggestions([]);
         }
       } catch (error) {
         console.error('Error searching for locations:', error);
-        // On geocoding error, still allow location with name only
-        setLocationSuggestions([{
-          name: query,
-          latitude: 0, // Default coordinates
-          longitude: 0,
-          placeName: query
-        }]);
+        setLocationSuggestions([]);
         toast({
           variant: "destructive",
-          description: 'Geocoding service temporarily unavailable. Location saved with name only.',
+          description: 'Location search temporarily unavailable. Please try again.',
         });
       } finally {
         setIsSearchingLocation(false);
-        setIsGeocoding(false);
       }
     }, 500),
     [toast]
