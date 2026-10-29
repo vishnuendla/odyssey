@@ -136,8 +136,6 @@ export const journalApi = {
     return handleResponse(response);
   },
   updateUserProfile: async (userId: string, profileData: Partial<User>): Promise<User> => {
-    console.log("User Id:", userId);
-    console.log("📤 Payload being sent to backend:", profileData);
     const response = await fetch(`${API_BASE_URL}/journals/update/${userId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -170,7 +168,6 @@ export const journalApi = {
   },
   
   createJournal: async (journalData: Omit<JournalEntry, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'reactions' | 'comments'>): Promise<JournalEntry> => {
-    console.log("📤 Payload being sent to backend:", journalData);
     const response = await fetch(`${API_BASE_URL}/journals`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -195,8 +192,6 @@ export const journalApi = {
       method: 'DELETE',
       credentials: 'include'
     });
-  
-    console.log('Response status:', res.status); // helpful debug
   
     if (!res.ok) {
       const errorText = await res.text(); // Avoid parsing JSON on empty response

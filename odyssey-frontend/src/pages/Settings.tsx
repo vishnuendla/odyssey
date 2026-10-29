@@ -33,7 +33,6 @@ const Settings = () => {
   const handleDeleteAccount = () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       // In a real app, you would call an API to delete the account
-      console.log('Delete account');
       logout();
       navigate('/');
     }
@@ -41,7 +40,6 @@ const Settings = () => {
 
   const handleSettingChange = (setting: string, value: boolean) => {
     // In a real app, you would call an API to update the setting
-    console.log(`Setting changed: ${setting} = ${value}`);
     toast({
       description: `${setting} setting updated`,
     });
