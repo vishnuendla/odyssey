@@ -1,8 +1,8 @@
 # 🎨 Odyssey Frontend - Modern React TypeScript SPA
 
-**Odyssey Frontend** is a cutting-edge, production-ready single-page application built with **React 18**, **TypeScript**, and **Vite**. Featuring enterprise-grade performance optimizations, responsive design, and modern UI components for the ultimate travel journaling experience.
+**Odyssey Frontend** is the React 18 and TypeScript single-page application for creating and exploring travel journals.
 
-![React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue) ![Vite](https://img.shields.io/badge/Vite-5.0-purple) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-cyan)
+![React](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Vite](https://img.shields.io/badge/Vite-6-purple) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-cyan)
 
 ## 🚀 Quick Start
 
@@ -14,15 +14,15 @@
 ### Development Setup
 ```bash
 # Clone and navigate to frontend
-git clone https://github.com/usersaketh/odyssey.git
+git clone https://github.com/vishnuendla/odyssey.git
 cd odyssey/odyssey-frontend
 
-# Install dependencies
-npm install
+# Install the locked dependencies
+npm ci
 
 # Copy environment template
-cp .env.example .env
-# Edit .env with your API keys
+cp .env.example .env.local
+# Add your Geoapify key to .env.local. VITE_* values are visible in browser code.
 
 # Start development server with HMR
 npm run dev
@@ -39,13 +39,11 @@ npm run build
 # Preview production build locally
 npm run preview
 
-# Analyze bundle size
-npm run build -- --analyze
 ```
 
 **🌐 Development URLs:**
-- **Local**: http://localhost:5173
-- **Network**: http://your-ip:5173 (with --host flag)
+- **Local**: http://localhost:3000
+- **Network**: http://your-ip:3000 (with --host flag)
 - **Production Preview**: http://localhost:4173
 
 ## ✨ Latest Features & Updates
@@ -173,8 +171,7 @@ React 18 + TypeScript + Vite
 ├── 🎯 Routing: React Router v6
 ├── 🌙 Theme: next-themes
 ├── 📦 Build: Vite with optimizations
-├── 🧪 Testing: Vitest + Testing Library
-└── 📱 PWA: Vite PWA plugin
+└── 🧪 Checks: ESLint + TypeScript typecheck
 ```
 
 ## ⚡ Performance Optimizations
@@ -201,13 +198,9 @@ export default defineConfig({
 })
 ```
 
-### 📊 Performance Metrics
-| Metric | Before Optimization | After Optimization | Improvement |
-|--------|-------------------|-------------------|-------------|
-| **Bundle Size** | 2.5MB | 850KB | **66% smaller** |
-| **First Paint** | 2.8s | 0.9s | **68% faster** |
-| **Interactive** | 4.2s | 1.4s | **67% faster** |
-| **Lighthouse Score** | 72/100 | 96/100 | **24 points** |
+### 📊 Build Output
+
+The current production build emits a JavaScript chunk larger than Vite's 500 kB warning threshold. The project does not currently maintain Lighthouse or load-test results.
 
 ### 🔧 Optimization Features
 - **Code Splitting** - Automatic route-based and component-based splitting
@@ -221,21 +214,10 @@ export default defineConfig({
 
 ### Environment Variables (.env)
 ```bash
-# API Configuration
-VITE_API_BASE_URL=http://localhost:9090/api
-VITE_APP_NAME=Odyssey
-
-# Geoapify API
+# Geoapify key (browser-visible; restrict it in the provider console)
 VITE_GEOAPIFY_API_KEY=your_geoapify_api_key_here
-
-# Feature Flags
-VITE_ENABLE_DARK_MODE=true
-VITE_ENABLE_PWA=true
-VITE_ENABLE_ANALYTICS=false
-
-# Development
+# Optional development logging
 VITE_NODE_ENV=development
-VITE_DEV_MODE=true
 ```
 
 ### Tailwind Configuration (tailwind.config.ts)
@@ -262,34 +244,9 @@ export default {
 }
 ```
 
-### Vite Configuration (vite.config.ts)
-```typescript
-export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      }
-    })
-  ],
-  build: {
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react')) return 'react-vendor'
-            if (id.includes('leaflet')) return 'maps-vendor'
-            return 'vendor'
-          }
-        }
-      }
-    }
-  }
-})
-```
+### Vite Configuration
+
+Vite serves the app on port `3000`, uses `@` as an alias for `src/`, and proxies `/api` requests to `http://localhost:9090`. See [`vite.config.ts`](vite.config.ts) for the current configuration.
 
 ## 🎨 Design System
 
@@ -357,13 +314,12 @@ npm run build
 
 # Lint code
 npm run lint
+
+# Check TypeScript types
+npm run typecheck
 ```
 
-### Performance Monitoring
-- **Bundle Analyzer** - Visualize bundle composition
-- **Lighthouse CI** - Automated performance testing
-- **Web Vitals** - Core Web Vitals monitoring
-- **Error Tracking** - Sentry integration ready
+Automated frontend test files are not currently configured. GitHub Actions runs lint, typecheck, and the production build on pushes and pull requests to `dev` and `main`.
 
 ## 🌙 Dark Mode Implementation
 
@@ -410,6 +366,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](../LICENS
 
 Built with ❤️ using React 18 + TypeScript + Vite
 
-[🐛 Report Bug](https://github.com/usersaketh/odyssey/issues) • [💡 Request Feature](https://github.com/usersaketh/odyssey/issues)
+[🐛 Report Bug](https://github.com/vishnuendla/odyssey/issues) • [💡 Request Feature](https://github.com/vishnuendla/odyssey/issues)
 
 </div>
