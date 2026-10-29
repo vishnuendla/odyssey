@@ -1,6 +1,6 @@
 # 🌍 Odyssey - Modern Travel Journal Platform
 
-**Odyssey** is a cutting-edge, full-stack travel journal application that empowers travelers to document, share, and explore travel experiences with rich multimedia content, interactive maps, and advanced social features. Built with enterprise-grade architecture and optimized for production-scale performance.
+**Odyssey** is a full-stack travel journal application for documenting, sharing, and exploring travel experiences with images, location data, interactive maps, and community features.
 
 ## ✨ Latest Features & Updates
 
@@ -35,17 +35,11 @@
 - **⚡ Lightning Fast** - Optimized bundle sizes with Vite build system
 - **📊 Database Optimization** - Strategic indexes and connection pooling
 - **🗄️ Caching Strategy** - Multi-level caching for improved response times
-- **📈 Enterprise Scale** - Supports 2,000-5,000 concurrent users
 - **🔍 Smart Pagination** - Efficient handling of large datasets
 
-## 📊 Performance Metrics
+## 📊 Performance
 
-| Metric | Before Optimization | After Optimization | Improvement |
-|--------|-------------------|-------------------|-------------|
-| **Concurrent Users** | 50-200 | 2,000-5,000 | **25x** |
-| **Requests/Min** | 500-1K | 10K-20K | **20x** |
-| **Response Time** | 500ms+ | 50-200ms | **60% faster** |
-| **Database Queries** | N+1 problems | Optimized indexes | **80% faster** |
+The repository includes database indexes, pagination, and connection-pool settings. No load-test results or performance benchmarks are currently maintained.
 
 ## 🛠️ Technology Stack
 
@@ -58,7 +52,7 @@ React 18 + TypeScript + Vite
 ├── 📝 Forms: React Hook Form + Zod
 ├── 🔄 State: React Query + Context API
 ├── 🎯 Routing: React Router v6
-└── 📦 Build: Vite with optimizations
+└── 📦 Build: Vite 6
 ```
 
 ### Backend Architecture
@@ -69,7 +63,7 @@ Spring Boot 3.2.0 + Java 17
 ├── ⚡ Performance: HikariCP + Spring Cache
 ├── 🔧 Config: Production-ready settings
 ├── 📊 Monitoring: Optimized queries
-└── 🚀 Deployment: Production profiles
+└── 🚀 Deployment: Spring profiles
 ```
 
 ## 🏗️ Project Structure
@@ -118,34 +112,32 @@ odyssey/
 - **Git** for version control
 
 ### 🔧 Backend Setup
-```bash
+```powershell
 # Clone the repository
-git clone https://github.com/your-username/odyssey.git
+git clone https://github.com/vishnuendla/odyssey.git
 cd odyssey/odyssey-backend
 
-# Configure database (application.properties)
-spring.datasource.url=jdbc:mysql://localhost:3306/odyssey_db
-spring.datasource.username=your_username
-spring.datasource.password=your_password
+# Configure database credentials and generate a random JWT signing key.
+$env:DB_URL = "jdbc:mysql://localhost:3306/odyssey_db?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true"
+$env:DB_USERNAME = "root"
+$env:DB_PASSWORD = "your-local-mysql-password"
+$env:JWT_SECRET = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 
-# Install dependencies and run
-mvn clean install
+# Verify and run
+mvn --batch-mode verify
 mvn spring-boot:run
-
-# For production mode
-mvn spring-boot:run -Dspring.profiles.active=production
 ```
 
 ### 🎨 Frontend Setup
-```bash
+```powershell
 cd ../odyssey-frontend
 
-# Install dependencies
-npm install
+# Install the locked dependencies
+npm ci
 
 # Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
+Copy-Item .env.example .env.local
+# Add your Geoapify key to .env.local. VITE_* variables are included in browser code.
 
 # Start development server
 npm run dev
@@ -155,23 +147,43 @@ npm run build
 ```
 
 ### 🌐 Access the Application
-- **Frontend**: http://localhost:5173
+- **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:9090
-- **API Documentation**: http://localhost:9090/swagger-ui.html
 
 ## 🔧 Configuration
 
 ### Environment Variables
 ```bash
-# Frontend (.env)
-VITE_API_BASE_URL=http://localhost:9090/api
+# Frontend (.env.local)
 VITE_GEOAPIFY_API_KEY=your_geoapify_key
+VITE_NODE_ENV=development
 
-# Backend (application.properties)
-app.jwt.secret=your-jwt-secret-key
-app.jwt.expiration=86400000
-spring.profiles.active=development
+# Backend environment
+DB_URL=jdbc:mysql://localhost:3306/odyssey_db
+DB_USERNAME=your_database_user
+DB_PASSWORD=your_database_password
+JWT_SECRET=base64_encoded_random_key_at_least_32_bytes
+JWT_EXPIRATION=86400000
 ```
+
+Do not commit `.env` files or production credentials. Restrict the Geoapify key in its provider console because frontend keys are visible to browser users.
+
+## ✅ Checks and CI
+
+GitHub Actions runs frontend lint, TypeScript typecheck, and production build, plus backend Maven verification, for pushes and pull requests to `dev` and `main`.
+
+```bash
+cd odyssey-frontend
+npm ci
+npm run lint
+npm run typecheck
+npm run build
+
+cd ../odyssey-backend
+mvn --batch-mode --no-transfer-progress verify
+```
+
+There are currently no automated frontend or backend test files. Maven verification compiles and packages the backend but reports “No tests to run.”
 
 ### Database Setup
 ```sql
@@ -283,8 +295,8 @@ We welcome contributions! Please follow these steps:
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Follow coding standards**: ESLint for frontend, Checkstyle for backend
-4. **Add tests**: Ensure new features have adequate test coverage
+3. **Run the checks** listed above
+4. **Add tests** when introducing behavior that can be covered by automated tests
 5. **Commit changes**: `git commit -m 'Add amazing feature'`
 6. **Push to branch**: `git push origin feature/amazing-feature`
 7. **Open a Pull Request**: Describe your changes thoroughly
@@ -320,8 +332,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 📞 Support & Contact
 
 - **📧 Email**: Sakethdussa1234@gmail.com
-- **📱 Issues**: [GitHub Issues](https://github.com/usersaketh/odyssey/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/usersaketh/odyssey/discussions)
+- **📱 Issues**: [GitHub Issues](https://github.com/vishnuendla/odyssey/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/vishnuendla/odyssey/discussions)
 
 ---
 
