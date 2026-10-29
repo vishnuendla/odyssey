@@ -36,24 +36,17 @@ export const getLocationSuggestions = async (query: string): Promise<LocationSug
     return [];
   }
 
-  console.log('Searching for:', query); // Debug log
-
   try {
     const response = await fetch(
       `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&limit=8&apiKey=${GEOAPIFY_API_KEY}`
     );
-
-    console.log('API Response status:', response.status); // Debug log
 
     if (!response.ok) {
       throw new Error(`Geoapify API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('API Response data:', data); // Debug log
-    
     if (!data.features || !Array.isArray(data.features)) {
-      console.log('No features in response'); // Debug log
       return [];
     }
 
@@ -104,7 +97,6 @@ export const getLocationSuggestions = async (query: string): Promise<LocationSug
       }
     }
 
-    console.log('Returning suggestions:', uniqueResults); // Debug log
     return uniqueResults;
   } catch (error) {
     console.error('Error fetching location suggestions:', error);

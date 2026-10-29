@@ -62,6 +62,8 @@ Backend configuration variables:
 
 Frontend configuration uses `VITE_GEOAPIFY_API_KEY`. Vite embeds `VITE_*` values in browser assets, so restrict this key in Geoapify's settings. Keep `.env` files and production credentials out of Git. Use the checked-in `.env.example` as a template.
 
+The application currently has no Google Gemini or OpenRouter integration. If an AI provider is added, its API key must be configured as a backend environment variable and requests must go through the backend; never expose it through a `VITE_*` variable.
+
 Changing `JWT_SECRET` invalidates existing login tokens. Configure the new value in the deployment environment when rotating it.
 
 ## Checks and CI

@@ -29,7 +29,6 @@ export default function Navbar() {
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
-    console.log("user :",user?.avatar);
   };
 
   return (
