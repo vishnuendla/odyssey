@@ -1,6 +1,6 @@
 # 🚀 Odyssey Backend - Enterprise Spring Boot API
 
-**Odyssey Backend** is a high-performance, production-ready REST API service built with **Spring Boot 3.2.0** and **Java 17**. Designed to handle enterprise-scale traffic with advanced security, optimized performance, and modern architectural patterns.
+**Odyssey Backend** is the Spring Boot 3.2 REST API for Odyssey, built with **Java 17**, Spring Security, JPA, and MySQL.
 
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen) ![Java](https://img.shields.io/badge/Java-17-orange) ![MySQL](https://img.shields.io/badge/MySQL-8.0-blue) ![JWT](https://img.shields.io/badge/JWT-Security-red)
 
@@ -13,19 +13,25 @@
 - **Git** for version control
 
 ### Development Setup
-```bash
+```powershell
 # Clone and navigate to backend
-git clone https://github.com/usersaketh/odyssey.git
+git clone https://github.com/vishnuendla/odyssey.git
 cd odyssey/odyssey-backend
 
-# Build the project
-mvn clean install
+# Configure the database and JWT secret through environment variables.
+$env:DB_URL = "jdbc:mysql://localhost:3306/odyssey_db"
+$env:DB_USERNAME = "root"
+$env:DB_PASSWORD = "your-local-mysql-password"
+$env:JWT_SECRET = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+
+# Verify and run
+mvn --batch-mode --no-transfer-progress verify
 
 # Run in development mode
 mvn spring-boot:run
 
-# Run with specific profile
-mvn spring-boot:run -Dspring.profiles.active=development
+# Run with the production profile after setting production DB and JWT environment variables
+mvn spring-boot:run -Dspring-boot.run.profiles=production
 ```
 
 ### Production Deployment
@@ -40,18 +46,14 @@ java -jar target/odyssey-backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=pro
 java -Xmx2g -Xms1g -XX:+UseG1GC -jar target/odyssey-backend-0.0.1-SNAPSHOT.jar
 ```
 
-**🌐 Server URLs:**
-- **Development**: http://localhost:9090
-- **API Docs**: http://localhost:9090/swagger-ui.html
-- **Health Check**: http://localhost:9090/actuator/health
+The API listens on http://localhost:9090 by default. Swagger UI and Spring Boot Actuator are not configured in this repository.
 
 ## ✨ Latest Features & Updates
 
 ### 🆕 Recent Enhancements
 - **🔧 Spring Security 6** - Modern lambda-based configuration with enhanced JWT security
 - **📊 Database Optimization** - Strategic indexes for 80% faster queries
-- **⚡ Performance Tuning** - HikariCP connection pooling supporting 2,000-5,000 concurrent users
-- **🏢 Production Configuration** - Comprehensive production profiles and monitoring
+- **⚙️ Configuration** - Database and JWT credentials supplied through environment variables
 - **🔐 Enhanced Authentication** - Cookie-based JWT tokens with automatic refresh
 - **📍 Location Services** - Optimized geocoding and location search endpoints
 
@@ -134,42 +136,14 @@ Spring Boot 3.2.0 + Java 17
 ├── 🗄️ Database: MySQL 8 + JPA/Hibernate
 ├── ⚡ Performance: HikariCP + Caching
 ├── 📝 Validation: Hibernate Validator
-├── 📊 Monitoring: Spring Boot Actuator
+├── 📦 Packaging: Spring Boot Maven plugin
 └── 🔧 Build: Maven 3.9+
 
 ```
 
-## 📊 Performance Optimizations
+## 📊 Performance
 
-### 🗄️ Database Layer
-```sql
--- Strategic indexes for optimal performance
-CREATE INDEX idx_journals_user_id ON journals(user_id);
-CREATE INDEX idx_journals_created_at ON journals(created_at);
-CREATE INDEX idx_journals_location ON journals(latitude, longitude);
-CREATE INDEX idx_journals_public ON journals(is_public);
-CREATE INDEX idx_comments_journal_id ON comments(journal_id);
-CREATE INDEX idx_users_email ON users(email);
-```
-
-### ⚡ Connection Pooling (HikariCP)
-```properties
-# Optimized for high concurrency
-spring.datasource.hikari.maximum-pool-size=20
-spring.datasource.hikari.minimum-idle=10
-spring.datasource.hikari.connection-timeout=30000
-spring.datasource.hikari.idle-timeout=600000
-spring.datasource.hikari.max-lifetime=1800000
-spring.datasource.hikari.leak-detection-threshold=60000
-```
-
-### 🚀 Performance Metrics
-| Metric | Before Optimization | After Optimization | Improvement |
-|--------|-------------------|-------------------|-------------|
-| **Concurrent Users** | 50-200 | 2,000-5,000 | **25x** |
-| **Requests/Min** | 500-1K | 10K-20K | **20x** |
-| **Response Time** | 500ms+ | 50-200ms | **60% faster** |
-| **Database Queries** | N+1 problems | Optimized indexes | **80% faster** |
+Connection-pool and database-index configuration is included, but this repository does not currently include load tests or verified performance benchmarks.
 
 ## 🔧 Configuration
 
@@ -179,20 +153,20 @@ spring.datasource.hikari.leak-detection-threshold=60000
 server.port=9090
 server.servlet.context-path=/
 
-# Database Configuration
-spring.datasource.url=jdbc:mysql://localhost:3306/odyssey_db
-spring.datasource.username=your_username
-spring.datasource.password=your_password
+# Database credentials are supplied via DB_URL, DB_USERNAME, and DB_PASSWORD.
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/odyssey_db?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true}
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JWT_SECRET is required; JWT_EXPIRATION defaults to one day (milliseconds).
+app.jwt.secret=${JWT_SECRET}
+app.jwt.expiration=${JWT_EXPIRATION:86400000}
 
 # JPA Configuration
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
-
-# JWT Configuration
-app.jwt.secret=your-jwt-secret-key-here
-app.jwt.expiration=86400000
 
 # File Upload Configuration
 spring.servlet.multipart.max-file-size=10MB
@@ -206,14 +180,8 @@ server.port=9090
 logging.level.org.springframework.security=WARN
 logging.level.com.odyssey=INFO
 
-# Production Database
-spring.datasource.url=jdbc:mysql://your-production-db:3306/odyssey_prod
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.show-sql=false
-
-# Security Configuration
-app.jwt.secret=${JWT_SECRET:your-production-jwt-secret}
-app.jwt.expiration=86400000
+# Database credentials and JWT_SECRET are supplied through environment variables.
+# JWT_EXPIRATION is optional; its default is 86400000 milliseconds.
 
 # Performance Tuning
 spring.datasource.hikari.maximum-pool-size=20
@@ -288,24 +256,11 @@ GET    /api/users/{id}/journals   # Get user's public journals
 
 ### Run Tests
 ```bash
-# Run all tests
-mvn test
-
-# Run with coverage
-mvn test jacoco:report
-
-# Run integration tests
-mvn test -Dtest=**/*IntegrationTest
-
-# Run specific test class
-mvn test -Dtest=AuthControllerTest
+# Compile, run available tests, and package
+mvn --batch-mode --no-transfer-progress verify
 ```
 
-### Test Coverage
-- **Unit Tests** - Service layer and utilities
-- **Integration Tests** - Controller and repository layers
-- **Security Tests** - Authentication and authorization
-- **Performance Tests** - Load testing with JMeter
+There are currently no backend test sources, so Maven reports “No tests to run.” GitHub Actions runs this verification on pushes and pull requests to `dev` and `main`.
 
 ## 🚀 Deployment
 
@@ -335,35 +290,20 @@ docker build -t odyssey-backend .
 docker run -p 9090:9090 odyssey-backend
 ```
 
-## 📊 Monitoring & Health
-
-### Health Endpoints
-```http
-GET /actuator/health           # Application health
-GET /actuator/info             # Application info
-GET /actuator/metrics          # Application metrics
-```
-
-### Performance Monitoring
-- **Database Connection Pool** - HikariCP metrics
-- **Request/Response Times** - Spring Boot Actuator
-- **Memory Usage** - JVM metrics
-- **Error Rates** - Exception tracking
-
 ## 🤝 Contributing
 
 ### Development Workflow
 1. **Fork the repository**
 2. **Create feature branch**: `git checkout -b feature/new-feature`
-3. **Follow coding standards**: Checkstyle configuration included
-4. **Add tests**: Maintain test coverage above 80%
+3. **Run** `mvn --batch-mode --no-transfer-progress verify`
+4. **Add tests** for new behavior when practical
 5. **Commit changes**: `git commit -m 'Add new feature'`
 6. **Push to branch**: `git push origin feature/new-feature`
 7. **Create Pull Request**
 
 ### Code Quality
 - **Code Style**: Google Java Style Guide
-- **Testing**: JUnit 5 + Mockito for unit tests
+- **Testing**: Maven Surefire (no test sources are present yet)
 - **Documentation**: Javadoc for public APIs
 - **Security**: OWASP guidelines compliance
 
@@ -380,6 +320,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](../LICENS
 
 Built with ❤️ using Spring Boot 3.2.0
 
-[📚 API Docs](http://localhost:9090/swagger-ui.html) • [🐛 Report Bug](https://github.com/usersaketh/odyssey/issues) • [💡 Request Feature](https://github.com/your-username/odyssey/issues)
+[🐛 Report Bug](https://github.com/vishnuendla/odyssey/issues) • [💡 Request Feature](https://github.com/vishnuendla/odyssey/issues)
 
 </div>

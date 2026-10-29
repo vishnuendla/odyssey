@@ -8,32 +8,8 @@ import FeaturedJournals from '@/components/home/FeaturedJournals';
 import MapPreview from '@/components/home/MapPreview';
 import CallToAction from '@/components/home/CallToAction';
 import { Skeleton } from '@/components/ui/skeleton';
-import {useEffect,useState} from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import {journalApi} from '@/services/api'
-
-
 const HomePage = () => {
-  const { journals, isLoading } = useJournal();
-  const [demoJournals, setDemoJournals] = useState([]);
-  const { user } = useAuth();
-  
-    useEffect(() => {
-        const fetchJournals = async () => {
-          try {
-            const data = await journalApi.getPublicJournals();
-            const filtered = data.filter(journal => journal.userId !== user?.id);
-            setDemoJournals(filtered);
-          } catch (error) {
-            console.error('Error fetching journals:', error);
-          }
-        };
-        fetchJournals();
-      }, []);
-  const featuredJournals = demoJournals
-    .filter(journal => journal.isPublic)
-    .sort(() => 0.5 - Math.random()) // Simple randomization
-    .slice(0, 3);
+  const { isLoading } = useJournal();
     
   return (
     <>
@@ -68,7 +44,7 @@ const HomePage = () => {
             </div>
           </section>
         ) : (
-          <FeaturedJournals journals={featuredJournals} />
+          <FeaturedJournals />
         )}
         <Features />
         <MapPreview />

@@ -56,10 +56,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         description: `Welcome back, ${user.name}!`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
-        description: error.message || 'Login failed',
+        description: error instanceof Error ? error.message : 'Login failed',
       });
       throw error;
     } finally {
@@ -76,10 +76,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         description: `Welcome to Odyssey, ${name}!`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
-        description: error.message || 'Registration failed',
+        description: error instanceof Error ? error.message : 'Registration failed',
       });
       throw error;
     } finally {

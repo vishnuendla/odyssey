@@ -60,11 +60,7 @@ export const JournalProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setIsLoading(true);
       const publicJournals = await journalApi.getPublicJournals();
-      // Handle paginated response - extract content array
-      const journalsArray = Array.isArray(publicJournals) 
-        ? publicJournals 
-        : (publicJournals as any)?.content || [];
-      setJournals(journalsArray);
+      setJournals(publicJournals);
       setError(null);
     } catch (error) {
       setError('Failed to fetch public journals');
