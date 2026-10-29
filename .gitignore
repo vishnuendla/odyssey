@@ -1,0 +1,13 @@
+# Node
+node_modules/
+odyssey-frontend/dist/
+
+# Java / Maven
+odyssey-backend/target/
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+*.log
+.idea/
