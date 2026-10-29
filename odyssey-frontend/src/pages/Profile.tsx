@@ -96,7 +96,6 @@ const Profile = () => {
         location: data.location || user?.location,
       };
       const response = await journalApi.updateUserProfile(user?.id,updatedData);
-      console.log('Profile update data:', updatedData);
       
       await new Promise(resolve => setTimeout(resolve, 1000));
       

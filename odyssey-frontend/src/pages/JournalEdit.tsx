@@ -189,7 +189,6 @@ const JournalEdit = () => {
   };
 
   const onSubmit = async (data: JournalFormValues) => {
-    console.log('onSubmit called with:', data);
     if (!id || !user) return;
     setSubmitting(true);
     try {
@@ -213,7 +212,6 @@ const JournalEdit = () => {
           : undefined,
         images: [...existingImages, ...imageUrls],
       };
-      console.log('Sending updatedData:', updatedData);
       await journalApi.updateJournal(id, updatedData);
       toast({
         description: 'Journal updated successfully',
@@ -268,7 +266,6 @@ const JournalEdit = () => {
                             placeholder="Journal title" 
                             {...field}
                             onChange={(e) => {
-                              console.log('Title changed to:', e.target.value);
                               field.onChange(e);
                             }}
                           />
@@ -290,7 +287,6 @@ const JournalEdit = () => {
                             className="min-h-[200px]"
                             {...field}
                             onChange={(e) => {
-                              console.log('Content changed to:', e.target.value);
                               field.onChange(e);
                             }}
                           />
@@ -309,7 +305,6 @@ const JournalEdit = () => {
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={(checked) => {
-                              console.log('isPublic changed to:', checked);
                               field.onChange(checked);
                             }}
                           />
@@ -486,11 +481,6 @@ const JournalEdit = () => {
                   type="submit" 
                   disabled={submitting}
                   onClick={(e) => {
-                    console.log('Submit button clicked');
-                    console.log('Form errors:', form.formState.errors);
-                    console.log('Form values:', form.getValues());
-                    console.log('Form dirty fields:', form.formState.dirtyFields);
-                    console.log('Form is valid:', form.formState.isValid);
                   }}
                 >
                   {submitting ? (

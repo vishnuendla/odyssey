@@ -36,9 +36,7 @@ import {
 const API_BASE_URL = '/api';
 
 const JournalView = () => {
-  console.log('JournalView component rendering');
   const { id } = useParams<{ id: string }>();
-  console.log('Journal ID from params:', id);
   
   const [journal, setJournal] = useState<JournalEntry | null>(null);
   const [author, setAuthor] = useState<User | null>(null);
@@ -52,23 +50,19 @@ const JournalView = () => {
   const { deleteJournal } = useJournal();
 
   useEffect(() => {
-    console.log('useEffect triggered');
     const fetchJournal = async () => {
       if (!id) {
-        console.log('No ID provided');
         setError('No journal ID provided');
         setLoading(false);
         return;
       }
       
       try {
-        console.log('Fetching journal with ID:', id);
         setLoading(true);
         setError(null);
         const response = await fetch(`${API_BASE_URL}/journals/${id}`, {
           credentials: 'include'
         });
-        console.log('Response status:', response.status);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Failed to load journal' }));
@@ -76,7 +70,6 @@ const JournalView = () => {
         }
         
         const journalData = await response.json();
-        console.log('Journal data received:', journalData);
         setJournal(journalData);
         
         // Fetch author information
@@ -172,10 +165,8 @@ const JournalView = () => {
     }
   };
 
-  console.log('Current state:', { loading, error, journal });
 
   if (loading) {
-    console.log('Rendering loading state');
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -190,7 +181,6 @@ const JournalView = () => {
   }
 
   if (error || !journal) {
-    console.log('Rendering error state:', error);
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -207,7 +197,6 @@ const JournalView = () => {
     );
   }
 
-  console.log('Rendering journal content');
   const isOwner = user?.id === journal.userId;
   const formattedDate = new Date(journal.createdAt).toLocaleDateString();
   const formattedTime = new Date(journal.createdAt).toLocaleTimeString();
