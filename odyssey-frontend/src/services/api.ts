@@ -79,9 +79,9 @@ export const searchLocations = async (query: string): Promise<Location[]> => {
 
   if (!response.ok) throw new Error('Failed to fetch locations');
 
-  const results = await response.json();
+  const results: Array<{ display_name: string; lat: string; lon: string; address: { country?: string; city?: string; town?: string; village?: string } }> = await response.json();
 
-  return results.map((item: any) => ({
+  return results.map((item) => ({
     name: item.display_name,
     latitude: parseFloat(item.lat),
     longitude: parseFloat(item.lon),
