@@ -89,3 +89,12 @@ There are currently no automated frontend or backend test files. Maven verificat
 - `odyssey-backend/` — Spring Boot application and Maven build
 - `database_indexes.sql` — optional database index definitions
 - `.github/workflows/ci.yml` — CI checks
+- `LICENSE` — GNU General Public License v3.0
+
+## License
+
+Odyssey is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License v3.0 as published by the Free Software Foundation.
+
+- Full license text: see [`LICENSE`](./LICENSE)
+- Copyright (C) 2026 vishnuendla
+- Learn more: <https://www.gnu.org/licenses/gpl-3.0.html>
