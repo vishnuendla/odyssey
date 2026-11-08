@@ -72,12 +72,20 @@ const JournalView = () => {
         const journalData = await response.json();
         setJournal(journalData);
         
-        // Fetch author information
-        try {
-          const authorData = await accountApi.getUser(journalData.userId);
-          setAuthor(authorData);
-        } catch (error) {
-          console.error('Failed to fetch author information:', error);
+        // Use author info included in the journal payload; fall back to a
+        // dedicated lookup only when it is missing (and we are signed in,
+        // since that endpoint requires authentication).
+        if (journalData.userName) {
+          setAuthor({ id: journalData.userId, name: journalData.userName, avatar: journalData.userAvatar } as User);
+        } else if (isAuthenticated) {
+          try {
+            const authorData = await accountApi.getUser(journalData.userId);
+            setAuthor(authorData);
+          } catch (error) {
+            console.error('Failed to fetch author information:', error);
+            setAuthor(null);
+          }
+        } else {
           setAuthor(null);
         }
       } catch (error) {
@@ -93,7 +101,7 @@ const JournalView = () => {
     };
   
     fetchJournal();
-  }, [id, toast]);
+  }, [id, toast, isAuthenticated]);
 
   const handleViewMap = () => {
     if (!journal?.location) return;

@@ -5,6 +5,7 @@ import com.odyssey.security.JwtAuthenticationFilter;
 import com.odyssey.security.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,6 +34,15 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/journals/public").permitAll()
+                // Public journal image files are referenced by URL in journal entries,
+                // which anonymous visitors must be able to load.
+                .requestMatchers(HttpMethod.GET, "/api/storage/files/*").permitAll()
+                // Individual journal pages are publicly viewable when the journal is public,
+                // so the lookup endpoint must accept anonymous GETs. The service enforces
+                // that private journals stay visible to their owner only.
+                // "/my" is kept ahead of the "/*" matcher so it stays authenticated.
+                .requestMatchers(HttpMethod.GET, "/api/journals/my").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/journals/*").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(new JwtAuthenticationFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class)

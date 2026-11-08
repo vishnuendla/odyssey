@@ -34,23 +34,34 @@ const ExplorePage = () => {
         const filtered = data.filter(journal => journal.userId !== user?.id);
         setDemoJournals(filtered);
 
-        // Fetch user information for all unique authors
-        const userIds = [...new Set(filtered.map(journal => journal.userId))];
-        const userInfoPromises = userIds.map(async (userId) => {
+        // Build author info from journal data first, then fall back to
+        // per-author fetches only for entries that are missing it.
+        const userMapEntries: Record<string, User> = {};
+        const missingIds = new Set<string>();
+        for (const journal of filtered) {
+          if (journal.userName) {
+            userMapEntries[journal.userId] = { id: journal.userId, name: journal.userName, avatar: journal.userAvatar } as User;
+          } else {
+            missingIds.add(journal.userId);
+          }
+        }
+
+        // Fetch user information for authors without inline data
+        const userInfoPromises = [...missingIds].map(async (userId) => {
           try {
             const userInfo = await accountApi.getUser(userId);
             return { id: userId, ...userInfo };
           } catch (error) {
             console.error(`Failed to fetch user info for ${userId}:`, error);
-            return { id: userId, name: 'Anonymous' };
+            return { id: userId, name: 'Anonymous', email: '', createdAt: '' } as User;
           }
         });
 
         const userInfos = await Promise.all(userInfoPromises);
-        const newUserMap = userInfos.reduce((acc, user) => ({
+        const newUserMap = userInfos.reduce<Record<string, User>>((acc, user) => ({
           ...acc,
           [user.id]: user
-        }), {});
+        }), { ...userMapEntries });
         
         setUserMap(newUserMap);
       } catch (error) {
