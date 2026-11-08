@@ -26,7 +26,7 @@ const JournalCard = memo(({
 }: JournalCardProps) => {
   const reactionCount = journal.reactions?.reduce((acc, r) => acc + r.count, 0) ?? 0;
   const commentCount = journal.comments?.length ?? 0;
-  const coverImage = journal.images?.[0] || '/placeholder-journal.jpg';
+  const coverImage = journal.images?.[0] || '/placeholder.svg';
 
   return (
     <Link to={`/journals/${journal.id}`} className="block">

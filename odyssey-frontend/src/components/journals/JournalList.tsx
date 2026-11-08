@@ -123,8 +123,8 @@ export default function JournalList({
           <JournalCard
             key={journal.id}
             journal={journal}
-            userName={userMap[journal.userId]?.name || 'Anonymous'}
-            userAvatar={userMap[journal.userId]?.avatar}
+            userName={userMap[journal.userId]?.name || journal.userName || 'Anonymous'}
+            userAvatar={userMap[journal.userId]?.avatar || journal.userAvatar}
           />
         ))}
       </div>

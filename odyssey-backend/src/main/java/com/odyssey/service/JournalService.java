@@ -81,7 +81,8 @@ public class JournalService {
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
         
-        if (!journal.isPublic() && !journal.getUser().getEmail().equals(userEmail)) {
+        boolean isOwner = userEmail != null && journal.getUser().getEmail().equals(userEmail);
+        if (!journal.isPublic() && !isOwner) {
             throw new UnauthorizedException("You do not have permission to view this journal");
         }
         
@@ -102,7 +103,6 @@ public class JournalService {
 
     @Transactional
     public JournalDto createJournal(JournalRequest journalRequest, String userEmail) {
-        System.out.println("Journal Request: " + journalRequest.getIsPublic());
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         
@@ -212,6 +212,8 @@ public class JournalService {
         dto.setCreatedAt(journal.getCreatedAt());
         dto.setUpdatedAt(journal.getUpdatedAt());
         dto.setUserId(journal.getUser().getId());
+        dto.setUserName(journal.getUser().getName());
+        dto.setUserAvatar(journal.getUser().getAvatar());
         
         // Set location
         if (journal.getLocation() != null) {

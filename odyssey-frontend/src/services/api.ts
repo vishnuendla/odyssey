@@ -109,7 +109,9 @@ export const authApi = {
       body: JSON.stringify({ name, email, password }),
       credentials: 'include'
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    // Backend returns {user, token}; extract just the user
+    return (data as { user: User; token: string }).user ?? data;
   },
   
   logout: async (): Promise<void> => {

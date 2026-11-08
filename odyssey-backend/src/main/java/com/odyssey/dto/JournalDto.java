@@ -13,6 +13,8 @@ public class JournalDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String userId;
+    private String userName;
+    private String userAvatar;
     private LocationDto location;
     private List<String> images = new ArrayList<>();
     private List<CommentDto> comments = new ArrayList<>();
@@ -73,6 +75,22 @@ public class JournalDto {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getUserAvatar() {
+        return userAvatar;
+    }
+
+    public void setUserAvatar(String userAvatar) {
+        this.userAvatar = userAvatar;
     }
 
     public LocationDto getLocation() {

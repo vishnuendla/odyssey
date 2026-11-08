@@ -16,6 +16,8 @@ export interface JournalEntry {
   createdAt: string;
   updatedAt: string;
   userId: string;
+  userName?: string;
+  userAvatar?: string;
   isPublic: boolean;
   location?: Location;
   images?: string[];

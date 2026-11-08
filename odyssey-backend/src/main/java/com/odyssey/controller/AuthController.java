@@ -72,13 +72,16 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
-        // Clear the auth cookie
-        Cookie cookie = new Cookie("auth_token", null);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
-        
+        // Clear the auth cookie. The JWT cookie is "odyssey-token" (see addAuthCookie);
+        // "auth_token" is cleared too for older sessions.
+        for (String cookieName : new String[] { "odyssey-token", "auth_token" }) {
+            Cookie cookie = new Cookie(cookieName, null);
+            cookie.setHttpOnly(true);
+            cookie.setPath("/");
+            cookie.setMaxAge(0);
+            response.addCookie(cookie);
+        }
+
         return ResponseEntity.ok().build();
     }
 
@@ -88,7 +91,7 @@ public class AuthController {
         Cookie cookie = new Cookie("odyssey-token", token); // Match name in resolveToken()
         cookie.setHttpOnly(true);
         cookie.setPath("/");
-        cookie.setMaxAge(86400); // 1 hour
+        cookie.setMaxAge(86400); // 1 day
         response.addCookie(cookie);
     }
     
