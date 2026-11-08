@@ -158,11 +158,9 @@ const CreateJournalForm = () => {
         imageUrls = await journalApi.uploadImages(uploadedFiles);
       }
       
-      const journalLocation: Location = selectedLocation || {
-        name: 'Unknown location',
-        latitude: 0,
-        longitude: 0,
-      };
+      // A journal can have no location. Only send one when the user picked a
+      // place; otherwise the backend would store a bogus 0,0 coordinate.
+      const journalLocation: Location | undefined = selectedLocation || undefined;
       
       await createJournal({
         title: data.title,
@@ -185,8 +183,8 @@ const CreateJournalForm = () => {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="w-full">
+      <div className="w-full">
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="sm" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4 mr-2" />
