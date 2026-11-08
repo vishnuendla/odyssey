@@ -55,7 +55,9 @@ public class JournalController {
     public ResponseEntity<JournalDto> getJournalById(
             @PathVariable String id, 
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(journalService.getJournalById(id, userDetails.getUsername()));
+        // Anonymous visitors may view public journals (see SecurityConfig).
+        String userEmail = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(journalService.getJournalById(id, userEmail));
     }
 
     @PostMapping
@@ -93,8 +95,6 @@ public class JournalController {
             @PathVariable String id,
             @RequestBody UserDto userDetails
     ) {
-        System.out.println("Updating user with ID: " + id);
-        System.out.println("User details: " + userDetails);
         UserDto updatedUser = journalService.updateUser(id, userDetails);
         return ResponseEntity.ok(updatedUser);
     }
