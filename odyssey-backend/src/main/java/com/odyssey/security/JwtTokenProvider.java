@@ -1,91 +1,104 @@
-
 package com.odyssey.security;
 
 import com.odyssey.config.JwtConfig;
-import io.jsonwebtoken.*;
+import com.odyssey.entity.User;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Cookie;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
 
+    public static final String ACCESS_COOKIE = "odyssey-token";
+    public static final String REFRESH_COOKIE = "odyssey-refresh";
+
     private final JwtConfig jwtConfig;
-    private final UserDetailsService userDetailsService;
     private final SecretKey secretKey;
 
-    public JwtTokenProvider(JwtConfig jwtConfig, UserDetailsService userDetailsService) {
+    public JwtTokenProvider(JwtConfig jwtConfig) {
         this.jwtConfig = jwtConfig;
-        this.userDetailsService = userDetailsService;
         this.secretKey = Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
-    public String createToken(String username) {
-        Claims claims = Jwts.claims().setSubject(username);
+    public String createAccessToken(User user) {
         Date now = new Date();
-        Date validity = new Date(now.getTime() + jwtConfig.getExpiration());
+        Date expiry = new Date(now.getTime() + jwtConfig.getAccessExpiration());
 
         return Jwts.builder()
-                .setClaims(claims)
+                .setSubject(user.getEmail())
+                .setIssuer(jwtConfig.getIssuer())
+                .setAudience(jwtConfig.getAudience())
+                .setId(UUID.randomUUID().toString())
+                .claim("uid", user.getId())
+                .claim("tv", user.getTokenVersion())
                 .setIssuedAt(now)
-                .setExpiration(validity)
+                .setExpiration(expiry)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public Authentication getAuthentication(String token) {
-        UserDetails userDetails = this.userDetailsService.loadUserByUsername(getUsername(token));
-        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+    /**
+     * Parses and validates the access token, returning null for anything that is
+     * expired, malformed, or signed with a different key.
+     */
+    public Claims parseAccessToken(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(secretKey)
+                    .requireIssuer(jwtConfig.getIssuer())
+                    .requireAudience(jwtConfig.getAudience())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
     }
 
-    public String getUsername(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
-    }
-
-    public String resolveToken(HttpServletRequest request) {
-        // 1. First try to read from Authorization header
+    public String resolveAccessToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
-    
-        // 2. If not found, check cookies
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("odyssey-token".equals(cookie.getName())) { // Use your actual cookie name
-                    return cookie.getValue();
-                }
+        return readCookie(request, ACCESS_COOKIE);
+    }
+
+    public String resolveRefreshToken(HttpServletRequest request) {
+        return readCookie(request, REFRESH_COOKIE);
+    }
+
+    public String readCookie(HttpServletRequest request, String name) {
+        if (request.getCookies() == null) {
+            return null;
+        }
+        for (Cookie cookie : request.getCookies()) {
+            if (name.equals(cookie.getName()) && StringUtils.hasText(cookie.getValue())) {
+                return cookie.getValue();
             }
         }
-    
         return null;
     }
-    
 
-    public boolean validateToken(String token) {
-        try {
-            Jws<Claims> claims = Jwts.parserBuilder()
-                    .setSigningKey(secretKey)
-                    .build()
-                    .parseClaimsJws(token);
-            return !claims.getBody().getExpiration().before(new Date());
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
+    public long getAccessExpirationMs() {
+        return jwtConfig.getAccessExpiration();
+    }
+
+    public long refreshExpirationMs(boolean rememberMe) {
+        return rememberMe ? jwtConfig.getRememberMeRefreshExpiration() : jwtConfig.getRefreshExpiration();
+    }
+
+    public JwtConfig getJwtConfig() {
+        return jwtConfig;
     }
 }

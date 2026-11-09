@@ -1,14 +1,29 @@
 
 package com.odyssey.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class JournalRequest {
+
+    @NotBlank(message = "Title is required")
+    @Size(max = 150, message = "Title must be 150 characters or less")
     private String title;
+
+    @NotBlank(message = "Content is required")
+    @Size(max = 50000, message = "Content is too long")
     private String content;
+
     private boolean isPublic;
+
+    @Valid
     private LocationDto location;
+
+    @Size(max = 10, message = "You can attach at most 10 images")
     private List<String> images = new ArrayList<>();
 
     // Getters and setters

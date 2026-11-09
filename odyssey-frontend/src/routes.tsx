@@ -5,6 +5,11 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
+import VerifyEmail from '@/pages/VerifyEmail';
+import CheckEmail from '@/pages/CheckEmail';
+import Security from '@/pages/Security';
 import Journals from '@/pages/Journals';
 import Explore from '@/pages/Explore';
 import MapView from '@/pages/MapView';
@@ -25,6 +30,10 @@ export const AppRoutes = () => (
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<ProtectedRoute requireAuth={false}><Login /></ProtectedRoute>} />
     <Route path="/register" element={<ProtectedRoute requireAuth={false}><Register /></ProtectedRoute>} />
+    <Route path="/forgot-password" element={<ProtectedRoute requireAuth={false}><ForgotPassword /></ProtectedRoute>} />
+    <Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/verify-email" element={<VerifyEmail />} />
+    <Route path="/check-email" element={<CheckEmail />} />
     <Route path="/journals" element={<ProtectedRoute><Journals /></ProtectedRoute>} />
     <Route path="/explore" element={<Explore />} />
     <Route path="/map" element={<MapView />} />
@@ -34,6 +43,7 @@ export const AppRoutes = () => (
     <Route path="/journal/edit/:id" element={<ProtectedRoute><JournalEdit /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+    <Route path="/security" element={<ProtectedRoute><Security /></ProtectedRoute>} />
     <Route path="/about" element={<About />} />
     <Route path="/privacy" element={<PrivacyPolicy />} />
     <Route path="/terms" element={<TermsOfService />} />

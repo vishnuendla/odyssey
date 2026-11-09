@@ -13,6 +13,7 @@ import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/storage")
@@ -35,10 +36,16 @@ public class StorageController {
     @GetMapping("/files/{fileName:.+}")
     public ResponseEntity<Resource> getFile(@PathVariable String fileName) {
         try {
+            if (fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+                return ResponseEntity.notFound().build();
+            }
             Path filePath = fileStorageLocation.resolve(fileName).normalize();
+            if (!filePath.startsWith(fileStorageLocation)) {
+                return ResponseEntity.notFound().build();
+            }
             Resource resource = new UrlResource(filePath.toUri());
             
-            if (resource.exists()) {
+            if (resource.exists() && resource.isReadable()) {
                 String contentType = determineContentType(fileName);
                 
                 return ResponseEntity.ok()
@@ -53,12 +60,15 @@ public class StorageController {
     }
 
     private String determineContentType(String fileName) {
-        if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
             return "image/jpeg";
-        } else if (fileName.endsWith(".png")) {
+        } else if (lower.endsWith(".png")) {
             return "image/png";
-        } else if (fileName.endsWith(".gif")) {
+        } else if (lower.endsWith(".gif")) {
             return "image/gif";
+        } else if (lower.endsWith(".webp")) {
+            return "image/webp";
         } else {
             return "application/octet-stream";
         }
