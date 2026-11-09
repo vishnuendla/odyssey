@@ -16,7 +16,7 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 - **Explore** — a public feed of every public journal with search, location filters and recent/oldest/popular sorting.
 - **Social interactions** — reactions and comments on journals, with author names and avatars.
 - **Sharing** — shareable links for public journals, and visibility control (public vs private) per entry.
-- **Accounts** — email/password registration and JWT authentication stored in an HTTP-only cookie.
+- **Accounts** — email/password registration with server-side validation, email verification, password reset, and session management. Access tokens live in short-lived HttpOnly cookies; rotating refresh tokens can be reviewed and revoked from the Security page.
 - **Dark mode and responsive layout** — usable from a phone to a desktop.
 
 ## Screenshots
@@ -65,7 +65,9 @@ $env:JWT_SECRET  = [Convert]::ToBase64String([Security.Cryptography.RandomNumber
 mvn spring-boot:run
 ```
 
-The backend starts on <http://localhost:9090> and creates the `odyssey_db` database and tables on first run (`createDatabaseIfNotExist=true` plus Hibernate `ddl-auto=update`).
+The backend starts on <http://localhost:9090> and creates the `odyssey_db` database on first run (`createDatabaseIfNotExist=true`). Schema changes are applied by Flyway migrations in `src/main/resources/db/migration`, and Hibernate validates the schema rather than altering it.
+
+Email is not required for local development: with the default `MAIL_MODE=log`, verification and password-reset links are printed to the backend console instead of being sent. Copy the link into your browser to complete the flow.
 
 ### 2. Frontend
 
@@ -87,32 +89,59 @@ Open <http://localhost:3000>. Vite proxies `/api` requests to the backend on por
 | `DB_USERNAME` | backend | no | Database user, defaults to `root` |
 | `DB_PASSWORD` | backend | yes | Database password |
 | `JWT_SECRET` | backend | yes | HMAC key for signing tokens, at least 32 bytes |
-| `JWT_EXPIRATION` | backend | no | Token lifetime in ms, defaults to one day |
+| `JWT_ACCESS_EXPIRATION` | backend | no | Access-token lifetime in ms, defaults to 15 minutes |
+| `JWT_REFRESH_EXPIRATION` | backend | no | Refresh-token lifetime in ms, defaults to 7 days |
+| `JWT_REMEMBER_REFRESH_EXPIRATION` | backend | no | Refresh-token lifetime for "keep me signed in", defaults to 30 days |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | backend | no | Token `iss`/`aud` claims, default to `odyssey` / `odyssey-web` |
+| `COOKIE_SECURE` | backend | no | Set to `true` to mark auth cookies `Secure` (required behind HTTPS) |
+| `CORS_ALLOWED_ORIGINS` | backend | no | Comma-separated origins allowed to call the API, defaults to local Vite origins |
+| `FRONTEND_URL` | backend | no | Base URL used in verification and reset email links, defaults to `http://localhost:3000` |
+| `MAIL_MODE` | backend | no | `log` (default) prints email links to the console; `smtp` sends them |
+| `MAIL_FROM` | backend | no | From address for transactional email |
+| `MAIL_HOST` / `MAIL_PORT` | backend | no | SMTP host and port when `MAIL_MODE=smtp` |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | backend | no | SMTP credentials when `MAIL_MODE=smtp` |
+| `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | backend | no | SMTP auth and STARTTLS toggles, default to `false` |
 | `VITE_GEOAPIFY_API_KEY` | frontend | yes | Location autocomplete and geocoding |
 
 `VITE_*` values are embedded in the browser bundle, so treat the Geoapify key as public and restrict it in the Geoapify dashboard. Never put provider secrets in a `VITE_*` variable — backend-only keys belong in backend environment variables.
 
 ## API overview
 
+All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` cookie. The SPA bootstraps it from `GET /api/auth/csrf` and handles this automatically.
+
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| POST | `/api/auth/register` | public | Create an account |
-| POST | `/api/auth/login` | public | Sign in and receive the `odyssey-token` cookie |
-| POST | `/api/auth/logout` | public | Clear the auth cookie |
-| GET | `/api/auth/me` | user | Current profile |
-| GET | `/api/auth/users/{id}` | user | Author profile |
+| GET | `/api/auth/csrf` | public | Issue a CSRF token cookie |
+| POST | `/api/auth/register` | public | Create an account and start a session |
+| POST | `/api/auth/login` | public | Sign in (optional `rememberMe`) |
+| POST | `/api/auth/refresh` | public | Rotate the refresh cookie and issue a new access token |
+| POST | `/api/auth/logout` | public | End the current session |
+| POST | `/api/auth/logout-all` | user | End every session for the account |
+| GET | `/api/auth/me` | user | Current profile (includes `emailVerified`) |
+| GET | `/api/auth/users/{id}` | public | Public author card (never includes email) |
+| PUT | `/api/auth/profile` | user | Update name, avatar, bio or location |
+| GET | `/api/auth/sessions` | user | Active sessions with device and IP hints |
+| DELETE | `/api/auth/sessions/{id}` | user | Revoke one session |
+| POST | `/api/auth/change-password` | user | Change password and sign out other devices |
+| POST | `/api/auth/forgot-password` | public | Send a reset link (enumeration-safe response) |
+| POST | `/api/auth/reset-password` | public | Consume a reset token and set a new password |
+| POST | `/api/auth/verify-email` | public | Consume an email verification token |
+| POST | `/api/auth/resend-verification` | user | Resend the verification email |
+| DELETE | `/api/auth/account` | user | Permanently delete the account and its data |
 | GET | `/api/journals` | user | All journals |
 | GET | `/api/journals/public` | public | Paged public journals |
 | GET | `/api/journals/my` | user | Journals owned by the caller |
 | GET | `/api/journals/{id}` | public | Single journal (private entries visible to the owner only) |
-| POST | `/api/journals` | user | Create a journal |
-| PUT | `/api/journals/{id}` | user | Update a journal |
+| POST | `/api/journals` | verified user | Create a journal |
+| PUT | `/api/journals/{id}` | verified user | Update a journal |
 | DELETE | `/api/journals/{id}` | user | Delete a journal |
 | GET | `/api/journals/{id}/reactions` | user | Reaction summary |
-| POST | `/api/journals/{id}/comments` | user | Add a comment |
+| POST | `/api/journals/{id}/comments` | verified user | Add a comment |
 | POST | `/api/storage/upload` | user | Upload journal images |
 | GET | `/api/storage/files/{file}` | public | Serve an uploaded image |
 | GET | `/api/locations/search?q=` | user | Location search |
+
+Unverified accounts can browse and edit their profile, but publishing journals and commenting stay locked until the email address is confirmed.
 
 ## Project structure
 
@@ -122,11 +151,14 @@ odyssey/
 │   ├── src/main/java/com/odyssey/
 │   │   ├── config/           Security, CORS, JWT and cache configuration
 │   │   ├── controller/       REST endpoints
-│   │   ├── dto/              Request/response models
+│   │   ├── dto/              Request/response models with validation rules
 │   │   ├── entity/           JPA entities
+│   │   ├── exception/        Error envelope and exception handlers
 │   │   ├── repository/       Spring Data repositories
-│   │   ├── security/         JWT filter and providers
-│   │   └── service/          Business logic
+│   │   ├── security/         JWT auth, CSRF and password hashing
+│   │   └── service/          Business logic, mail, rate limiting and audits
+│   ├── src/main/resources/db/migration/  Flyway schema migrations
+│   ├── src/test/             Auth integration tests (H2)
 │   └── uploads/              Uploaded journal images
 ├── odyssey-frontend/         React application
 │   └── src/
@@ -155,12 +187,15 @@ Set-Location ../odyssey-backend
 mvn --batch-mode --no-transfer-progress verify
 ```
 
-There are currently no automated frontend or backend test files; Maven verification compiles and packages the backend.
+There are no frontend unit tests; the backend has an auth integration suite (`AuthFlowIntegrationTest`) that covers registration, validation envelopes, CSRF enforcement, refresh-token rotation and reuse detection, verification gating, password changes and account deletion.
 
 ## Troubleshooting
 
 - **`invalid flag: --release`** while building the backend — Maven is running on JDK 8. Point `JAVA_HOME` at a JDK 17+ installation.
 - **`Access denied for user 'root'@'localhost'`** — set `DB_PASSWORD` to your local MySQL password before starting the backend.
+- **`Schema-validation: wrong column type`** on startup — the database was created by an older build. Delete the `odyssey_db` schema (or run the migrations by hand) and start the backend again.
+- **No verification or reset email arrives** — this is expected in local development. With `MAIL_MODE=log` the link is printed in the backend console; copy it into the browser.
+- **`403` for a form submission** — the CSRF cookie is missing or blocked. Allow cookies for the site and reload the page.
 - **A journal card shows the placeholder graphic** — that entry has no photo, or its uploaded file is missing from `odyssey-backend/uploads/`. Missing images fall back to `public/placeholder.svg` instead of a broken-image icon.
 - **Location search returns nothing** — `VITE_GEOAPIFY_API_KEY` is missing or restricted in `.env.local`; restart Vite after changing env values.
 - **`401`/`403` on private pages after changing `JWT_SECRET`** — old cookies are invalid, sign in again.
