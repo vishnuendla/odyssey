@@ -2,9 +2,9 @@ package com.odyssey.controller;
 
 import com.odyssey.dto.JournalDto;
 import com.odyssey.dto.JournalRequest;
-import com.odyssey.dto.UserDto;
 import com.odyssey.service.JournalService;
 
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,7 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-@CrossOrigin(origins = "*")
+
 @RestController
 @RequestMapping("/api/journals")
 public class JournalController {
@@ -62,7 +62,7 @@ public class JournalController {
 
     @PostMapping
     public ResponseEntity<JournalDto> createJournal(
-            @RequestBody JournalRequest journalRequest, 
+            @Valid @RequestBody JournalRequest journalRequest, 
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(journalService.createJournal(journalRequest, userDetails.getUsername()));
     }
@@ -77,7 +77,7 @@ public class JournalController {
     @PutMapping("/{id}")
     public ResponseEntity<JournalDto> updateJournal(
             @PathVariable String id, 
-            @RequestBody JournalRequest journalRequest, 
+            @Valid @RequestBody JournalRequest journalRequest, 
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(journalService.updateJournal(id, journalRequest, userDetails.getUsername()));
     }
@@ -88,14 +88,5 @@ public class JournalController {
             @AuthenticationPrincipal UserDetails userDetails) {
         journalService.deleteJournal(id, userDetails.getUsername());
         return ResponseEntity.ok().build();
-    }
-
-    @PutMapping("/update/{id}")
-    public ResponseEntity<UserDto> updateUser(
-            @PathVariable String id,
-            @RequestBody UserDto userDetails
-    ) {
-        UserDto updatedUser = journalService.updateUser(id, userDetails);
-        return ResponseEntity.ok(updatedUser);
     }
 }

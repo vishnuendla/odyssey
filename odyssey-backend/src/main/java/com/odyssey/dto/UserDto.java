@@ -9,6 +9,7 @@ public class UserDto {
     private String email;
     private String avatar;
     private LocalDateTime createdAt;
+    private boolean emailVerified;
     private String bio;
 
     public String getBio() {
@@ -59,6 +60,14 @@ public class UserDto {
 
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public LocalDateTime getCreatedAt() {

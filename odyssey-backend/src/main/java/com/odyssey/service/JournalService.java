@@ -2,6 +2,7 @@ package com.odyssey.service;
 
 import com.odyssey.dto.*;
 import com.odyssey.entity.*;
+import com.odyssey.exception.ForbiddenException;
 import com.odyssey.exception.ResourceNotFoundException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.*;
@@ -34,40 +35,20 @@ public class JournalService {
         this.imageRepository = imageRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<JournalDto> getAllJournals() {
         return journalRepository.findAll().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Page<JournalDto> getPublicJournals(Pageable pageable) {
         Page<Journal> journalPage = journalRepository.findByIsPublicTrue(pageable);
         return journalPage.map(this::convertToDto);
     }
 
-    public UserDto updateUser(String id, UserDto request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UnauthorizedException("User not found"));
-    
-        user.setName(request.getName() != null ? request.getName() : user.getName());
-        user.setAvatar(request.getAvatar() != null ? request.getAvatar() : user.getAvatar());
-        user.setBio(request.getBio() != null ? request.getBio() : user.getBio());
-        user.setLocation(request.getLocation() != null ? request.getLocation() : user.getLocation());
-    
-        return convertUserToDto(userRepository.save(user));
-    }
-    
-        private UserDto convertUserToDto(User user) {
-            UserDto userDto = new UserDto();
-            userDto.setId(user.getId());
-            userDto.setName(user.getName());
-            userDto.setEmail(user.getEmail());
-            userDto.setBio(user.getBio());
-            userDto.setLocation(user.getLocation());
-            userDto.setAvatar(user.getAvatar());
-            return userDto;
-    }
-
+    @Transactional(readOnly = true)
     public List<JournalDto> getUserJournals(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
@@ -77,6 +58,7 @@ public class JournalService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public JournalDto getJournalById(String id, String userEmail) {
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
@@ -89,6 +71,7 @@ public class JournalService {
         return convertToDto(journal);
     }
 
+    @Transactional(readOnly = true)
     public JournalDto shareJournal(String id, String userEmail) {
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
@@ -105,6 +88,7 @@ public class JournalService {
     public JournalDto createJournal(JournalRequest journalRequest, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
+        requireVerified(user);
         
         Journal journal = new Journal();
         journal.setTitle(journalRequest.getTitle());
@@ -151,6 +135,7 @@ public class JournalService {
         if (!journal.getUser().getEmail().equals(userEmail)) {
             throw new UnauthorizedException("You do not have permission to update this journal");
         }
+        requireVerified(journal.getUser());
         
         journal.setTitle(journalRequest.getTitle());
         journal.setContent(journalRequest.getContent());
@@ -256,5 +241,12 @@ public class JournalService {
         dto.setReactions(reactionSummaries);
         
         return dto;
+    }
+
+    private void requireVerified(User user) {
+        if (!user.isEmailVerified()) {
+            throw new ForbiddenException("Please verify your email address before publishing journals. "
+                    + "Check your inbox for the verification link.");
+        }
     }
 }

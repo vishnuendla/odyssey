@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTheme } from '@/contexts/ThemeContext';
+import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,6 +33,7 @@ export default function Navbar() {
   };
 
   return (
+    <>
     <nav className="bg-background border-b shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
@@ -196,5 +198,7 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+    <EmailVerificationBanner />
+    </>
   );
 }

@@ -6,6 +6,7 @@ export interface User {
   createdAt: string;
   bio?: string;
   location?: string;
+  emailVerified?: boolean;
   journalsCount?: number;
 }
 
