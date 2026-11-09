@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { useToast } from '@/hooks/use-toast';
 import { authApi } from '@/services/api';
@@ -7,9 +7,13 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  register: (name: string, email: string, password: string, acceptTerms?: boolean) => Promise<void>;
+  logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
+  updateUser: (user: User) => void;
+  refreshUser: () => Promise<void>;
+  clearSession: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,60 +32,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  const clearSession = useCallback(() => {
+    setUser(null);
+    setIsAuthenticated(false);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const currentUser = await authApi.getCurrentUser();
+    setUser(currentUser);
+    setIsAuthenticated(true);
+  }, []);
+
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const currentUser = await authApi.getCurrentUser();
-        setUser(currentUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        // Session is invalid or expired
-        setUser(null);
-        setIsAuthenticated(false);
+        // The API client transparently refreshes an expired access token using
+        // the rotating refresh cookie, so this also restores long sessions.
+        await refreshUser();
+      } catch {
+        clearSession();
       } finally {
         setIsLoading(false);
       }
     };
 
     checkSession();
-  }, []);
+  }, [clearSession, refreshUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe = false) => {
     setIsLoading(true);
     try {
-      const { user, token } = await authApi.login(email, password);
-      // Remove localStorage token storage
-      setUser(user);
+      const loggedInUser = await authApi.login(email, password, rememberMe);
+      setUser(loggedInUser);
       setIsAuthenticated(true);
       toast({
-        description: `Welcome back, ${user.name}!`,
+        description: `Welcome back, ${loggedInUser.name}!`,
       });
-    } catch (error: unknown) {
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : 'Login failed',
-      });
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, acceptTerms = true) => {
     setIsLoading(true);
     try {
-      const newUser = await authApi.register(name, email, password);
+      const newUser = await authApi.register(name, email, password, acceptTerms);
       setUser(newUser);
       setIsAuthenticated(true);
       toast({
-        description: `Welcome to Odyssey, ${name}!`,
+        description: `Welcome to Odyssey, ${newUser.name}!`,
       });
-    } catch (error: unknown) {
-      toast({
-        variant: "destructive",
-        description: error instanceof Error ? error.message : 'Registration failed',
-      });
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -90,18 +90,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await authApi.logout();
-      // Clear any remaining auth state
-      setUser(null);
-      setIsAuthenticated(false);
-      toast({
-        description: 'You have been logged out',
-      });
     } catch (error) {
-      console.error("Error logging out", error);
-      // Still clear local state even if server logout fails
-      setUser(null);
-      setIsAuthenticated(false);
+      console.error('Error logging out', error);
+    } finally {
+      clearSession();
+      toast({ description: 'You have been logged out' });
     }
+  };
+
+  const logoutAll = async () => {
+    await authApi.logoutAll();
+    clearSession();
+    toast({ description: 'You have been signed out on all devices' });
+  };
+
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    setIsAuthenticated(true);
   };
 
   const value = {
@@ -111,6 +116,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     logout,
+    logoutAll,
+    updateUser,
+    refreshUser,
+    clearSession,
   };
 
   return (

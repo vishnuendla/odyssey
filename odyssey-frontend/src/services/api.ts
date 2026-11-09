@@ -1,79 +1,212 @@
-import { User, JournalEntry, Location } from '@/types';
+import { User, JournalEntry, Location, Comment as JournalComment } from '@/types';
 
-// Base API URL - using the proxy configuration from vite.config.ts
+// All backend calls go through the Vite proxy, so cookies stay first-party.
 const API_BASE_URL = '/api';
+const TIMEOUT_DURATION = 15000;
 
+interface ErrorEnvelope {
+  message?: string;
+  errors?: Record<string, string> | null;
+}
 
-// Helper function to handle API responses
-const handleResponse = async (response: Response) => {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
-    
-    // Handle specific HTTP status codes
-    switch (response.status) {
-      case 401:
-        throw new Error('Authentication required. Please log in.');
-      case 403:
-        throw new Error('You do not have permission to perform this action.');
-      case 404:
-        throw new Error('The requested resource was not found.');
-      case 413:
-        throw new Error('The file size is too large.');
-      case 429:
-        throw new Error('Too many requests. Please try again later.');
-      default:
-        throw new Error(error.message || `API error: ${response.status}`);
-    }
+export class ApiError extends Error {
+  readonly status: number;
+  readonly fieldErrors: Record<string, string>;
+
+  constructor(message: string, status: number, fieldErrors?: Record<string, string> | null) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.fieldErrors = fieldErrors ?? {};
   }
-  return response.json();
-};
+}
 
-// Add request timeout
-const TIMEOUT_DURATION = 10000; // 10 seconds
+interface CsrfToken {
+  token: string;
+  headerName: string;
+}
 
-const fetchWithTimeout = async (url: string, options: RequestInit = {}) => {
+let csrfToken: CsrfToken | null = null;
+let csrfRequest: Promise<CsrfToken> | null = null;
+let refreshRequest: Promise<boolean> | null = null;
+
+async function loadCsrfToken(): Promise<CsrfToken> {
+  if (csrfToken) {
+    return csrfToken;
+  }
+  if (!csrfRequest) {
+    csrfRequest = fetch(`${API_BASE_URL}/auth/csrf`, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new ApiError('Could not start a secure session. Please refresh the page.', response.status);
+        }
+        const data = (await response.json()) as CsrfToken;
+        csrfToken = data;
+        return data;
+      })
+      .finally(() => {
+        csrfRequest = null;
+      });
+  }
+  return csrfRequest;
+}
+
+function isMutation(method: string): boolean {
+  return !['GET', 'HEAD', 'OPTIONS'].includes(method);
+}
+
+/**
+ * Reads the double-submit cookie directly so a token rotated by the server is
+ * never stale, even if this tab has been open for a long time.
+ */
+function readCsrfCookie(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+async function csrfHeader(): Promise<Record<string, string>> {
+  const cookieToken = readCsrfCookie();
+  if (cookieToken) {
+    return { 'X-XSRF-TOKEN': cookieToken };
+  }
+  const token = await loadCsrfToken();
+  return { [token.headerName]: token.token };
+}
+
+const NO_REFRESH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/verify-email',
+  '/auth/csrf',
+];
+
+async function performFetch(path: string, options: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_DURATION);
-
   try {
-    const response = await fetch(url, {
+    return await fetch(`${API_BASE_URL}${path}`, {
       ...options,
+      credentials: 'include',
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
-    return response;
   } catch (error) {
-    clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Request timed out. Please try again.');
+      throw new ApiError('Request timed out. Please try again.', 0);
     }
-    throw error;
+    throw new ApiError('Could not reach Odyssey. Check your connection and try again.', 0);
+  } finally {
+    clearTimeout(timeoutId);
   }
-};
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
+
+  if (!response.ok) {
+    const envelope = (data ?? {}) as ErrorEnvelope;
+    throw new ApiError(
+      envelope.message || fallbackMessage(response.status),
+      response.status,
+      envelope.errors
+    );
+  }
+
+  return data as T;
+}
+
+function fallbackMessage(status: number): string {
+  switch (status) {
+    case 401:
+      return 'Authentication required. Please log in.';
+    case 403:
+      return 'You do not have permission to perform this action.';
+    case 404:
+      return 'The requested resource was not found.';
+    case 413:
+      return 'The file size is too large.';
+    case 429:
+      return 'Too many requests. Please try again later.';
+    default:
+      return `API error: ${status}`;
+  }
+}
+
+async function attemptRefresh(): Promise<boolean> {
+  if (!refreshRequest) {
+    refreshRequest = (async () => {
+      try {
+        const tokenHeaders = await csrfHeader();
+        const response = await performFetch('/auth/refresh', {
+          method: 'POST',
+          headers: tokenHeaders,
+        });
+        return response.ok;
+      } catch {
+        return false;
+      } finally {
+        refreshRequest = null;
+      }
+    })();
+  }
+  return refreshRequest;
+}
+
+async function apiRequest<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  const headers = new Headers(options.headers);
+
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (isMutation(method)) {
+    const tokenHeaders = await csrfHeader();
+    Object.entries(tokenHeaders).forEach(([name, value]) => headers.set(name, value));
+  }
+
+  let response = await performFetch(path, { ...options, headers });
+
+  if (response.status === 401 && retry && !NO_REFRESH_PATHS.includes(path)) {
+    if (await attemptRefresh()) {
+      response = await performFetch(path, { ...options, headers });
+    }
+  }
+
+  return parseResponse<T>(response);
+}
 
 export const accountApi = {
   getUser: async (userId: string): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/auth/users/${userId}`, {
-      credentials: 'include'
-    });
-    return handleResponse(response);
+    const user = await apiRequest<Omit<User, 'email'> & { email?: string }>(`/auth/users/${userId}`);
+    return { ...user, email: user.email ?? '' };
   },
-  deleteUser: async (userId: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-    return handleResponse(response);
-  },
-  
-}
+};
 
 export const searchLocations = async (query: string): Promise<Location[]> => {
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`;
 
   const response = await fetch(url, {
     headers: {
-      'Accept': 'application/json',
+      Accept: 'application/json',
     },
   });
 
@@ -90,186 +223,189 @@ export const searchLocations = async (query: string): Promise<Location[]> => {
   }));
 };
 
+export interface SessionInfo {
+  id: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  expiresAt: string;
+  userAgent?: string;
+  ipAddress?: string;
+  current: boolean;
+}
+
 // Auth API calls
 export const authApi = {
-  login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  login: async (email: string, password: string, rememberMe = false): Promise<User> => {
+    const data = await apiRequest<{ user: User }>('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-      credentials: 'include'
+      body: JSON.stringify({ email, password, rememberMe }),
     });
-    return handleResponse(response);
+    return data.user;
   },
-  
-  register: async (name: string, email: string, password: string): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+
+  register: async (name: string, email: string, password: string, acceptTerms = true): Promise<User> => {
+    const data = await apiRequest<{ user: User }>('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-      credentials: 'include'
+      body: JSON.stringify({ name, email, password, acceptTerms }),
     });
-    const data = await handleResponse(response);
-    // Backend returns {user, token}; extract just the user
-    return (data as { user: User; token: string }).user ?? data;
+    return data.user;
   },
-  
+
   logout: async (): Promise<void> => {
-    await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include'
+    await apiRequest<void>('/auth/logout', { method: 'POST' });
+  },
+
+  logoutAll: async (): Promise<void> => {
+    await apiRequest<void>('/auth/logout-all', { method: 'POST' });
+  },
+
+  getCurrentUser: async (): Promise<User> => {
+    return apiRequest<User>('/auth/me');
+  },
+
+  updateProfile: async (profile: Partial<Pick<User, 'name' | 'avatar' | 'bio' | 'location'>>): Promise<User> => {
+    return apiRequest<User>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profile),
     });
   },
-  
-  getCurrentUser: async (): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      credentials: 'include'
+
+  forgotPassword: async (email: string): Promise<string> => {
+    const data = await apiRequest<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
-    return handleResponse(response);
-  }
+    return data.message;
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<string> => {
+    const data = await apiRequest<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+    return data.message;
+  },
+
+  verifyEmail: async (token: string): Promise<string> => {
+    const data = await apiRequest<{ message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+    return data.message;
+  },
+
+  resendVerification: async (): Promise<string> => {
+    const data = await apiRequest<{ message: string }>('/auth/resend-verification', { method: 'POST' });
+    return data.message;
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string): Promise<User> => {
+    const data = await apiRequest<{ user: User }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    return data.user;
+  },
+
+  deleteAccount: async (password: string, confirmation: string): Promise<string> => {
+    const data = await apiRequest<{ message: string }>('/auth/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password, confirmation }),
+    });
+    return data.message;
+  },
+
+  getSessions: async (): Promise<SessionInfo[]> => {
+    return apiRequest<SessionInfo[]>('/auth/sessions');
+  },
+
+  revokeSession: async (sessionId: string): Promise<void> => {
+    await apiRequest<void>(`/auth/sessions/${sessionId}`, { method: 'DELETE' });
+  },
 };
 
 // Journal API calls
 export const journalApi = {
   getAllJournals: async (): Promise<JournalEntry[]> => {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/journals`, {
-      credentials: 'include'
-    });
-    return handleResponse(response);
+    return apiRequest<JournalEntry[]>('/journals');
   },
-  updateUserProfile: async (userId: string, profileData: Partial<User>): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/journals/update/${userId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profileData),
-      credentials: 'include'
-    });
-    return handleResponse(response);
-  },
+
   getPublicJournals: async (): Promise<JournalEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/journals/public`, {
-      credentials: 'include'
-    });
-    const data = await handleResponse(response);
-    // Backend returns paginated response, extract content array
+    const data = await apiRequest<JournalEntry[] | { content: JournalEntry[] }>('/journals/public');
     return Array.isArray(data) ? data : data.content || [];
   },
-  
+
   getUserJournals: async (): Promise<JournalEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/journals/my`, {
-      credentials: 'include'
-    });
-    return handleResponse(response);
+    return apiRequest<JournalEntry[]>('/journals/my');
   },
-  
+
   getJournalById: async (id: string): Promise<JournalEntry> => {
-    const response = await fetch(`${API_BASE_URL}/journals/${id}`, {
-      credentials: 'include'
-    });
-    return handleResponse(response);
+    return apiRequest<JournalEntry>(`/journals/${id}`);
   },
-  
+
   createJournal: async (journalData: Omit<JournalEntry, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'reactions' | 'comments'>): Promise<JournalEntry> => {
-    const response = await fetch(`${API_BASE_URL}/journals`, {
+    return apiRequest<JournalEntry>('/journals', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(journalData),
-      credentials: 'include'
     });
-    return handleResponse(response);
   },
-  
+
   updateJournal: async (id: string, journalData: Partial<JournalEntry>): Promise<JournalEntry> => {
-    const response = await fetch(`${API_BASE_URL}/journals/${id}`, {
+    return apiRequest<JournalEntry>(`/journals/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(journalData),
-      credentials: 'include'
     });
-    return handleResponse(response);
   },
-  
-  deleteJournal: async (id: string) => {
-    const res = await fetch(`${API_BASE_URL}/journals/${id}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-  
-    if (!res.ok) {
-      const errorText = await res.text(); // Avoid parsing JSON on empty response
-      throw new Error(errorText || 'Failed to delete journal');
-    }
-  
-    return true; // No data expected from DELETE
+
+  deleteJournal: async (id: string): Promise<boolean> => {
+    await apiRequest<void>(`/journals/${id}`, { method: 'DELETE' });
+    return true;
   },
-  
-  // Image upload endpoint
+
   uploadImages: async (files: File[]): Promise<string[]> => {
-    // Validate all files before upload
     files.forEach(validateFile);
 
     const formData = new FormData();
     files.forEach(file => {
       formData.append('images', file);
     });
-    
-    const response = await fetchWithTimeout(`${API_BASE_URL}/storage/upload`, {
+
+    return apiRequest<string[]>('/storage/upload', {
       method: 'POST',
       body: formData,
-      credentials: 'include'
     });
-    return handleResponse(response);
   },
-  
-  // Location search endpoint
+
   searchLocations: async (query: string): Promise<Location[]> => {
-    const response = await fetch(`${API_BASE_URL}/locations/search?q=${encodeURIComponent(query)}`, {
-      credentials: 'include'
-    });
-    return handleResponse(response);
-  }
+    return apiRequest<Location[]>(`/locations/search?q=${encodeURIComponent(query)}`);
+  },
 };
 
 // Comment and reaction API calls
 export const socialApi = {
-  addComment: async (journalId: string, content: string): Promise<Comment> => {
-    const response = await fetch(`${API_BASE_URL}/journals/${journalId}/comments`, {
+  addComment: async (journalId: string, content: string): Promise<JournalComment> => {
+    return apiRequest<JournalComment>(`/journals/${journalId}/comments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
-      credentials: 'include'
     });
-    return handleResponse(response);
   },
-  
+
   deleteComment: async (journalId: string, commentId: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/journals/${journalId}/comments/${commentId}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-    return handleResponse(response);
+    await apiRequest<void>(`/journals/${journalId}/comments/${commentId}`, { method: 'DELETE' });
   },
-  
+
   addReaction: async (journalId: string, reactionType: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/journals/${journalId}/reactions`, {
+    await apiRequest<void>(`/journals/${journalId}/reactions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: reactionType }),
-      credentials: 'include'
     });
-    return handleResponse(response);
   },
-  
+
   removeReaction: async (journalId: string, reactionType: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/journals/${journalId}/reactions/${reactionType}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-    return handleResponse(response);
-  }
+    await apiRequest<void>(`/journals/${journalId}/reactions/${reactionType}`, { method: 'DELETE' });
+  },
 };
 
-// Add file validation
 const validateFile = (file: File) => {
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif'];

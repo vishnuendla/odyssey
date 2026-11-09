@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Camera, Settings, MapPin, Mail, Calendar, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { journalApi } from '@/services/api';
+import { authApi, journalApi } from '@/services/api';
 import { useEffect, useState } from 'react';
 
 const profileSchema = z.object({
@@ -34,7 +34,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const Profile = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, updateUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [JournalsCount, setDemoJournals] = useState<number>(0);
@@ -89,16 +89,21 @@ const Profile = () => {
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
     try {
-      const updatedData = {
+      const response = await authApi.updateProfile({
         name: data.name,
-        avatar: data.avatar || user?.avatar,
-        bio: data.bio || user?.bio,
-        location: data.location || user?.location,
-      };
-      const response = await journalApi.updateUserProfile(user?.id,updatedData);
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+        avatar: data.avatar || '',
+        bio: data.bio || '',
+        location: data.location || '',
+      });
+      updateUser(response);
+      form.reset({
+        name: response.name,
+        avatar: response.avatar || '',
+        bio: response.bio || '',
+        location: response.location || '',
+      });
+      setPreviewUrl(response.avatar || null);
+
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
@@ -108,7 +113,7 @@ const Profile = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update profile. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -164,7 +169,7 @@ const Profile = () => {
                   src={previewUrl || user?.avatar} 
                   alt={user?.name} 
                 />
-                <AvatarFallback className="text-4xl bg-primary/10">{user?.avatar}</AvatarFallback>
+                <AvatarFallback className="text-4xl bg-primary/10">{user?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
               
               <h2 className="text-2xl font-bold mt-2">{form.watch('name') || user.name}</h2>
@@ -302,7 +307,15 @@ const Profile = () => {
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={() => form.reset()}
+                      onClick={() => {
+                        form.reset({
+                          name: user.name,
+                          avatar: user.avatar || '',
+                          bio: user.bio || '',
+                          location: user.location || '',
+                        });
+                        setPreviewUrl(user.avatar || null);
+                      }}
                     >
                       <X className="mr-2 h-4 w-4" />
                       Cancel
