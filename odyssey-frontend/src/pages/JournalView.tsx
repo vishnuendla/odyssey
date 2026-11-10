@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { 
+  Bookmark,
   Calendar, 
   Clock, 
   Edit, 
@@ -153,6 +154,30 @@ const JournalView = () => {
     }
   };
 
+  const handleToggleBookmark = async () => {
+    if (!journal || !id) return;
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const updated = journal.bookmarked
+        ? await journalApi.removeBookmark(id)
+        : await journalApi.addBookmark(id);
+      setJournal(updated);
+      toast({
+        description: updated.bookmarked ? 'Journal saved to your bookmarks.' : 'Bookmark removed.',
+      });
+    } catch (error) {
+      console.error('Failed to update bookmark:', error);
+      toast({
+        variant: 'destructive',
+        description: 'Could not update your bookmark. Please try again.',
+      });
+    }
+  };
+
   const handleDeleteJournal = async () => {
     if (!id || !journal || journal.userId !== user?.id) return;
     
@@ -230,6 +255,12 @@ const JournalView = () => {
                   </Button>
                 </div>
               )}
+              {isAuthenticated && journal.isPublic && (
+                <Button variant="outline" size="sm" onClick={handleToggleBookmark}>
+                  <Bookmark className={`h-4 w-4 mr-2 ${journal.bookmarked ? 'fill-current' : ''}`} />
+                  {journal.bookmarked ? 'Saved' : 'Save'}
+                </Button>
+              )}
               <ShareJournal journalId={journal.id} title={journal.title} />
             </div>
           </div>
@@ -246,7 +277,15 @@ const JournalView = () => {
             </div>
             <div className="flex items-center">
               <UserIcon className="h-4 w-4 mr-1" />
-              <span>By: {author?.name || 'Anonymous'}</span>
+              <span>
+                By:{' '}
+                <Link
+                  to={`/users/${journal.userId}`}
+                  className="font-medium text-foreground hover:text-primary"
+                >
+                  {author?.name || journal.userName || 'Anonymous'}
+                </Link>
+              </span>
             </div>
             <div className="flex items-center">
               <Globe className="h-4 w-4 mr-1" />
@@ -259,6 +298,20 @@ const JournalView = () => {
               </div>
             )}
           </div>
+
+          {journal.tags && journal.tags.length > 0 && (
+            <div className="mb-6 flex flex-wrap gap-2">
+              {journal.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  to={`/explore?tag=${encodeURIComponent(tag)}`}
+                  className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary hover:bg-primary/20"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          )}
           
           {/* Journal content */}
           <Card className="mb-8">

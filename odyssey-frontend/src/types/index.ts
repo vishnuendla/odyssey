@@ -22,6 +22,8 @@ export interface JournalEntry {
   isPublic: boolean;
   location?: Location;
   images?: string[];
+  tags?: string[];
+  bookmarked?: boolean;
   reactions: Array<{
     type: string;
     count: number;

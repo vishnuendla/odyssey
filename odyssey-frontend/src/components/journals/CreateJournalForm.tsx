@@ -43,6 +43,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const MIN_SEARCH_LENGTH = 3; // Minimum characters before searching
+const MAX_TAGS = 8;
 
 const CreateJournalForm = () => {
   const { createJournal } = useJournal();
@@ -53,6 +54,33 @@ const CreateJournalForm = () => {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+
+  const addTag = () => {
+    const value = tagInput.trim().toLowerCase();
+    if (!value) return;
+    if (tags.includes(value)) {
+      setTagInput('');
+      return;
+    }
+    if (tags.length >= MAX_TAGS) {
+      toast({
+        variant: 'destructive',
+        description: `You can add up to ${MAX_TAGS} tags.`,
+      });
+      return;
+    }
+    setTags((prev) => [...prev, value]);
+    setTagInput('');
+  };
+
+  const handleTagKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addTag();
+    }
+  };
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -167,7 +195,8 @@ const CreateJournalForm = () => {
         content: data.content,
         isPublic: data.isPublic,
         location: journalLocation,
-        images: imageUrls, 
+        images: imageUrls,
+        tags,
       });
       
       navigate('/journals');
@@ -225,6 +254,51 @@ const CreateJournalForm = () => {
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel>Tags</FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder="Add a tag and press Enter"
+                  maxLength={30}
+                  disabled={isSubmitting || tags.length >= MAX_TAGS}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addTag}
+                  disabled={isSubmitting || !tagInput.trim() || tags.length >= MAX_TAGS}
+                >
+                  Add
+                </Button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary"
+                    >
+                      #{tag}
+                      <button
+                        type="button"
+                        onClick={() => setTags((prev) => prev.filter((value) => value !== tag))}
+                        className="rounded-full hover:bg-primary/20"
+                        aria-label={`Remove ${tag} tag`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <FormDescription>
+                Add up to {MAX_TAGS} tags so other travelers can discover your journal.
+              </FormDescription>
+            </FormItem>
 
             <FormField
               control={form.control}

@@ -108,7 +108,7 @@ export default function JournalList({
       <div className="text-center py-12">
         <p className="text-muted-foreground mb-4">{emptyMessage}</p>
         {!explore && (
-          <Button onClick={() => navigate('/journals/new')}>
+          <Button onClick={() => navigate('/create')}>
             Create your first journal
           </Button>
         )}

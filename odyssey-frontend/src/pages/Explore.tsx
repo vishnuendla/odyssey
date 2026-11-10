@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useJournal } from '@/contexts/JournalContext';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import JournalList from '@/components/journals/JournalList';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { journalApi, accountApi } from '@/services/api';
+import { journalApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@/types';
+import { JournalEntry, User } from '@/types';
 
 import {
   Select,
@@ -18,96 +19,120 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+type SortOption = 'recent' | 'oldest' | 'popular';
+
 const ExplorePage = () => {
-  const { journals, isLoading } = useJournal();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('recent');
-  const [demoJournals, setDemoJournals] = useState([]);
-  const [userMap, setUserMap] = useState<Record<string, User>>({});
+  const [tagFilter, setTagFilter] = useState(searchParams.get('tag') || '');
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [popularTags, setPopularTags] = useState<string[]>([]);
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    journalApi
+      .getPopularTags()
+      .then(setPopularTags)
+      .catch((error) => console.error('Error fetching tags:', error));
+  }, []);
+
+  // Build the location filter options once from the widest public listing.
+  useEffect(() => {
+    journalApi
+      .searchPublicJournals({ size: 100 })
+      .then((data) => {
+        const names = Array.from(
+          new Set(data.map((journal) => journal.location?.name).filter(Boolean))
+        ).sort() as string[];
+        setLocationOptions(names);
+      })
+      .catch((error) => console.error('Error fetching locations:', error));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     const fetchJournals = async () => {
+      setIsLoading(true);
       try {
-        const data = await journalApi.getPublicJournals();
-        const filtered = data.filter(journal => journal.userId !== user?.id);
-        setDemoJournals(filtered);
-
-        // Build author info from journal data first, then fall back to
-        // per-author fetches only for entries that are missing it.
-        const userMapEntries: Record<string, User> = {};
-        const missingIds = new Set<string>();
-        for (const journal of filtered) {
-          if (journal.userName) {
-            userMapEntries[journal.userId] = { id: journal.userId, name: journal.userName, avatar: journal.userAvatar } as User;
-          } else {
-            missingIds.add(journal.userId);
-          }
-        }
-
-        // Fetch user information for authors without inline data
-        const userInfoPromises = [...missingIds].map(async (userId) => {
-          try {
-            const userInfo = await accountApi.getUser(userId);
-            return { id: userId, ...userInfo };
-          } catch (error) {
-            console.error(`Failed to fetch user info for ${userId}:`, error);
-            return { id: userId, name: 'Anonymous', email: '', createdAt: '' } as User;
-          }
+        const data = await journalApi.searchPublicJournals({
+          q: debouncedSearch.trim() || undefined,
+          tag: tagFilter || undefined,
+          location: locationFilter === 'all' ? undefined : locationFilter,
+          sort: sortBy === 'popular' ? 'recent' : sortBy,
+          size: 100,
         });
 
-        const userInfos = await Promise.all(userInfoPromises);
-        const newUserMap = userInfos.reduce<Record<string, User>>((acc, user) => ({
-          ...acc,
-          [user.id]: user
-        }), { ...userMapEntries });
-        
-        setUserMap(newUserMap);
+        if (cancelled) return;
+
+        let filtered = data.filter((journal) => journal.userId !== user?.id);
+        if (sortBy === 'popular') {
+          const countReactions = (journal: JournalEntry) =>
+            journal.reactions?.reduce((acc, reaction) => acc + reaction.count, 0) ?? 0;
+          filtered = [...filtered].sort((a, b) => countReactions(b) - countReactions(a));
+        }
+
+        setJournals(filtered);
       } catch (error) {
         console.error('Error fetching journals:', error);
+        if (!cancelled) setJournals([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     };
+
     fetchJournals();
-  }, [user?.id]);
-  
-  const publicJournals = demoJournals;
-  
-  const countries = Array.from(new Set(
-    publicJournals
-      .map(journal => journal.location?.name)
-      .filter(Boolean)
-  )).sort();
-  
-  const filteredJournals = publicJournals
-    .filter(journal => {
-      const combinedText = [
-        journal.title,
-        journal.location?.name,
-        journal.location?.city,
-        journal.location?.country
-      ].filter(Boolean).join(' ').toLowerCase();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, tagFilter, locationFilter, sortBy, user?.id]);
 
-      const matchesSearch = searchTerm.trim() === '' || 
-        combinedText.includes(searchTerm.toLowerCase());
-
-      const matchesLocation = locationFilter === 'all' || 
-        journal.location?.name === locationFilter;
-
-      return matchesSearch;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'recent') {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      } else if (sortBy === 'oldest') {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      } else if (sortBy === 'popular') {
-        const countReactions = (journal) => 
-          journal.reactions?.reduce((acc, r) => acc + r.count, 0) ?? 0;
-        return countReactions(b) - countReactions(a);
+  const userMap = useMemo(() => {
+    const map: Record<string, User> = {};
+    for (const journal of journals) {
+      if (journal.userName) {
+        map[journal.userId] = {
+          id: journal.userId,
+          name: journal.userName,
+          avatar: journal.userAvatar,
+          email: '',
+          createdAt: '',
+        };
       }
-      return 0;
-    });
+    }
+    return map;
+  }, [journals]);
+
+  const locations = useMemo(() => {
+    const names = new Set(locationOptions);
+    for (const journal of journals) {
+      if (journal.location?.name) names.add(journal.location.name);
+    }
+    return Array.from(names).sort();
+  }, [locationOptions, journals]);
+
+  const selectTag = (tag: string) => {
+    const next = tagFilter === tag ? '' : tag;
+    setTagFilter(next);
+
+    const params = new URLSearchParams(searchParams);
+    if (next) {
+      params.set('tag', next);
+    } else {
+      params.delete('tag');
+    }
+    setSearchParams(params, { replace: true });
+  };
 
   return (
     <>
@@ -122,7 +147,7 @@ const ExplorePage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -141,14 +166,14 @@ const ExplorePage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Locations</SelectItem>
-                {countries.map((country) => (
+                {locations.map((country) => (
                   <SelectItem key={country} value={country}>
                     {country}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -160,7 +185,33 @@ const ExplorePage = () => {
             </Select>
           </div>
         </div>
-        
+
+        {popularTags.length > 0 && (
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">Popular tags:</span>
+            {popularTags.slice(0, 12).map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => selectTag(tag)}
+                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                  tagFilter === tag
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'bg-background hover:bg-accent'
+                }`}
+              >
+                #{tag}
+              </button>
+            ))}
+            {tagFilter && (
+              <Button variant="ghost" size="sm" onClick={() => selectTag(tagFilter)}>
+                <X className="mr-1 h-4 w-4" />
+                Clear tag
+              </Button>
+            )}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -178,11 +229,11 @@ const ExplorePage = () => {
         ) : (
           <>
             <div className="text-sm text-muted-foreground mb-4">
-              Found {filteredJournals.length} {filteredJournals.length === 1 ? 'journal' : 'journals'}
+              Found {journals.length} {journals.length === 1 ? 'journal' : 'journals'}
             </div>
-            <JournalList 
-              explore='true'
-              journals={filteredJournals} 
+            <JournalList
+              explore="true"
+              journals={journals}
               emptyMessage="No journals match your filters. Try changing your search criteria."
               userMap={userMap}
             />
@@ -195,4 +246,3 @@ const ExplorePage = () => {
 };
 
 export default ExplorePage;
-
