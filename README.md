@@ -18,9 +18,13 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 - **Timeline view** — see your trips ordered chronologically with locations and reaction/comment counts.
 - **Explore** — a public feed of every public journal with server-side search, tag and location filters and recent/oldest/popular sorting.
 - **Drafts and published views** — filter your own journals into drafts (private) and published entries.
-- **Social interactions** — reactions and comments on journals, with author names and avatars.
-- **Sharing** — shareable links for public journals, and visibility control (public vs private) per entry.
+- **Social interactions** — reactions and comments on journals, with author names and avatars. Comments support one level of threaded replies.
+- **Following and notifications** — follow other travellers and get an in-app notification bell for new followers, reactions, comments, replies and saved journals.
+- **Trust and safety** — report journals or comments, and resolve reports from an admin moderation queue that can hide content. Hidden entries disappear from public feeds while staying visible to their author and moderators.
+- **Onboarding** — new accounts get a short checklist for completing their profile, writing a first journal and exploring the map.
+- **Sharing** — shareable links for public journals, Open Graph previews for journal pages, and visibility control (public vs private) per entry.
 - **Accounts** — email/password registration with server-side validation, email verification, password reset, and session management. Access tokens live in short-lived HttpOnly cookies; rotating refresh tokens can be reviewed and revoked from the Security page.
+- **Operations** — Docker images for the API and web app, a Compose stack with MySQL, Actuator health probes, and backup/restore guides.
 - **Dark mode and responsive layout** — usable from a phone to a desktop.
 
 ## Screenshots
@@ -98,6 +102,8 @@ Open <http://localhost:3000>. Vite proxies `/api` requests to the backend on por
 | `JWT_REMEMBER_REFRESH_EXPIRATION` | backend | no | Refresh-token lifetime for "keep me signed in", defaults to 30 days |
 | `JWT_ISSUER` / `JWT_AUDIENCE` | backend | no | Token `iss`/`aud` claims, default to `odyssey` / `odyssey-web` |
 | `COOKIE_SECURE` | backend | no | Set to `true` to mark auth cookies `Secure` (required behind HTTPS) |
+| `FILE_UPLOAD_DIR` | backend | no | Where uploaded images are stored, defaults to `uploads` |
+| `MANAGEMENT_ENDPOINTS` | backend | no | Actuator endpoints to expose, defaults to `health,info,metrics` |
 | `CORS_ALLOWED_ORIGINS` | backend | no | Comma-separated origins allowed to call the API, defaults to local Vite origins |
 | `FRONTEND_URL` | backend | no | Base URL used in verification and reset email links, defaults to `http://localhost:3000` |
 | `MAIL_MODE` | backend | no | `log` (default) prints email links to the console; `smtp` sends them |
@@ -133,9 +139,9 @@ All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` c
 | POST | `/api/auth/verify-email` | public | Consume an email verification token |
 | POST | `/api/auth/resend-verification` | user | Resend the verification email |
 | DELETE | `/api/auth/account` | user | Permanently delete the account and its data |
-| GET | `/api/journals` | user | All journals |
-| GET | `/api/journals/public` | public | Paged public journals |
-| GET | `/api/journals/search?q=&tag=&location=&sort=` | public | Search public journals by text, tag and place |
+| GET | `/api/journals` | user | Public journals plus the caller's own entries; admins see everything |
+| GET | `/api/journals/public?page=&size=` | public | Paged public journals |
+| GET | `/api/journals/search?q=&tag=&location=&sort=&page=&size=` | public | Search public journals by text, tag and place |
 | GET | `/api/journals/tags` | public | Tags used by public journals |
 | GET | `/api/journals/bookmarks` | user | Journals saved by the caller |
 | GET | `/api/journals/my` | user | Journals owned by the caller |
@@ -146,10 +152,28 @@ All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` c
 | POST | `/api/journals/{id}/bookmark` | user | Save a public journal |
 | DELETE | `/api/journals/{id}/bookmark` | user | Remove a saved journal |
 | GET | `/api/journals/{id}/reactions` | user | Reaction summary |
-| POST | `/api/journals/{id}/comments` | verified user | Add a comment |
+| POST | `/api/journals/{id}/comments` | verified user | Add a comment or a reply (`parentId`) |
+| DELETE | `/api/journals/{id}/comments/{commentId}` | user | Delete a comment and its replies (author, journal owner or admin) |
+| POST | `/api/users/{id}/follow` | user | Follow a traveller |
+| DELETE | `/api/users/{id}/follow` | user | Unfollow a traveller |
+| GET | `/api/users/{id}/followers` | public | Followers of a traveller |
+| GET | `/api/users/{id}/following` | public | Accounts a traveller follows |
+| GET | `/api/notifications` | user | Activity for the caller |
+| GET | `/api/notifications/unread-count` | user | Unread badge count |
+| POST | `/api/notifications/{id}/read` | user | Mark one notification read |
+| POST | `/api/notifications/read-all` | user | Mark every notification read |
+| DELETE | `/api/notifications/{id}` | user | Delete a notification |
+| POST | `/api/reports` | user | Report a journal or comment |
+| GET | `/api/admin/reports?status=` | admin | Moderation queue |
+| PATCH | `/api/admin/reports/{id}` | admin | Resolve with `HIDE` or `DISMISS` |
+| PATCH | `/api/admin/journals/{id}/visibility?hidden=` | admin | Hide or restore a journal |
+| PATCH | `/api/admin/comments/{id}/visibility?hidden=` | admin | Hide or restore a comment |
+| GET | `/api/admin/stats` | admin | User, journal, comment and report counts |
 | POST | `/api/storage/upload` | user | Upload journal images |
 | GET | `/api/storage/files/{file}` | public | Serve an uploaded image |
 | GET | `/api/locations/search?q=` | user | Location search |
+| GET | `/actuator/health` | public | Liveness and readiness probe |
+| GET | `/actuator/metrics` | admin | JVM and HTTP metrics |
 
 Unverified accounts can browse and edit their profile, but publishing journals and commenting stay locked until the email address is confirmed.
 
@@ -159,7 +183,7 @@ Unverified accounts can browse and edit their profile, but publishing journals a
 odyssey/
 ├── odyssey-backend/          Spring Boot API
 │   ├── src/main/java/com/odyssey/
-│   │   ├── config/           Security, CORS, JWT and cache configuration
+│   │   ├── config/           Security, CORS, JWT, cache and actuator configuration
 │   │   ├── controller/       REST endpoints
 │   │   ├── dto/              Request/response models with validation rules
 │   │   ├── entity/           JPA entities
@@ -167,17 +191,25 @@ odyssey/
 │   │   ├── repository/       Spring Data repositories
 │   │   ├── security/         JWT auth, CSRF and password hashing
 │   │   └── service/          Business logic, mail, rate limiting and audits
-│   ├── src/main/resources/db/migration/  Flyway schema migrations
-│   ├── src/test/             Auth integration tests (H2)
+│   ├── src/main/resources/db/migration/  Flyway schema migrations (V1–V4)
+│   ├── src/test/             Auth and Phase 3 integration tests (H2)
+│   ├── Dockerfile            Multi-stage JDK 17 build
 │   └── uploads/              Uploaded journal images
 ├── odyssey-frontend/         React application
-│   └── src/
-│       ├── components/       UI, layout and feature components
-│       ├── contexts/         Auth and journal state
-│       ├── pages/            Route-level screens
-│       ├── services/         API client
-│       └── utils/            Geocoding and helpers
-├── docs/screenshots/         README screenshots
+│   ├── src/
+│   │   ├── components/       UI, layout and feature components
+│   │   ├── contexts/         Auth and journal state
+│   │   ├── pages/            Route-level screens
+│   │   ├── services/         API client
+│   │   └── utils/            Geocoding and helpers
+│   ├── Dockerfile            Vite build served by nginx
+│   └── nginx.conf            SPA fallback and `/api` proxy
+├── docs/
+│   ├── DEPLOYMENT.md         Docker deployment guide
+│   ├── BACKUP_RESTORE.md     Database and uploads backup runbook
+│   └── screenshots/          README screenshots
+├── docker-compose.yml        MySQL, backend and frontend stack
+├── .env.example              Deployment environment template
 ├── database_indexes.sql      Optional index definitions
 └── .github/workflows/ci.yml  CI pipeline
 ```
@@ -197,7 +229,27 @@ Set-Location ../odyssey-backend
 mvn --batch-mode --no-transfer-progress verify
 ```
 
-There are no frontend unit tests; the backend integration suite (`AuthFlowIntegrationTest`) covers registration, validation envelopes, CSRF enforcement, refresh-token rotation and reuse detection, verification gating, password changes, account deletion, bookmarks, tag/search filtering and public profiles.
+There are no frontend unit tests; the backend integration suite covers registration, validation envelopes, CSRF enforcement, refresh-token rotation and reuse detection, verification gating, password changes, account deletion, bookmarks, tag/search filtering, public profiles, follows and notifications, threaded comments and report-driven moderation (`AuthFlowIntegrationTest`, `Phase3SocialIntegrationTest`).
+
+## Deployment
+
+Docker files, a Compose stack, production configuration, and backup/restore
+runbooks live in the repository:
+
+```bash
+cp .env.example .env   # set MYSQL_ROOT_PASSWORD and JWT_SECRET
+docker compose up -d --build
+```
+
+Then open <http://localhost:8080>. Full instructions, TLS notes, admin promotion
+and upgrade steps are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Backups are covered in [`docs/BACKUP_RESTORE.md`](docs/BACKUP_RESTORE.md).
+
+To promote a moderator after signing up:
+
+```sql
+UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
+```
 
 ## Troubleshooting
 

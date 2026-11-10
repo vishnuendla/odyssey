@@ -11,3 +11,4 @@ odyssey-backend/target/
 !.env.example
 *.log
 .idea/
+backups/
