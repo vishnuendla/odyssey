@@ -10,10 +10,14 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 ## Features
 
 - **Travel journals** — create, edit and delete entries with a title, story text, cover photos and a tagged location.
-- **Photo galleries** — upload images per journal; files are stored by the backend and served through `/api/storage/files/...`.
+- **Tags and search** — add up to eight tags per journal, filter the public feed by tag, and search titles, stories and places from the server.
+- **Photo galleries** — upload images per journal; files are stored by the backend and served through `/api/storage/files/...`. A public gallery collects photos from every public journal.
+- **Bookmarks** — save any public journal and return to it from the Saved Journals page.
+- **Public profiles** — every author has a public page listing their published journals, without exposing their email address.
 - **Interactive maps** — Leaflet maps show journal locations, with automatic geocoding and autocomplete powered by Geoapify.
 - **Timeline view** — see your trips ordered chronologically with locations and reaction/comment counts.
-- **Explore** — a public feed of every public journal with search, location filters and recent/oldest/popular sorting.
+- **Explore** — a public feed of every public journal with server-side search, tag and location filters and recent/oldest/popular sorting.
+- **Drafts and published views** — filter your own journals into drafts (private) and published entries.
 - **Social interactions** — reactions and comments on journals, with author names and avatars.
 - **Sharing** — shareable links for public journals, and visibility control (public vs private) per entry.
 - **Accounts** — email/password registration with server-side validation, email verification, password reset, and session management. Access tokens live in short-lived HttpOnly cookies; rotating refresh tokens can be reviewed and revoked from the Security page.
@@ -119,6 +123,7 @@ All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` c
 | POST | `/api/auth/logout-all` | user | End every session for the account |
 | GET | `/api/auth/me` | user | Current profile (includes `emailVerified`) |
 | GET | `/api/auth/users/{id}` | public | Public author card (never includes email) |
+| GET | `/api/auth/users/{id}/journals` | public | Public journals by an author |
 | PUT | `/api/auth/profile` | user | Update name, avatar, bio or location |
 | GET | `/api/auth/sessions` | user | Active sessions with device and IP hints |
 | DELETE | `/api/auth/sessions/{id}` | user | Revoke one session |
@@ -130,11 +135,16 @@ All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` c
 | DELETE | `/api/auth/account` | user | Permanently delete the account and its data |
 | GET | `/api/journals` | user | All journals |
 | GET | `/api/journals/public` | public | Paged public journals |
+| GET | `/api/journals/search?q=&tag=&location=&sort=` | public | Search public journals by text, tag and place |
+| GET | `/api/journals/tags` | public | Tags used by public journals |
+| GET | `/api/journals/bookmarks` | user | Journals saved by the caller |
 | GET | `/api/journals/my` | user | Journals owned by the caller |
 | GET | `/api/journals/{id}` | public | Single journal (private entries visible to the owner only) |
 | POST | `/api/journals` | verified user | Create a journal |
 | PUT | `/api/journals/{id}` | verified user | Update a journal |
 | DELETE | `/api/journals/{id}` | user | Delete a journal |
+| POST | `/api/journals/{id}/bookmark` | user | Save a public journal |
+| DELETE | `/api/journals/{id}/bookmark` | user | Remove a saved journal |
 | GET | `/api/journals/{id}/reactions` | user | Reaction summary |
 | POST | `/api/journals/{id}/comments` | verified user | Add a comment |
 | POST | `/api/storage/upload` | user | Upload journal images |
@@ -187,7 +197,7 @@ Set-Location ../odyssey-backend
 mvn --batch-mode --no-transfer-progress verify
 ```
 
-There are no frontend unit tests; the backend has an auth integration suite (`AuthFlowIntegrationTest`) that covers registration, validation envelopes, CSRF enforcement, refresh-token rotation and reuse detection, verification gating, password changes and account deletion.
+There are no frontend unit tests; the backend integration suite (`AuthFlowIntegrationTest`) covers registration, validation envelopes, CSRF enforcement, refresh-token rotation and reuse detection, verification gating, password changes, account deletion, bookmarks, tag/search filtering and public profiles.
 
 ## Troubleshooting
 
