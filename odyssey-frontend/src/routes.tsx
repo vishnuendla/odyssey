@@ -18,6 +18,9 @@ import NotFound from '@/pages/NotFound';
 import JournalView from '@/pages/JournalView';
 import JournalEdit from '@/pages/JournalEdit';
 import Profile from '@/pages/Profile';
+import PublicProfile from '@/pages/PublicProfile';
+import Bookmarks from '@/pages/Bookmarks';
+import Gallery from '@/pages/Gallery';
 import Timeline from '@/pages/Timeline';
 import Settings from '@/pages/Settings';
 import About from '@/pages/About';
@@ -36,6 +39,9 @@ export const AppRoutes = () => (
     <Route path="/check-email" element={<CheckEmail />} />
     <Route path="/journals" element={<ProtectedRoute><Journals /></ProtectedRoute>} />
     <Route path="/explore" element={<Explore />} />
+    <Route path="/gallery" element={<Gallery />} />
+    <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+    <Route path="/users/:id" element={<PublicProfile />} />
     <Route path="/map" element={<MapView />} />
     <Route path="/timeline" element={<ProtectedRoute><Timeline /></ProtectedRoute>} />
     <Route path="/create" element={<ProtectedRoute><CreateJournal /></ProtectedRoute>} />
