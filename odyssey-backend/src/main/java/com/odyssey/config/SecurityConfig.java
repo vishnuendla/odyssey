@@ -91,9 +91,18 @@ public class SecurityConfig {
                                 "/api/auth/reset-password",
                                 "/api/auth/verify-email"
                         ).permitAll()
-                        // Public author cards are needed by anonymous visitors on public journals.
+                        // Public author cards and social graph are needed by anonymous visitors.
                         .requestMatchers(HttpMethod.GET, "/api/auth/users/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/users/*/journals").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/followers").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*/following").permitAll()
+                        // Operational endpoints.
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        // Moderation and admin tooling.
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/reports", "/api/reports/**").authenticated()
+                        .requestMatchers("/api/notifications", "/api/notifications/**").authenticated()
                         // Public journal image files are referenced by URL in journal entries.
                         .requestMatchers(HttpMethod.GET, "/api/storage/files/*").permitAll()
                         // Individual journal pages are public when the journal is public.

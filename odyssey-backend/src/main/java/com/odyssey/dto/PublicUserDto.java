@@ -14,6 +14,9 @@ public class PublicUserDto {
     private String location;
     private LocalDateTime createdAt;
     private long journalsCount;
+    private long followersCount;
+    private long followingCount;
+    private boolean following;
 
     public String getId() {
         return id;
@@ -69,5 +72,29 @@ public class PublicUserDto {
 
     public void setJournalsCount(long journalsCount) {
         this.journalsCount = journalsCount;
+    }
+
+    public long getFollowersCount() {
+        return followersCount;
+    }
+
+    public void setFollowersCount(long followersCount) {
+        this.followersCount = followersCount;
+    }
+
+    public long getFollowingCount() {
+        return followingCount;
+    }
+
+    public void setFollowingCount(long followingCount) {
+        this.followingCount = followingCount;
+    }
+
+    public boolean isFollowing() {
+        return following;
+    }
+
+    public void setFollowing(boolean following) {
+        this.following = following;
     }
 }

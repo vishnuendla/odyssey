@@ -33,6 +33,9 @@ public class Journal {
     @Column(name = "is_public")
     private boolean isPublic;
 
+    @Column(nullable = false)
+    private boolean hidden = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -95,6 +98,14 @@ public class Journal {
 
     public void setPublic(boolean isPublic) {
         this.isPublic = isPublic;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 
     public LocalDateTime getCreatedAt() {

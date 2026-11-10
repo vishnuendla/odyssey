@@ -6,6 +6,8 @@ import com.odyssey.exception.ForbiddenException;
 import com.odyssey.exception.ResourceNotFoundException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.*;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,9 @@ public class JournalService {
     private final LocationRepository locationRepository;
     private final ImageRepository imageRepository;
     private final BookmarkRepository bookmarkRepository;
+    private final NotificationRepository notificationRepository;
+    private final ReportRepository reportRepository;
+    private final NotificationService notificationService;
     private final StorageService storageService;
 
     public JournalService(JournalRepository journalRepository,
@@ -38,19 +43,29 @@ public class JournalService {
                           LocationRepository locationRepository,
                           ImageRepository imageRepository,
                           BookmarkRepository bookmarkRepository,
+                          NotificationRepository notificationRepository,
+                          ReportRepository reportRepository,
+                          NotificationService notificationService,
                           StorageService storageService) {
         this.journalRepository = journalRepository;
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
         this.imageRepository = imageRepository;
         this.bookmarkRepository = bookmarkRepository;
+        this.notificationRepository = notificationRepository;
+        this.reportRepository = reportRepository;
+        this.notificationService = notificationService;
         this.storageService = storageService;
     }
 
     @Transactional(readOnly = true)
     public List<JournalDto> getAllJournals(String userEmail) {
-        Set<String> bookmarked = bookmarkedJournalIds(userEmail);
-        return journalRepository.findAll().stream()
+        User viewer = requireUser(userEmail);
+        Set<String> bookmarked = bookmarkRepository.findJournalIdsByUserId(viewer.getId());
+        List<Journal> journals = viewer.isAdmin()
+                ? journalRepository.findAll()
+                : journalRepository.findVisibleToUser(viewer.getId());
+        return journals.stream()
                 .map(journal -> convertToDto(journal, bookmarked))
                 .collect(Collectors.toList());
     }
@@ -58,7 +73,7 @@ public class JournalService {
     @Transactional(readOnly = true)
     public Page<JournalDto> getPublicJournals(Pageable pageable, String userEmail) {
         Set<String> bookmarked = bookmarkedJournalIds(userEmail);
-        return journalRepository.findByIsPublicTrue(pageable)
+        return journalRepository.findByIsPublicTrueAndHiddenFalse(pageable)
                 .map(journal -> convertToDto(journal, bookmarked));
     }
 
@@ -66,12 +81,15 @@ public class JournalService {
     public Page<JournalDto> searchPublicJournals(String query, String tag, String location,
                                                  Pageable pageable, String userEmail) {
         Set<String> bookmarked = bookmarkedJournalIds(userEmail);
+        String viewerId = userEmail == null ? null
+                : userRepository.findByEmailIgnoreCase(userEmail).map(User::getId).orElse(null);
         return journalRepository.searchPublic(
-                        blankToNull(query), blankToNull(tag), blankToNull(location), pageable)
+                        blankToNull(query), blankToNull(tag), blankToNull(location), viewerId, pageable)
                 .map(journal -> convertToDto(journal, bookmarked));
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "publicTags", key = "'all'")
     public List<String> getPopularTags() {
         return journalRepository.findPublicTags();
     }
@@ -79,7 +97,7 @@ public class JournalService {
     @Transactional(readOnly = true)
     public List<JournalDto> getUserJournals(String userEmail) {
         User user = requireUser(userEmail);
-        Set<String> bookmarked = bookmarkedJournalIds(userEmail);
+        Set<String> bookmarked = bookmarkRepository.findJournalIdsByUserId(user.getId());
         return journalRepository.findByUserOrderByCreatedAtDesc(user).stream()
                 .map(journal -> convertToDto(journal, bookmarked))
                 .collect(Collectors.toList());
@@ -91,7 +109,7 @@ public class JournalService {
             throw new ResourceNotFoundException("User not found");
         }
         Set<String> bookmarked = bookmarkedJournalIds(viewerEmail);
-        return journalRepository.findByUserIdAndIsPublicTrueOrderByCreatedAtDesc(userId).stream()
+        return journalRepository.findByUserIdAndIsPublicTrueAndHiddenFalseOrderByCreatedAtDesc(userId).stream()
                 .map(journal -> convertToDto(journal, bookmarked))
                 .collect(Collectors.toList());
     }
@@ -102,6 +120,7 @@ public class JournalService {
         Set<String> bookmarked = bookmarkRepository.findJournalIdsByUserId(user.getId());
         return bookmarkRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
                 .map(Bookmark::getJournal)
+                .filter(journal -> journal.isPublic() && !journal.isHidden())
                 .map(journal -> convertToDto(journal, bookmarked))
                 .collect(Collectors.toList());
     }
@@ -110,12 +129,18 @@ public class JournalService {
     public JournalDto getJournalById(String id, String userEmail) {
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
-        
-        boolean isOwner = userEmail != null && journal.getUser().getEmail().equalsIgnoreCase(userEmail);
-        if (!journal.isPublic() && !isOwner) {
+
+        User viewer = userEmail == null ? null : userRepository.findByEmailIgnoreCase(userEmail).orElse(null);
+        boolean isOwner = viewer != null && journal.getUser().getId().equals(viewer.getId());
+        boolean isAdmin = viewer != null && viewer.isAdmin();
+
+        if (journal.isHidden() && !isOwner && !isAdmin) {
+            throw new ResourceNotFoundException("Journal not found");
+        }
+        if (!journal.isPublic() && !isOwner && !isAdmin) {
             throw new UnauthorizedException("You do not have permission to view this journal");
         }
-        
+
         return convertToDto(journal, bookmarkedJournalIds(userEmail));
     }
 
@@ -123,20 +148,23 @@ public class JournalService {
     public JournalDto shareJournal(String id, String userEmail) {
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
-        
-        // Check if journal is private and not owned by the requesting user
-        if (!journal.isPublic() && !journal.getUser().getEmail().equalsIgnoreCase(userEmail)) {
+
+        User viewer = userEmail == null ? null : userRepository.findByEmailIgnoreCase(userEmail).orElse(null);
+        boolean isOwner = viewer != null && journal.getUser().getId().equals(viewer.getId());
+        if ((!journal.isPublic() || journal.isHidden()) && !isOwner
+                && (viewer == null || !viewer.isAdmin())) {
             throw new UnauthorizedException("You do not have permission to share this journal");
         }
-        
+
         return convertToDto(journal, bookmarkedJournalIds(userEmail));
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicTags", "userProfiles"}, allEntries = true)
     public JournalDto createJournal(JournalRequest journalRequest, String userEmail) {
         User user = requireUser(userEmail);
         requireVerified(user);
-        
+
         Journal journal = new Journal();
         journal.setTitle(journalRequest.getTitle());
         journal.setContent(journalRequest.getContent());
@@ -145,10 +173,9 @@ public class JournalService {
         journal.setCreatedAt(LocalDateTime.now());
         journal.setUpdatedAt(LocalDateTime.now());
         journal.setTags(normalizeTags(journalRequest.getTags()));
-        
+
         Journal savedJournal = journalRepository.save(journal);
-        
-        // Create location
+
         if (journalRequest.getLocation() != null) {
             Location location = new Location();
             location.setName(journalRequest.getLocation().getName());
@@ -160,8 +187,7 @@ public class JournalService {
             locationRepository.save(location);
             savedJournal.setLocation(location);
         }
-        
-        // Add images
+
         if (journalRequest.getImages() != null && !journalRequest.getImages().isEmpty()) {
             for (String imageUrl : journalRequest.getImages()) {
                 Image image = new Image();
@@ -171,54 +197,51 @@ public class JournalService {
                 savedJournal.getImages().add(image);
             }
         }
-        
+
         return convertToDto(savedJournal, Set.of());
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicTags", "userProfiles"}, allEntries = true)
     public JournalDto updateJournal(String id, JournalRequest journalRequest, String userEmail) {
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
-        
+
         if (!journal.getUser().getEmail().equalsIgnoreCase(userEmail)) {
             throw new UnauthorizedException("You do not have permission to update this journal");
         }
         requireVerified(journal.getUser());
-        
+
         journal.setTitle(journalRequest.getTitle());
         journal.setContent(journalRequest.getContent());
         journal.setPublic(journalRequest.getIsPublic());
         journal.setUpdatedAt(LocalDateTime.now());
         journal.getTags().clear();
         journal.getTags().addAll(normalizeTags(journalRequest.getTags()));
-        
-        // Update location
+
         if (journalRequest.getLocation() != null) {
             if (journal.getLocation() == null) {
                 Location location = new Location();
                 location.setJournal(journal);
                 journal.setLocation(location);
             }
-            
+
             journal.getLocation().setName(journalRequest.getLocation().getName());
             journal.getLocation().setLatitude(journalRequest.getLocation().getLatitude());
             journal.getLocation().setLongitude(journalRequest.getLocation().getLongitude());
             journal.getLocation().setCountry(journalRequest.getLocation().getCountry());
             journal.getLocation().setCity(journalRequest.getLocation().getCity());
         }
-        
-        // Update images - always process the images list from request
+
         if (journalRequest.getImages() != null) {
             List<String> removedImageUrls = journal.getImages().stream()
                     .map(Image::getUrl)
                     .filter(url -> !journalRequest.getImages().contains(url))
                     .collect(Collectors.toList());
 
-            // Clear existing images
             imageRepository.deleteAll(journal.getImages());
             journal.getImages().clear();
-            
-            // Add new images (even if list is empty - this allows image removal)
+
             for (String imageUrl : journalRequest.getImages()) {
                 Image image = new Image();
                 image.setUrl(imageUrl);
@@ -228,16 +251,17 @@ public class JournalService {
 
             storageService.deleteFilesAfterCommit(removedImageUrls);
         }
-        
+
         Journal updatedJournal = journalRepository.save(journal);
         return convertToDto(updatedJournal, bookmarkedJournalIds(userEmail));
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicTags", "userProfiles"}, allEntries = true)
     public void deleteJournal(String id, String userEmail) {
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
-        
+
         if (!journal.getUser().getEmail().equalsIgnoreCase(userEmail)) {
             throw new UnauthorizedException("You do not have permission to delete this journal");
         }
@@ -246,6 +270,8 @@ public class JournalService {
                 .map(Image::getUrl)
                 .collect(Collectors.toList());
         bookmarkRepository.deleteByJournalId(journal.getId());
+        notificationRepository.deleteByJournalId(journal.getId());
+        reportRepository.deleteByTarget(Report.TargetType.JOURNAL, journal.getId());
         journalRepository.delete(journal);
         storageService.deleteFilesAfterCommit(imageUrls);
     }
@@ -255,7 +281,7 @@ public class JournalService {
         User user = requireUser(userEmail);
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
-        if (!journal.isPublic()) {
+        if (!journal.isPublic() || journal.isHidden()) {
             throw new ResourceNotFoundException("Journal not found");
         }
 
@@ -265,6 +291,8 @@ public class JournalService {
                     bookmark.setUser(user);
                     bookmark.setJournal(journal);
                     bookmark.setCreatedAt(LocalDateTime.now());
+                    notificationService.notify(journal.getUser(), user, Notification.Type.BOOKMARK,
+                            journal.getId(), null, user.getName() + " saved your journal.");
                     return bookmarkRepository.save(bookmark);
                 });
 
@@ -311,6 +339,7 @@ public class JournalService {
         dto.setTitle(journal.getTitle());
         dto.setContent(journal.getContent());
         dto.setIsPublic(journal.isPublic());
+        dto.setHidden(journal.isHidden());
         dto.setCreatedAt(journal.getCreatedAt());
         dto.setUpdatedAt(journal.getUpdatedAt());
         dto.setUserId(journal.getUser().getId());
@@ -318,8 +347,7 @@ public class JournalService {
         dto.setUserAvatar(journal.getUser().getAvatar());
         dto.setBookmarked(bookmarkedJournalIds.contains(journal.getId()));
         dto.setTags(new ArrayList<>(journal.getTags()));
-        
-        // Set location
+
         if (journal.getLocation() != null) {
             LocationDto locationDto = new LocationDto();
             locationDto.setId(journal.getLocation().getId());
@@ -330,26 +358,29 @@ public class JournalService {
             locationDto.setCity(journal.getLocation().getCity());
             dto.setLocation(locationDto);
         }
-        
+
         dto.setImages(journal.getImages().stream()
                 .map(Image::getUrl)
                 .collect(Collectors.toList()));
-        
-        dto.setComments(journal.getComments().stream().map(comment -> {
-            CommentDto commentDto = new CommentDto();
-            commentDto.setId(comment.getId());
-            commentDto.setContent(comment.getContent());
-            commentDto.setUserId(comment.getUser().getId());
-            commentDto.setUserName(comment.getUser().getName());
-            commentDto.setUserAvatar(comment.getUser().getAvatar());
-            commentDto.setCreatedAt(comment.getCreatedAt());
-            return commentDto;
-        }).collect(Collectors.toList()));
-        
-        // Set reactions summary
+
+        dto.setComments(journal.getComments().stream()
+                .filter(comment -> !comment.isHidden()
+                        && (comment.getParent() == null || !comment.getParent().isHidden()))
+                .map(comment -> {
+                    CommentDto commentDto = new CommentDto();
+                    commentDto.setId(comment.getId());
+                    commentDto.setContent(comment.getContent());
+                    commentDto.setUserId(comment.getUser().getId());
+                    commentDto.setUserName(comment.getUser().getName());
+                    commentDto.setUserAvatar(comment.getUser().getAvatar());
+                    commentDto.setCreatedAt(comment.getCreatedAt());
+                    commentDto.setParentId(comment.getParent() == null ? null : comment.getParent().getId());
+                    return commentDto;
+                }).collect(Collectors.toList()));
+
         Map<Reaction.ReactionType, Long> reactionCounts = journal.getReactions().stream()
                 .collect(Collectors.groupingBy(Reaction::getType, Collectors.counting()));
-        
+
         List<ReactionSummaryDto> reactionSummaries = new ArrayList<>();
         for (Map.Entry<Reaction.ReactionType, Long> entry : reactionCounts.entrySet()) {
             reactionSummaries.add(new ReactionSummaryDto(
@@ -358,7 +389,7 @@ public class JournalService {
             ));
         }
         dto.setReactions(reactionSummaries);
-        
+
         return dto;
     }
 

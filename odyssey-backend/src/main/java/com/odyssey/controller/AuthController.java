@@ -96,8 +96,11 @@ public class AuthController {
      * Public author card. Returns no email or other private account data.
      */
     @GetMapping("/users/{userId}")
-    public ResponseEntity<PublicUserDto> getUserById(@PathVariable String userId) {
-        return ResponseEntity.ok(authService.getPublicUserById(userId));
+    public ResponseEntity<PublicUserDto> getUserById(
+            @PathVariable String userId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String viewerEmail = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(authService.getPublicUserById(userId, viewerEmail));
     }
 
     /**
