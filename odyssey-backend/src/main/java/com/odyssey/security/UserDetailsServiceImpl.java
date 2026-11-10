@@ -3,12 +3,11 @@ package com.odyssey.security;
 
 import com.odyssey.entity.User;
 import com.odyssey.repository.UserRepository;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
@@ -27,7 +26,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                new ArrayList<>()
+                AuthorityUtils.createAuthorityList(user.isAdmin() ? "ROLE_ADMIN" : "ROLE_USER")
         );
     }
 }

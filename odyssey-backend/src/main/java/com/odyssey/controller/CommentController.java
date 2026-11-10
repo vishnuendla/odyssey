@@ -26,7 +26,7 @@ public class CommentController {
             @Valid @RequestBody CommentRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(commentService.addComment(
-                journalId, request.getContent(), userDetails.getUsername()));
+                journalId, request.getContent(), request.getParentId(), userDetails.getUsername()));
     }
 
     @DeleteMapping("/{commentId}")
