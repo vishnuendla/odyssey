@@ -7,7 +7,11 @@ export interface User {
   bio?: string;
   location?: string;
   emailVerified?: boolean;
+  role?: 'USER' | 'ADMIN';
   journalsCount?: number;
+  followersCount?: number;
+  followingCount?: number;
+  following?: boolean;
 }
 
 export interface JournalEntry {
@@ -20,6 +24,7 @@ export interface JournalEntry {
   userName?: string;
   userAvatar?: string;
   isPublic: boolean;
+  hidden?: boolean;
   location?: Location;
   images?: string[];
   tags?: string[];
@@ -48,11 +53,62 @@ export interface Comment {
   createdAt: string;
   userName?: string;
   userAvatar?: string;
+  parentId?: string | null;
 }
 
 export interface Reaction {
   type: 'like' | 'love' | 'wow' | 'globe';
   count: number;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: 'FOLLOW' | 'REACTION' | 'COMMENT' | 'REPLY' | 'BOOKMARK';
+  actorId?: string;
+  actorName?: string;
+  actorAvatar?: string;
+  journalId?: string;
+  commentId?: string;
+  message?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface ReportItem {
+  id: string;
+  reporterId: string;
+  reporterName: string;
+  targetType: 'JOURNAL' | 'COMMENT';
+  targetId: string;
+  targetPreview?: string;
+  targetAuthorId?: string;
+  targetAuthorName?: string;
+  targetHidden?: boolean;
+  reason: string;
+  details?: string;
+  status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedByName?: string;
+  resolutionNote?: string;
+}
+
+export interface AdminStats {
+  users: number;
+  journals: number;
+  publicJournals: number;
+  comments: number;
+  openReports: number;
 }
 
 export type ThemeMode = 'light' | 'dark';

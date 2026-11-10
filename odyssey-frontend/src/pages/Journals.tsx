@@ -8,6 +8,7 @@ import JournalList from '@/components/journals/JournalList';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import Onboarding from '@/components/onboarding/Onboarding';
 import { User } from '@/types';
 
 type JournalFilter = 'all' | 'published' | 'drafts';
@@ -107,18 +108,21 @@ const JournalsPage = () => {
             ))}
           </div>
         ) : (
-          <JournalList 
-            explore="false"
-            journals={visibleJournals}
-            emptyMessage={
-              filter === 'drafts'
-                ? 'You have no drafts. Private journals appear here.'
-                : filter === 'published'
-                  ? 'You have no published journals yet.'
-                  : "You haven't created any journals yet. Click 'New Journal' to get started!"
-            }
-            userMap={userMap}
-          />
+          <>
+            {userJournals.length === 0 && <Onboarding hasJournals={false} />}
+            <JournalList 
+              explore="false"
+              journals={visibleJournals}
+              emptyMessage={
+                filter === 'drafts'
+                  ? 'You have no drafts. Private journals appear here.'
+                  : filter === 'published'
+                    ? 'You have no published journals yet.'
+                    : "You haven't created any journals yet. Click 'New Journal' to get started!"
+              }
+              userMap={userMap}
+            />
+          </>
         )}
         
         {!isLoading && userJournals.length === 0 && (
