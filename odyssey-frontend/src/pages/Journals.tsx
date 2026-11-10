@@ -10,11 +10,14 @@ import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User } from '@/types';
 
+type JournalFilter = 'all' | 'published' | 'drafts';
+
 const JournalsPage = () => {
   const { journals, getUserJournals, isLoading } = useJournal();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [userMap, setUserMap] = useState<Record<string, User>>({});
+  const [filter, setFilter] = useState<JournalFilter>('all');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -37,6 +40,13 @@ const JournalsPage = () => {
   }, [user]);
 
   const userJournals = getUserJournals();
+  const publishedCount = userJournals.filter((journal) => journal.isPublic).length;
+  const draftCount = userJournals.length - publishedCount;
+  const visibleJournals = userJournals.filter((journal) => {
+    if (filter === 'published') return journal.isPublic;
+    if (filter === 'drafts') return !journal.isPublic;
+    return true;
+  });
 
   return (
     <>
@@ -58,6 +68,30 @@ const JournalsPage = () => {
           </Button>
         </div>
 
+        <div className="mb-6 flex flex-wrap gap-2">
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('all')}
+          >
+            All ({userJournals.length})
+          </Button>
+          <Button
+            variant={filter === 'published' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('published')}
+          >
+            Published ({publishedCount})
+          </Button>
+          <Button
+            variant={filter === 'drafts' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('drafts')}
+          >
+            Drafts ({draftCount})
+          </Button>
+        </div>
+
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
@@ -75,8 +109,14 @@ const JournalsPage = () => {
         ) : (
           <JournalList 
             explore="false"
-            journals={userJournals} 
-            emptyMessage="You haven't created any journals yet. Click 'New Journal' to get started!"
+            journals={visibleJournals}
+            emptyMessage={
+              filter === 'drafts'
+                ? 'You have no drafts. Private journals appear here.'
+                : filter === 'published'
+                  ? 'You have no published journals yet.'
+                  : "You haven't created any journals yet. Click 'New Journal' to get started!"
+            }
             userMap={userMap}
           />
         )}

@@ -17,6 +17,8 @@ public class JournalDto {
     private String userAvatar;
     private LocationDto location;
     private List<String> images = new ArrayList<>();
+    private List<String> tags = new ArrayList<>();
+    private boolean bookmarked;
     private List<CommentDto> comments = new ArrayList<>();
     private List<ReactionSummaryDto> reactions = new ArrayList<>();
 
@@ -107,6 +109,22 @@ public class JournalDto {
 
     public void setImages(List<String> images) {
         this.images = images;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    public boolean isBookmarked() {
+        return bookmarked;
+    }
+
+    public void setBookmarked(boolean bookmarked) {
+        this.bookmarked = bookmarked;
     }
 
     public List<CommentDto> getComments() {

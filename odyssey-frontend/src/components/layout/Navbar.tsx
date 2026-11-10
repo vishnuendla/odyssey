@@ -49,6 +49,9 @@ export default function Navbar() {
             <Link to="/explore" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
               Explore
             </Link>
+            <Link to="/gallery" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              Gallery
+            </Link>
             <Link to="/map" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
               Map
             </Link>
@@ -78,6 +81,9 @@ export default function Navbar() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/bookmarks">Saved Journals</Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/profile">Profile</Link>
                     </DropdownMenuItem>
@@ -131,6 +137,13 @@ export default function Navbar() {
               Explore
             </Link>
             <Link
+              to="/gallery"
+              className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
+              onClick={() => setIsOpen(false)}
+            >
+              Gallery
+            </Link>
+            <Link
               to="/map"
               className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
               onClick={() => setIsOpen(false)}
@@ -153,6 +166,13 @@ export default function Navbar() {
                   onClick={() => setIsOpen(false)}
                 >
                   My Journals
+                </Link>
+                <Link
+                  to="/bookmarks"
+                  className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Saved Journals
                 </Link>
                 <Link
                   to="/profile"

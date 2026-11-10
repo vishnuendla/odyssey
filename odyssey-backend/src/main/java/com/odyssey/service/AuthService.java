@@ -9,6 +9,7 @@ import com.odyssey.exception.ForbiddenException;
 import com.odyssey.exception.TooManyRequestsException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.CommentRepository;
+import com.odyssey.repository.BookmarkRepository;
 import com.odyssey.repository.JournalRepository;
 import com.odyssey.repository.ReactionRepository;
 import com.odyssey.repository.RefreshTokenRepository;
@@ -43,11 +44,13 @@ public class AuthService {
     private final JournalRepository journalRepository;
     private final CommentRepository commentRepository;
     private final ReactionRepository reactionRepository;
+    private final BookmarkRepository bookmarkRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final MailService mailService;
     private final AuthAuditLogger auditLogger;
+    private final StorageService storageService;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -55,22 +58,26 @@ public class AuthService {
                        JournalRepository journalRepository,
                        CommentRepository commentRepository,
                        ReactionRepository reactionRepository,
+                       BookmarkRepository bookmarkRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
                        JwtTokenProvider tokenProvider,
                        MailService mailService,
-                       AuthAuditLogger auditLogger) {
+                       AuthAuditLogger auditLogger,
+                       StorageService storageService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.journalRepository = journalRepository;
         this.commentRepository = commentRepository;
         this.reactionRepository = reactionRepository;
+        this.bookmarkRepository = bookmarkRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
         this.mailService = mailService;
         this.auditLogger = auditLogger;
+        this.storageService = storageService;
     }
 
     public record AuthSession(UserDto user, String accessToken, String refreshToken, long refreshExpiresMs) {
@@ -191,6 +198,7 @@ public class AuthService {
         dto.setBio(user.getBio());
         dto.setLocation(user.getLocation());
         dto.setCreatedAt(user.getCreatedAt());
+        dto.setJournalsCount(journalRepository.countByUserIdAndIsPublicTrue(user.getId()));
         return dto;
     }
 
@@ -274,6 +282,9 @@ public class AuthService {
                 "This password reset link is invalid or has expired.");
 
         User user = token.getUser();
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Choose a password you have not used before.");
+        }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setPasswordChangedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
@@ -352,14 +363,20 @@ public class AuthService {
         // Remove rows that reference the user directly before deleting their journals.
         commentRepository.deleteByUserId(user.getId());
         reactionRepository.deleteByUserId(user.getId());
+        bookmarkRepository.deleteByUserId(user.getId());
         refreshTokenRepository.deleteAllForUser(user.getId());
         verificationTokenRepository.deleteAllForUser(user.getId());
 
         List<com.odyssey.entity.Journal> journals = journalRepository.findByUser(user);
+        List<String> imageUrls = journals.stream()
+                .flatMap(journal -> journal.getImages().stream())
+                .map(com.odyssey.entity.Image::getUrl)
+                .toList();
         journalRepository.deleteAll(journals);
         user.getJournals().clear();
         userRepository.delete(user);
 
+        storageService.deleteFilesAfterCommit(imageUrls);
         auditLogger.accountDeleted(email, ipAddress);
     }
 
