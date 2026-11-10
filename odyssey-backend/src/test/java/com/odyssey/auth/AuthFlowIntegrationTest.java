@@ -285,6 +285,88 @@ class AuthFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void bookmarksAreToggleableAndListed() throws Exception {
+        String authorEmail = "bookmark-author@example.com";
+        MvcResult author = register(authorEmail);
+        markVerified(authorEmail);
+        String authorId = userRepository.findByEmailIgnoreCase(authorEmail).orElseThrow().getId();
+        String journalId = createPublicJournal(author, authorId, "Tokyo After Dark",
+                "Neon alleys and midnight ramen.", java.util.List.of("Japan", "Food"));
+
+        String readerEmail = "bookmark-reader@example.com";
+        MvcResult reader = register(readerEmail);
+        Cookie readerAccess = cookie(reader, "odyssey-token");
+        Csrf csrf = csrf();
+
+        mockMvc.perform(post("/api/journals/" + journalId + "/bookmark")
+                        .cookie(csrf.cookie())
+                        .header("X-XSRF-TOKEN", csrf.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookmarked").value(true));
+
+        mockMvc.perform(get("/api/journals/bookmarks").cookie(readerAccess))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(journalId));
+
+        mockMvc.perform(delete("/api/journals/" + journalId + "/bookmark")
+                        .cookie(csrf.cookie())
+                        .header("X-XSRF-TOKEN", csrf.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookmarked").value(false));
+
+        mockMvc.perform(get("/api/journals/bookmarks").cookie(readerAccess))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").doesNotExist());
+    }
+
+    @Test
+    void searchAndTagsFindPublicJournals() throws Exception {
+        String email = "search-author@example.com";
+        MvcResult author = register(email);
+        markVerified(email);
+        String authorId = userRepository.findByEmailIgnoreCase(email).orElseThrow().getId();
+        String journalId = createPublicJournal(author, authorId, "Kyoto in Autumn",
+                "Temples, moss gardens and quiet tea houses.", java.util.List.of("Japan", "Temples"));
+
+        mockMvc.perform(get("/api/journals/search")
+                        .param("q", "kyoto")
+                        .param("tag", "japan"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(journalId))
+                .andExpect(jsonPath("$.content[0].tags").value(org.hamcrest.Matchers.hasItem("japan")));
+
+        mockMvc.perform(get("/api/journals/search").param("q", "kyoto").param("tag", "beaches"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0]").doesNotExist());
+
+        mockMvc.perform(get("/api/journals/tags"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(org.hamcrest.Matchers.hasItem("temples")));
+    }
+
+    @Test
+    void publicProfileExposesAuthorAndJournalsButNotEmail() throws Exception {
+        String email = "profile-author@example.com";
+        MvcResult author = register(email);
+        markVerified(email);
+        String authorId = userRepository.findByEmailIgnoreCase(email).orElseThrow().getId();
+        String journalId = createPublicJournal(author, authorId, "Iceland Ring Road",
+                "Waterfalls, glaciers and long summer drives.", java.util.List.of("Iceland", "Roadtrip"));
+
+        mockMvc.perform(get("/api/auth/users/" + authorId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Test Traveler"))
+                .andExpect(jsonPath("$.journalsCount").value(1))
+                .andExpect(jsonPath("$.email").doesNotExist());
+
+        mockMvc.perform(get("/api/auth/users/" + authorId + "/journals"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(journalId));
+    }
+
     private MvcResult register(String email) throws Exception {
         Csrf csrf = csrf();
         return mockMvc.perform(post("/api/auth/register")
@@ -303,6 +385,31 @@ class AuthFlowIntegrationTest {
                 "password", "Str0ng!Pass",
                 "acceptTerms", true
         ));
+    }
+
+    private void markVerified(String email) {
+        var user = userRepository.findByEmailIgnoreCase(email).orElseThrow();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+    }
+
+    private String createPublicJournal(MvcResult session, String authorId, String title,
+                                       String content, java.util.List<String> tags) throws Exception {
+        Cookie access = cookie(session, "odyssey-token");
+        Csrf csrf = csrf();
+        MvcResult created = mockMvc.perform(post("/api/journals")
+                        .cookie(csrf.cookie())
+                        .header("X-XSRF-TOKEN", csrf.token())
+                        .cookie(access)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", title,
+                                "content", content,
+                                "isPublic", true,
+                                "tags", tags))))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
     }
 
     private Csrf csrf() throws Exception {

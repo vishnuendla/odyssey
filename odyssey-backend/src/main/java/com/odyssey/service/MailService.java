@@ -42,7 +42,6 @@ public class MailService {
         send(to, "Verify your Odyssey email",
                 "Welcome to Odyssey!\n\nConfirm your email address by opening this link:\n" + link
                         + "\n\nThis link expires in 24 hours. If you did not create an account, you can ignore this email.");
-        log.info("Email verification link for {}: {}", to, link);
     }
 
     public void sendPasswordResetEmail(String to, String rawToken) {
@@ -50,7 +49,6 @@ public class MailService {
         send(to, "Reset your Odyssey password",
                 "We received a request to reset your Odyssey password.\n\nChoose a new password here:\n" + link
                         + "\n\nThis link expires in 1 hour. If you did not request a reset, you can safely ignore this email.");
-        log.info("Password reset link for {}: {}", to, link);
     }
 
     private void send(String to, String subject, String body) {

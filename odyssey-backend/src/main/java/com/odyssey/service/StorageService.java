@@ -2,6 +2,8 @@ package com.odyssey.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -71,8 +74,7 @@ public class StorageService {
         return fileUrls;
     }
 
-    private void validate(MultipartFile file) {
-        String originalFileName = file.getOriginalFilename();
+    private void validate(MultipartFile file) {        String originalFileName = file.getOriginalFilename();
         if (originalFileName == null || originalFileName.isBlank()) {
             throw new IllegalArgumentException("Every uploaded file needs a name.");
         }
@@ -93,6 +95,46 @@ public class StorageService {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.containsKey(contentType.toLowerCase(Locale.ROOT))) {
             throw new IllegalArgumentException("Only JPEG, PNG, GIF and WebP images can be uploaded.");
+        }
+    }
+
+    /**
+     * Deletes stored image files once the surrounding database transaction has
+     * committed, so a rollback never leaves rows pointing at missing files.
+     */
+    public void deleteFilesAfterCommit(Collection<String> fileUrls) {
+        if (fileUrls == null || fileUrls.isEmpty()) {
+            return;
+        }
+        List<String> urls = fileUrls.stream().filter(StringUtils::hasText).toList();
+        if (urls.isEmpty()) {
+            return;
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    urls.forEach(StorageService.this::deleteFile);
+                }
+            });
+        } else {
+            urls.forEach(this::deleteFile);
+        }
+    }
+
+    private void deleteFile(String fileUrl) {
+        String prefix = "/api/storage/files/";
+        if (!fileUrl.startsWith(prefix)) {
+            return;
+        }
+        String fileName = fileUrl.substring(prefix.length());
+        if (fileName.isBlank() || fileName.contains("..") || fileName.contains("/") || fileName.contains("\\")) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(this.fileStorageLocation.resolve(fileName).normalize());
+        } catch (IOException ex) {
+            // Missing or locked files should not fail an already committed change.
         }
     }
 }

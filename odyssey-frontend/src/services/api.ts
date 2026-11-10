@@ -199,7 +199,20 @@ export const accountApi = {
     const user = await apiRequest<Omit<User, 'email'> & { email?: string }>(`/auth/users/${userId}`);
     return { ...user, email: user.email ?? '' };
   },
+
+  getUserJournals: async (userId: string): Promise<JournalEntry[]> => {
+    return apiRequest<JournalEntry[]>(`/auth/users/${userId}/journals`);
+  },
 };
+
+export interface JournalSearchParams {
+  q?: string;
+  tag?: string;
+  location?: string;
+  sort?: 'recent' | 'oldest';
+  page?: number;
+  size?: number;
+}
 
 export const searchLocations = async (query: string): Promise<Location[]> => {
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`;
@@ -333,6 +346,38 @@ export const journalApi = {
   getPublicJournals: async (): Promise<JournalEntry[]> => {
     const data = await apiRequest<JournalEntry[] | { content: JournalEntry[] }>('/journals/public');
     return Array.isArray(data) ? data : data.content || [];
+  },
+
+  searchPublicJournals: async (params: JournalSearchParams = {}): Promise<JournalEntry[]> => {
+    const query = new URLSearchParams();
+    if (params.q) query.set('q', params.q);
+    if (params.tag) query.set('tag', params.tag);
+    if (params.location) query.set('location', params.location);
+    if (params.sort) query.set('sort', params.sort);
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.size !== undefined) query.set('size', String(params.size));
+
+    const suffix = query.toString();
+    const data = await apiRequest<JournalEntry[] | { content: JournalEntry[] }>(
+      `/journals/search${suffix ? `?${suffix}` : ''}`
+    );
+    return Array.isArray(data) ? data : data.content || [];
+  },
+
+  getPopularTags: async (): Promise<string[]> => {
+    return apiRequest<string[]>('/journals/tags');
+  },
+
+  getBookmarkedJournals: async (): Promise<JournalEntry[]> => {
+    return apiRequest<JournalEntry[]>('/journals/bookmarks');
+  },
+
+  addBookmark: async (id: string): Promise<JournalEntry> => {
+    return apiRequest<JournalEntry>(`/journals/${id}/bookmark`, { method: 'POST' });
+  },
+
+  removeBookmark: async (id: string): Promise<JournalEntry> => {
+    return apiRequest<JournalEntry>(`/journals/${id}/bookmark`, { method: 'DELETE' });
   },
 
   getUserJournals: async (): Promise<JournalEntry[]> => {
