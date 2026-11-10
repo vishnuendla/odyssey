@@ -7,6 +7,7 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -49,6 +50,11 @@ public class Journal {
 
     @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Reaction> reactions = new HashSet<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "journal_tags", joinColumns = @JoinColumn(name = "journal_id"))
+    @Column(name = "tag", nullable = false, length = 50)
+    private Set<String> tags = new LinkedHashSet<>();
 
     // Getters and setters
     public String getId() {
@@ -137,5 +143,13 @@ public class Journal {
 
     public void setReactions(Set<Reaction> reactions) {
         this.reactions = reactions;
+    }
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
     }
 }

@@ -13,6 +13,7 @@ public class PublicUserDto {
     private String bio;
     private String location;
     private LocalDateTime createdAt;
+    private long journalsCount;
 
     public String getId() {
         return id;
@@ -60,5 +61,13 @@ public class PublicUserDto {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public long getJournalsCount() {
+        return journalsCount;
+    }
+
+    public void setJournalsCount(long journalsCount) {
+        this.journalsCount = journalsCount;
     }
 }
