@@ -3,6 +3,7 @@ package com.odyssey.controller;
 import com.odyssey.dto.*;
 import com.odyssey.security.JwtTokenProvider;
 import com.odyssey.service.AuthService;
+import com.odyssey.service.JournalService;
 import com.odyssey.service.RateLimitService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,13 +27,16 @@ public class AuthController {
     private static final String REFRESH_COOKIE_PATH = "/api/auth";
 
     private final AuthService authService;
+    private final JournalService journalService;
     private final JwtTokenProvider tokenProvider;
     private final RateLimitService rateLimitService;
 
     public AuthController(AuthService authService,
+                          JournalService journalService,
                           JwtTokenProvider tokenProvider,
                           RateLimitService rateLimitService) {
         this.authService = authService;
+        this.journalService = journalService;
         this.tokenProvider = tokenProvider;
         this.rateLimitService = rateLimitService;
     }
@@ -94,6 +98,17 @@ public class AuthController {
     @GetMapping("/users/{userId}")
     public ResponseEntity<PublicUserDto> getUserById(@PathVariable String userId) {
         return ResponseEntity.ok(authService.getPublicUserById(userId));
+    }
+
+    /**
+     * Public journals by a given author, used by the public profile page.
+     */
+    @GetMapping("/users/{userId}/journals")
+    public ResponseEntity<List<JournalDto>> getUserJournals(
+            @PathVariable String userId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String viewerEmail = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(journalService.getPublicUserJournals(userId, viewerEmail));
     }
 
     @PutMapping("/profile")

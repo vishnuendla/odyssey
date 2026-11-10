@@ -27,8 +27,9 @@ public class JournalController {
     }
 
     @GetMapping
-    public ResponseEntity<List<JournalDto>> getAllJournals() {
-        return ResponseEntity.ok(journalService.getAllJournals());
+    public ResponseEntity<List<JournalDto>> getAllJournals(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(journalService.getAllJournals(userDetails.getUsername()));
     }
 
     @GetMapping("/public")
@@ -36,14 +37,43 @@ public class JournalController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @AuthenticationPrincipal UserDetails userDetails) {
         
         Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? 
             Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         
-        Page<JournalDto> journals = journalService.getPublicJournals(pageable);
+        Page<JournalDto> journals = journalService.getPublicJournals(pageable, emailOf(userDetails));
         return ResponseEntity.ok(journals);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<JournalDto>> searchJournals(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String location,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "recent") String sort,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Sort.Direction direction = "oldest".equalsIgnoreCase(sort)
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(direction, "createdAt"));
+        return ResponseEntity.ok(
+                journalService.searchPublicJournals(q, tag, location, pageable, emailOf(userDetails)));
+    }
+
+    @GetMapping("/tags")
+    public ResponseEntity<List<String>> getPopularTags() {
+        return ResponseEntity.ok(journalService.getPopularTags());
+    }
+
+    @GetMapping("/bookmarks")
+    public ResponseEntity<List<JournalDto>> getBookmarkedJournals(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(journalService.getBookmarkedJournals(userDetails.getUsername()));
     }
 
     @GetMapping("/my")
@@ -56,8 +86,7 @@ public class JournalController {
             @PathVariable String id, 
             @AuthenticationPrincipal UserDetails userDetails) {
         // Anonymous visitors may view public journals (see SecurityConfig).
-        String userEmail = userDetails != null ? userDetails.getUsername() : null;
-        return ResponseEntity.ok(journalService.getJournalById(id, userEmail));
+        return ResponseEntity.ok(journalService.getJournalById(id, emailOf(userDetails)));
     }
 
     @PostMapping
@@ -88,5 +117,23 @@ public class JournalController {
             @AuthenticationPrincipal UserDetails userDetails) {
         journalService.deleteJournal(id, userDetails.getUsername());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/bookmark")
+    public ResponseEntity<JournalDto> addBookmark(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(journalService.addBookmark(id, userDetails.getUsername()));
+    }
+
+    @DeleteMapping("/{id}/bookmark")
+    public ResponseEntity<JournalDto> removeBookmark(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(journalService.removeBookmark(id, userDetails.getUsername()));
+    }
+
+    private String emailOf(UserDetails userDetails) {
+        return userDetails != null ? userDetails.getUsername() : null;
     }
 }

@@ -93,12 +93,16 @@ public class SecurityConfig {
                         ).permitAll()
                         // Public author cards are needed by anonymous visitors on public journals.
                         .requestMatchers(HttpMethod.GET, "/api/auth/users/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/users/*/journals").permitAll()
                         // Public journal image files are referenced by URL in journal entries.
                         .requestMatchers(HttpMethod.GET, "/api/storage/files/*").permitAll()
                         // Individual journal pages are public when the journal is public.
                         // "/my" is kept ahead of the "/*" matcher so it stays authenticated.
                         .requestMatchers(HttpMethod.GET, "/api/journals/my").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/journals/bookmarks").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/journals/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/journals/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/journals/tags").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/journals/*").permitAll()
                         .requestMatchers("/api/journals/*/comments", "/api/journals/*/reactions/**").authenticated()
                         .anyRequest().authenticated())
