@@ -45,9 +45,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = tokenProvider.resolveAccessToken(request);
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             Claims claims = tokenProvider.parseAccessToken(token);
-            if (claims != null) {
-                Optional<User> user = userRepository.findById(claims.get("uid", String.class));
-                if (user.isPresent() && claims.get("tv", Integer.class) == user.get().getTokenVersion()) {
+            String userId = claims == null ? null : claims.get("uid", String.class);
+            if (userId != null) {
+                Optional<User> user = userRepository.findById(userId);
+                if (user.isPresent() && Integer.valueOf(user.get().getTokenVersion()).equals(claims.get("tv", Integer.class))) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(user.get().getEmail());
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
