@@ -10,8 +10,11 @@ import com.odyssey.exception.TooManyRequestsException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.CommentRepository;
 import com.odyssey.repository.BookmarkRepository;
+import com.odyssey.repository.FollowRepository;
 import com.odyssey.repository.JournalRepository;
+import com.odyssey.repository.NotificationRepository;
 import com.odyssey.repository.ReactionRepository;
+import com.odyssey.repository.ReportRepository;
 import com.odyssey.repository.RefreshTokenRepository;
 import com.odyssey.repository.UserRepository;
 import com.odyssey.repository.VerificationTokenRepository;
@@ -45,12 +48,16 @@ public class AuthService {
     private final CommentRepository commentRepository;
     private final ReactionRepository reactionRepository;
     private final BookmarkRepository bookmarkRepository;
+    private final FollowRepository followRepository;
+    private final NotificationRepository notificationRepository;
+    private final ReportRepository reportRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final MailService mailService;
     private final AuthAuditLogger auditLogger;
     private final StorageService storageService;
+    private final FollowService followService;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -59,12 +66,16 @@ public class AuthService {
                        CommentRepository commentRepository,
                        ReactionRepository reactionRepository,
                        BookmarkRepository bookmarkRepository,
+                       FollowRepository followRepository,
+                       NotificationRepository notificationRepository,
+                       ReportRepository reportRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
                        JwtTokenProvider tokenProvider,
                        MailService mailService,
                        AuthAuditLogger auditLogger,
-                       StorageService storageService) {
+                       StorageService storageService,
+                       FollowService followService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.verificationTokenRepository = verificationTokenRepository;
@@ -72,12 +83,16 @@ public class AuthService {
         this.commentRepository = commentRepository;
         this.reactionRepository = reactionRepository;
         this.bookmarkRepository = bookmarkRepository;
+        this.followRepository = followRepository;
+        this.notificationRepository = notificationRepository;
+        this.reportRepository = reportRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
         this.mailService = mailService;
         this.auditLogger = auditLogger;
         this.storageService = storageService;
+        this.followService = followService;
     }
 
     public record AuthSession(UserDto user, String accessToken, String refreshToken, long refreshExpiresMs) {
@@ -188,18 +203,8 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public PublicUserDto getPublicUserById(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new com.odyssey.exception.ResourceNotFoundException("User not found"));
-        PublicUserDto dto = new PublicUserDto();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        dto.setAvatar(user.getAvatar());
-        dto.setBio(user.getBio());
-        dto.setLocation(user.getLocation());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setJournalsCount(journalRepository.countByUserIdAndIsPublicTrue(user.getId()));
-        return dto;
+    public PublicUserDto getPublicUserById(String userId, String viewerEmail) {
+        return followService.getProfile(userId, viewerEmail);
     }
 
     @Transactional(readOnly = true)
@@ -361,9 +366,17 @@ public class AuthService {
         }
 
         // Remove rows that reference the user directly before deleting their journals.
+        for (com.odyssey.entity.Comment comment : commentRepository.findByUserId(user.getId())) {
+            commentRepository.deleteByParentId(comment.getId());
+            notificationRepository.deleteByCommentId(comment.getId());
+            reportRepository.deleteByTarget(com.odyssey.entity.Report.TargetType.COMMENT, comment.getId());
+        }
         commentRepository.deleteByUserId(user.getId());
         reactionRepository.deleteByUserId(user.getId());
         bookmarkRepository.deleteByUserId(user.getId());
+        followRepository.deleteByUserId(user.getId());
+        notificationRepository.deleteByUserId(user.getId());
+        reportRepository.deleteByReporterId(user.getId());
         refreshTokenRepository.deleteAllForUser(user.getId());
         verificationTokenRepository.deleteAllForUser(user.getId());
 
@@ -460,6 +473,7 @@ public class AuthService {
         dto.setBio(user.getBio());
         dto.setLocation(user.getLocation());
         dto.setEmailVerified(user.isEmailVerified());
+        dto.setRole(user.getRole());
         return dto;
     }
 

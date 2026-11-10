@@ -10,6 +10,8 @@ public class CommentDto {
     private String userName;
     private String userAvatar;
     private LocalDateTime createdAt;
+    private String parentId;
+    private boolean hidden;
 
     // Getters and setters
     public String getId() {
@@ -58,5 +60,21 @@ public class CommentDto {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 }

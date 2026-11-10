@@ -4,6 +4,7 @@ package com.odyssey.service;
 import com.odyssey.dto.ReactionDto;
 import com.odyssey.dto.ReactionSummaryDto;
 import com.odyssey.entity.Journal;
+import com.odyssey.entity.Notification;
 import com.odyssey.entity.Reaction;
 import com.odyssey.entity.User;
 import com.odyssey.exception.ResourceNotFoundException;
@@ -25,13 +26,16 @@ public class ReactionService {
     private final ReactionRepository reactionRepository;
     private final JournalRepository journalRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public ReactionService(ReactionRepository reactionRepository,
                            JournalRepository journalRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           NotificationService notificationService) {
         this.reactionRepository = reactionRepository;
         this.journalRepository = journalRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -41,6 +45,12 @@ public class ReactionService {
         
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+        if ((journal.isHidden() || !journal.isPublic())
+                && !journal.getUser().getId().equals(user.getId())
+                && !user.isAdmin()) {
+            throw new ResourceNotFoundException("Journal not found");
+        }
         
         Reaction.ReactionType reactionType;
         try {
@@ -59,6 +69,9 @@ public class ReactionService {
             reaction.setUser(user);
             reaction.setType(reactionType);
             reactionRepository.save(reaction);
+            notificationService.notify(journal.getUser(), user, Notification.Type.REACTION,
+                    journal.getId(), null,
+                    user.getName() + " reacted with " + reactionType.name().toLowerCase() + ".");
         }
         
         return getReactionSummary(journal);
