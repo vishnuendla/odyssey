@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { JournalEntry, Comment, User } from '@/types';
 import { journalApi, socialApi, accountApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import ShareJournal from '@/components/sharing/ShareJournal';
+import FollowButton from '@/components/social/FollowButton';
+import ReportDialog from '@/components/social/ReportDialog';
 import { useJournal } from '@/contexts/JournalContext';
 
 import Navbar from '@/components/layout/Navbar';
@@ -19,31 +21,42 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import { 
+import {
   Bookmark,
-  Calendar, 
-  Clock, 
-  Edit, 
-  Globe, 
-  Heart, 
-  MapPin, 
-  ThumbsUp, 
-  Trash, 
+  Calendar,
+  Clock,
+  Edit,
+  Globe,
+  Heart,
+  MapPin,
+  MessageCircle,
+  ThumbsUp,
+  Trash,
   User as UserIcon,
-  Loader2 
+  Loader2,
+  CornerDownRight,
 } from 'lucide-react';
 
-const API_BASE_URL = '/api';
+const setMeta = (property: string, content: string, attr: 'name' | 'property' = 'property') => {
+  let tag = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${property}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(attr, property);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', content);
+};
 
 const JournalView = () => {
   const { id } = useParams<{ id: string }>();
-  
+
   const [journal, setJournal] = useState<JournalEntry | null>(null);
   const [author, setAuthor] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -57,100 +70,124 @@ const JournalView = () => {
         setLoading(false);
         return;
       }
-      
+
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch(`${API_BASE_URL}/journals/${id}`, {
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: 'Failed to load journal' }));
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-        
-        const journalData = await response.json();
+        const journalData = await journalApi.getJournalById(id);
         setJournal(journalData);
-        
-        // Use author info included in the journal payload; fall back to a
-        // dedicated lookup only when it is missing (and we are signed in,
-        // since that endpoint requires authentication).
-        if (journalData.userName) {
-          setAuthor({ id: journalData.userId, name: journalData.userName, avatar: journalData.userAvatar } as User);
-        } else if (isAuthenticated) {
+
+        setAuthor(
+          journalData.userName
+            ? ({
+                id: journalData.userId,
+                name: journalData.userName,
+                avatar: journalData.userAvatar,
+                email: '',
+                createdAt: journalData.createdAt,
+              } as User)
+            : null
+        );
+
+        if (!journalData.userName) {
           try {
             const authorData = await accountApi.getUser(journalData.userId);
             setAuthor(authorData);
-          } catch (error) {
-            console.error('Failed to fetch author information:', error);
-            setAuthor(null);
+          } catch (authorError) {
+            console.error('Failed to fetch author information:', authorError);
           }
-        } else {
-          setAuthor(null);
         }
-      } catch (error) {
-        console.error('Failed to fetch journal:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load journal. It may be private or no longer exist.');
-        toast({
-          variant: "destructive",
-          description: error instanceof Error ? error.message : 'Failed to load journal. It may be private or no longer exist.',
-        });
+      } catch (fetchError) {
+        console.error('Failed to fetch journal:', fetchError);
+        setError(fetchError instanceof Error
+          ? fetchError.message
+          : 'Failed to load journal. It may be private or no longer exist.');
       } finally {
         setLoading(false);
       }
     };
-  
-    fetchJournal();
-  }, [id, toast, isAuthenticated]);
 
-  const handleViewMap = () => {
-    if (!journal?.location) return;
-    
-    const { latitude, longitude } = journal.location;
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-    window.open(mapUrl, '_blank');
+    fetchJournal();
+  }, [id]);
+
+  useEffect(() => {
+    if (!journal) return;
+    document.title = `${journal.title} · Odyssey`;
+    const description = journal.content.slice(0, 180).replace(/\s+/g, ' ').trim();
+    setMeta('description', description, 'name');
+    setMeta('og:title', journal.title);
+    setMeta('og:description', description);
+    setMeta('og:type', 'article');
+    setMeta('og:url', window.location.href);
+    if (journal.images?.[0]) {
+      setMeta('og:image', new URL(journal.images[0], window.location.origin).toString());
+    }
+  }, [journal]);
+
+  const comments = journal?.comments ?? [];
+
+  const { topLevel, repliesByParent } = useMemo(() => {
+    const top: Comment[] = [];
+    const replies: Record<string, Comment[]> = {};
+    for (const item of comments) {
+      if (!item.parentId) {
+        top.push(item);
+      } else {
+        replies[item.parentId] = [...(replies[item.parentId] ?? []), item];
+      }
+    }
+    return { topLevel: top, repliesByParent: replies };
+  }, [comments]);
+
+  const refreshJournal = async () => {
+    if (!id) return;
+    const updated = await journalApi.getJournalById(id);
+    setJournal(updated);
   };
-  
-  const handleAddComment = async () => {
-    if (!comment.trim() || !id || !isAuthenticated) return;
-    
+
+  const handleAddComment = async (parentId?: string) => {
+    const content = parentId ? replyText : comment;
+    if (!content.trim() || !id || !isAuthenticated) return;
+
     setSubmitting(true);
     try {
-      await socialApi.addComment(id, comment);
-      
-      const updatedJournal = await journalApi.getJournalById(id);
-      setJournal(updatedJournal);
-      setComment('');
-      
-      toast({
-        description: 'Comment added successfully',
-      });
-    } catch (error) {
-      console.error('Failed to add comment:', error);
-      toast({
-        variant: "destructive",
-        description: 'Failed to add comment',
-      });
+      await socialApi.addComment(id, content, parentId);
+      await refreshJournal();
+      if (parentId) {
+        setReplyText('');
+        setReplyTo(null);
+      } else {
+        setComment('');
+      }
+      toast({ description: parentId ? 'Reply posted.' : 'Comment added.' });
+    } catch (addError) {
+      console.error('Failed to add comment:', addError);
+      toast({ variant: 'destructive', description: 'Failed to add comment.' });
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!id || !window.confirm('Delete this comment and its replies?')) return;
+    try {
+      await socialApi.deleteComment(id, commentId);
+      await refreshJournal();
+      toast({ description: 'Comment deleted.' });
+    } catch (deleteError) {
+      console.error('Failed to delete comment:', deleteError);
+      toast({ variant: 'destructive', description: 'Failed to delete comment.' });
+    }
+  };
+
   const handleAddReaction = async (type: string) => {
     if (!id || !isAuthenticated) return;
-    
     try {
       await socialApi.addReaction(id, type);
-      
-      const updatedJournal = await journalApi.getJournalById(id);
-      setJournal(updatedJournal);
-    } catch (error) {
-      console.error('Failed to add reaction:', error);
-      toast({
-        variant: "destructive",
-        description: 'Failed to add reaction',
-      });
+      await refreshJournal();
+    } catch (reactionError) {
+      console.error('Failed to add reaction:', reactionError);
+      toast({ variant: 'destructive', description: 'Failed to add reaction.' });
     }
   };
 
@@ -169,35 +206,26 @@ const JournalView = () => {
       toast({
         description: updated.bookmarked ? 'Journal saved to your bookmarks.' : 'Bookmark removed.',
       });
-    } catch (error) {
-      console.error('Failed to update bookmark:', error);
-      toast({
-        variant: 'destructive',
-        description: 'Could not update your bookmark. Please try again.',
-      });
+    } catch (bookmarkError) {
+      console.error('Failed to update bookmark:', bookmarkError);
+      toast({ variant: 'destructive', description: 'Could not update your bookmark. Please try again.' });
     }
   };
 
   const handleDeleteJournal = async () => {
     if (!id || !journal || journal.userId !== user?.id) return;
-    
+
     if (window.confirm('Are you sure you want to delete this journal? This action cannot be undone.')) {
       try {
         await deleteJournal(id);
-        toast({
-          description: 'Journal deleted successfully',
-        });
+        toast({ description: 'Journal deleted successfully' });
         navigate('/journals');
-      } catch (error) {
-        console.error('Failed to delete journal:', error);
-        toast({
-          variant: "destructive",
-          description: 'Failed to delete journal',
-        });
+      } catch (deleteError) {
+        console.error('Failed to delete journal:', deleteError);
+        toast({ variant: 'destructive', description: 'Failed to delete journal' });
       }
     }
   };
-
 
   if (loading) {
     return (
@@ -231,17 +259,77 @@ const JournalView = () => {
   }
 
   const isOwner = user?.id === journal.userId;
+  const canModerate = isOwner || user?.role === 'ADMIN';
   const formattedDate = new Date(journal.createdAt).toLocaleDateString();
   const formattedTime = new Date(journal.createdAt).toLocaleTimeString();
+
+  const commentCard = (item: Comment, isReply = false) => (
+    <Card key={item.id} className={isReply ? 'ml-8 border-l-2' : ''}>
+      <CardHeader className="py-3">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={item.userAvatar} alt={item.userName || 'User'} />
+            <AvatarFallback>{item.userName?.charAt(0) || 'U'}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <CardTitle className="text-sm font-medium">
+              <Link to={`/users/${item.userId}`} className="hover:text-primary">
+                {item.userName || 'Anonymous'}
+              </Link>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              {new Date(item.createdAt).toLocaleDateString()}
+            </CardDescription>
+          </div>
+          {isAuthenticated && !isReply && (
+            <Button variant="ghost" size="sm" onClick={() => {
+              setReplyTo(replyTo?.id === item.id ? null : item);
+              setReplyText('');
+            }}>
+              <CornerDownRight className="mr-1 h-3 w-3" /> Reply
+            </Button>
+          )}
+          {(user?.id === item.userId || canModerate) && (
+            <Button variant="ghost" size="icon" onClick={() => handleDeleteComment(item.id)} aria-label="Delete comment">
+              <Trash className="h-4 w-4" />
+            </Button>
+          )}
+          {!isOwner && user?.id !== item.userId && (
+            <ReportDialog targetType="COMMENT" targetId={item.id} label="" />
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="py-2">
+        <p className="whitespace-pre-wrap">{item.content}</p>
+      </CardContent>
+      {replyTo?.id === item.id && (
+        <CardContent className="space-y-2 pt-0">
+          <Textarea
+            value={replyText}
+            onChange={(event) => setReplyText(event.target.value)}
+            placeholder={`Reply to ${item.userName || 'this comment'}...`}
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => handleAddComment(item.id)} disabled={!replyText.trim() || submitting}>
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Post reply
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setReplyTo(null); setReplyText(''); }}>
+              Cancel
+            </Button>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto">
-          {/* Journal header */}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6">
-            <h1 className="text-3xl font-bold mb-4 md:mb-0">{journal.title}</h1>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
+            <h1 className="text-3xl font-bold">{journal.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               {isOwner && (
                 <div className="flex gap-2">
@@ -261,12 +349,14 @@ const JournalView = () => {
                   {journal.bookmarked ? 'Saved' : 'Save'}
                 </Button>
               )}
+              {!isOwner && (
+                <ReportDialog targetType="JOURNAL" targetId={journal.id} />
+              )}
               <ShareJournal journalId={journal.id} title={journal.title} />
             </div>
           </div>
-          
-          {/* Journal metadata */}
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-6">
+
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
             <div className="flex items-center">
               <Calendar className="h-4 w-4 mr-1" />
               <span>{formattedDate}</span>
@@ -275,21 +365,23 @@ const JournalView = () => {
               <Clock className="h-4 w-4 mr-1" />
               <span>{formattedTime}</span>
             </div>
-            <div className="flex items-center">
-              <UserIcon className="h-4 w-4 mr-1" />
+            <div className="flex items-center gap-2">
+              <UserIcon className="h-4 w-4" />
               <span>
                 By:{' '}
-                <Link
-                  to={`/users/${journal.userId}`}
-                  className="font-medium text-foreground hover:text-primary"
-                >
+                <Link to={`/users/${journal.userId}`} className="font-medium text-foreground hover:text-primary">
                   {author?.name || journal.userName || 'Anonymous'}
                 </Link>
               </span>
+              <FollowButton
+                userId={journal.userId}
+                initialFollowing={author?.following}
+                initialFollowers={author?.followersCount}
+              />
             </div>
             <div className="flex items-center">
               <Globe className="h-4 w-4 mr-1" />
-              <span>{journal.isPublic ? 'Public' : 'Private'}</span>
+              <span>{journal.hidden ? 'Under review' : journal.isPublic ? 'Public' : 'Private'}</span>
             </div>
             {journal.location && (
               <div className="flex items-center">
@@ -312,16 +404,11 @@ const JournalView = () => {
               ))}
             </div>
           )}
-          
-          {/* Journal content */}
+
           <Card className="mb-8">
             {journal.images && journal.images.length > 0 && (
               <div className="w-full h-64 md:h-96 overflow-hidden">
-                <img 
-                  src={journal.images[0]} 
-                  alt={journal.title} 
-                  className="w-full h-full object-cover"
-                />
+                <img src={journal.images[0]} alt={journal.title} className="w-full h-full object-cover" />
               </div>
             )}
             <CardContent className="pt-6">
@@ -330,16 +417,12 @@ const JournalView = () => {
                   <p key={index} className="mb-4">{paragraph}</p>
                 ))}
               </div>
-              
+
               {journal.images && journal.images.length > 1 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
                   {journal.images.slice(1).map((image, index) => (
                     <div key={index} className="aspect-square overflow-hidden rounded-md">
-                      <img 
-                        src={image} 
-                        alt={`${journal.title} - ${index + 2}`} 
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={image} alt={`${journal.title} - ${index + 2}`} className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -348,56 +431,45 @@ const JournalView = () => {
             <CardFooter className="flex justify-between">
               <div className="flex gap-4">
                 {isAuthenticated && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleAddReaction('like')}
-                    className="flex items-center gap-1"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => handleAddReaction('like')} className="flex items-center gap-1">
                     <ThumbsUp className="h-4 w-4" />
-                    <span>
-                      {journal.reactions.find(r => r.type === 'like')?.count || 0}
-                    </span>
+                    <span>{journal.reactions.find((reaction) => reaction.type === 'like')?.count || 0}</span>
                   </Button>
                 )}
                 {isAuthenticated && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleAddReaction('love')}
-                    className="flex items-center gap-1"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => handleAddReaction('love')} className="flex items-center gap-1">
                     <Heart className="h-4 w-4" />
-                    <span>
-                      {journal.reactions.find(r => r.type === 'love')?.count || 0}
-                    </span>
+                    <span>{journal.reactions.find((reaction) => reaction.type === 'love')?.count || 0}</span>
                   </Button>
                 )}
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <MessageCircle className="h-4 w-4" /> {comments.length}
+                </span>
               </div>
-              
+
               {journal.location && (
-                <Button onClick={handleViewMap} variant="outline" size="sm">
+                <Button
+                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${journal.location?.latitude},${journal.location?.longitude}`, '_blank')}
+                  variant="outline"
+                  size="sm"
+                >
                   <MapPin className="h-4 w-4 mr-1" /> View on Map
                 </Button>
               )}
             </CardFooter>
           </Card>
-          
-          {/* Comments section */}
+
           <h2 className="text-2xl font-bold mb-4">Comments</h2>
-          
+
           {isAuthenticated ? (
             <div className="mb-6">
               <Textarea
                 placeholder="Write a comment..."
                 className="mb-2"
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={(event) => setComment(event.target.value)}
               />
-              <Button 
-                onClick={handleAddComment} 
-                disabled={!comment.trim() || submitting}
-              >
+              <Button onClick={() => handleAddComment()} disabled={!comment.trim() || submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -413,29 +485,14 @@ const JournalView = () => {
               </CardContent>
             </Card>
           )}
-          
-          {journal.comments && journal.comments.length > 0 ? (
+
+          {topLevel.length > 0 ? (
             <div className="space-y-4">
-              {journal.comments.map((comment) => (
-                <Card key={comment.id}>
-                  <CardHeader className="py-3">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={comment.userAvatar} alt={comment.userName || 'User'} />
-                        <AvatarFallback>{comment.userName?.charAt(0) || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-sm font-medium">{comment.userName || 'Anonymous'}</CardTitle>
-                        <CardDescription className="text-xs">
-                          {new Date(comment.createdAt).toLocaleDateString()}
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <p>{comment.content}</p>
-                  </CardContent>
-                </Card>
+              {topLevel.map((item) => (
+                <div key={item.id} className="space-y-3">
+                  {commentCard(item)}
+                  {(repliesByParent[item.id] ?? []).map((reply) => commentCard(reply, true))}
+                </div>
               ))}
             </div>
           ) : (

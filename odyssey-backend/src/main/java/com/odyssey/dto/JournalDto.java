@@ -10,6 +10,7 @@ public class JournalDto {
     private String title;
     private String content;
     private boolean isPublic;
+    private boolean hidden;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String userId;
@@ -53,6 +54,14 @@ public class JournalDto {
 
     public void setIsPublic(boolean isPublic) {  // 🔥 FIXED
         this.isPublic = isPublic;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 
     public LocalDateTime getCreatedAt() {

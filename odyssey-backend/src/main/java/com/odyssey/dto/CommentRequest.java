@@ -9,11 +9,21 @@ public class CommentRequest {
     @Size(max = 2000, message = "Comment must be 2000 characters or fewer")
     private String content;
 
+    private String parentId;
+
     public String getContent() {
         return content;
     }
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
     }
 }

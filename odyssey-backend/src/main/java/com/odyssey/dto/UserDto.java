@@ -11,9 +11,18 @@ public class UserDto {
     private LocalDateTime createdAt;
     private boolean emailVerified;
     private String bio;
+    private String role = "USER";
 
     public String getBio() {
         return bio;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public void setBio(String bio) {
