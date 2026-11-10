@@ -1,4 +1,4 @@
-import { User, JournalEntry, Location, Comment as JournalComment } from '@/types';
+import { User, JournalEntry, Location, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats } from '@/types';
 
 // All backend calls go through the Vite proxy, so cookies stay first-party.
 const API_BASE_URL = '/api';
@@ -203,6 +203,22 @@ export const accountApi = {
   getUserJournals: async (userId: string): Promise<JournalEntry[]> => {
     return apiRequest<JournalEntry[]>(`/auth/users/${userId}/journals`);
   },
+
+  getFollowers: async (userId: string): Promise<User[]> => {
+    return apiRequest<User[]>(`/users/${userId}/followers`);
+  },
+
+  getFollowing: async (userId: string): Promise<User[]> => {
+    return apiRequest<User[]>(`/users/${userId}/following`);
+  },
+
+  follow: async (userId: string): Promise<User> => {
+    return apiRequest<User>(`/users/${userId}/follow`, { method: 'POST' });
+  },
+
+  unfollow: async (userId: string): Promise<User> => {
+    return apiRequest<User>(`/users/${userId}/follow`, { method: 'DELETE' });
+  },
 };
 
 export interface JournalSearchParams {
@@ -344,11 +360,25 @@ export const journalApi = {
   },
 
   getPublicJournals: async (): Promise<JournalEntry[]> => {
-    const data = await apiRequest<JournalEntry[] | { content: JournalEntry[] }>('/journals/public');
-    return Array.isArray(data) ? data : data.content || [];
+    const page = await apiRequest<JournalEntry[] | PageResponse<JournalEntry>>('/journals/public');
+    return Array.isArray(page) ? page : page.content || [];
+  },
+
+  getPublicJournalsPage: async (page = 0, size = 12): Promise<PageResponse<JournalEntry>> => {
+    const data = await apiRequest<JournalEntry[] | PageResponse<JournalEntry>>(
+      `/journals/public?page=${page}&size=${size}`
+    );
+    return Array.isArray(data)
+      ? { content: data, totalElements: data.length, totalPages: 1, number: 0, size: data.length, first: true, last: true }
+      : data;
   },
 
   searchPublicJournals: async (params: JournalSearchParams = {}): Promise<JournalEntry[]> => {
+    const page = await journalApi.searchPublicJournalsPage(params);
+    return page.content;
+  },
+
+  searchPublicJournalsPage: async (params: JournalSearchParams = {}): Promise<PageResponse<JournalEntry>> => {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
     if (params.tag) query.set('tag', params.tag);
@@ -358,10 +388,12 @@ export const journalApi = {
     if (params.size !== undefined) query.set('size', String(params.size));
 
     const suffix = query.toString();
-    const data = await apiRequest<JournalEntry[] | { content: JournalEntry[] }>(
+    const data = await apiRequest<JournalEntry[] | PageResponse<JournalEntry>>(
       `/journals/search${suffix ? `?${suffix}` : ''}`
     );
-    return Array.isArray(data) ? data : data.content || [];
+    return Array.isArray(data)
+      ? { content: data, totalElements: data.length, totalPages: 1, number: 0, size: data.length, first: true, last: true }
+      : data;
   },
 
   getPopularTags: async (): Promise<string[]> => {
@@ -428,10 +460,10 @@ export const journalApi = {
 
 // Comment and reaction API calls
 export const socialApi = {
-  addComment: async (journalId: string, content: string): Promise<JournalComment> => {
+  addComment: async (journalId: string, content: string, parentId?: string | null): Promise<JournalComment> => {
     return apiRequest<JournalComment>(`/journals/${journalId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, parentId: parentId ?? null }),
     });
   },
 
@@ -448,6 +480,73 @@ export const socialApi = {
 
   removeReaction: async (journalId: string, reactionType: string): Promise<void> => {
     await apiRequest<void>(`/journals/${journalId}/reactions/${reactionType}`, { method: 'DELETE' });
+  },
+};
+
+export const notificationApi = {
+  list: async (): Promise<NotificationItem[]> => {
+    return apiRequest<NotificationItem[]>('/notifications');
+  },
+
+  unreadCount: async (): Promise<number> => {
+    const data = await apiRequest<{ count: number }>('/notifications/unread-count');
+    return data.count;
+  },
+
+  markRead: async (id: string): Promise<void> => {
+    await apiRequest<void>(`/notifications/${id}/read`, { method: 'POST' });
+  },
+
+  markAllRead: async (): Promise<void> => {
+    await apiRequest<void>('/notifications/read-all', { method: 'POST' });
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await apiRequest<void>(`/notifications/${id}`, { method: 'DELETE' });
+  },
+};
+
+export interface CreateReportInput {
+  targetType: 'JOURNAL' | 'COMMENT';
+  targetId: string;
+  reason: string;
+  details?: string;
+}
+
+export const moderationApi = {
+  report: async (input: CreateReportInput): Promise<ReportItem> => {
+    return apiRequest<ReportItem>('/reports', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
+  listReports: async (status?: string): Promise<ReportItem[]> => {
+    const suffix = status ? `?status=${encodeURIComponent(status)}` : '';
+    return apiRequest<ReportItem[]>(`/admin/reports${suffix}`);
+  },
+
+  resolveReport: async (id: string, action: 'HIDE' | 'DISMISS', note?: string): Promise<ReportItem> => {
+    return apiRequest<ReportItem>(`/admin/reports/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action, note }),
+    });
+  },
+
+  stats: async (): Promise<AdminStats> => {
+    return apiRequest<AdminStats>('/admin/stats');
+  },
+
+  setJournalVisibility: async (journalId: string, hidden: boolean): Promise<void> => {
+    await apiRequest<void>(`/admin/journals/${journalId}/visibility?hidden=${hidden}`, {
+      method: 'PATCH',
+    });
+  },
+
+  setCommentVisibility: async (commentId: string, hidden: boolean): Promise<void> => {
+    await apiRequest<void>(`/admin/comments/${commentId}/visibility?hidden=${hidden}`, {
+      method: 'PATCH',
+    });
   },
 };
 

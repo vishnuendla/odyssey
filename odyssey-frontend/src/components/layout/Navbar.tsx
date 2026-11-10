@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTheme } from '@/contexts/ThemeContext';
 import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -64,6 +65,7 @@ export default function Navbar() {
                 <Link to="/journals" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
                   My Journals
                 </Link>
+                <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -87,6 +89,14 @@ export default function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link to="/profile">Profile</Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/notifications">Notifications</Link>
+                    </DropdownMenuItem>
+                    {user?.role === 'ADMIN' && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin">Moderation</Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem asChild>
                       <Link to="/settings">Settings</Link>
                     </DropdownMenuItem>
@@ -181,6 +191,22 @@ export default function Navbar() {
                 >
                   Profile
                 </Link>
+                <Link
+                  to="/notifications"
+                  className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Notifications
+                </Link>
+                {user?.role === 'ADMIN' && (
+                  <Link
+                    to="/admin"
+                    className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Moderation
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     logout();

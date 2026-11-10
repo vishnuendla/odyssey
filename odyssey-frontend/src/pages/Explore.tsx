@@ -5,7 +5,7 @@ import Footer from '@/components/layout/Footer';
 import JournalList from '@/components/journals/JournalList';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { journalApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +21,8 @@ import {
 
 type SortOption = 'recent' | 'oldest' | 'popular';
 
+const PAGE_SIZE = 12;
+
 const ExplorePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,7 +30,10 @@ const ExplorePage = () => {
   const [locationFilter, setLocationFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState(searchParams.get('tag') || '');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [page, setPage] = useState(0);
   const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [popularTags, setPopularTags] = useState<string[]>([]);
   const [locationOptions, setLocationOptions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,33 +64,45 @@ const ExplorePage = () => {
       .catch((error) => console.error('Error fetching locations:', error));
   }, []);
 
+  // Any change to the search criteria starts again from the first page.
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, tagFilter, locationFilter, sortBy]);
+
   useEffect(() => {
     let cancelled = false;
 
     const fetchJournals = async () => {
       setIsLoading(true);
       try {
-        const data = await journalApi.searchPublicJournals({
+        const result = await journalApi.searchPublicJournalsPage({
           q: debouncedSearch.trim() || undefined,
           tag: tagFilter || undefined,
           location: locationFilter === 'all' ? undefined : locationFilter,
           sort: sortBy === 'popular' ? 'recent' : sortBy,
-          size: 100,
+          page,
+          size: PAGE_SIZE,
         });
 
         if (cancelled) return;
 
-        let filtered = data.filter((journal) => journal.userId !== user?.id);
+        let entries = result.content;
         if (sortBy === 'popular') {
           const countReactions = (journal: JournalEntry) =>
             journal.reactions?.reduce((acc, reaction) => acc + reaction.count, 0) ?? 0;
-          filtered = [...filtered].sort((a, b) => countReactions(b) - countReactions(a));
+          entries = [...entries].sort((a, b) => countReactions(b) - countReactions(a));
         }
 
-        setJournals(filtered);
+        setJournals(entries);
+        setTotalElements(result.totalElements);
+        setTotalPages(result.totalPages);
       } catch (error) {
         console.error('Error fetching journals:', error);
-        if (!cancelled) setJournals([]);
+        if (!cancelled) {
+          setJournals([]);
+          setTotalElements(0);
+          setTotalPages(0);
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -95,7 +112,7 @@ const ExplorePage = () => {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, tagFilter, locationFilter, sortBy, user?.id]);
+  }, [debouncedSearch, tagFilter, locationFilter, sortBy, page, user?.id]);
 
   const userMap = useMemo(() => {
     const map: Record<string, User> = {};
@@ -229,7 +246,8 @@ const ExplorePage = () => {
         ) : (
           <>
             <div className="text-sm text-muted-foreground mb-4">
-              Found {journals.length} {journals.length === 1 ? 'journal' : 'journals'}
+              Found {totalElements} {totalElements === 1 ? 'journal' : 'journals'}
+              {totalPages > 1 ? ` · page ${page + 1} of ${totalPages}` : ''}
             </div>
             <JournalList
               explore="true"
@@ -237,6 +255,30 @@ const ExplorePage = () => {
               emptyMessage="No journals match your filters. Try changing your search criteria."
               userMap={userMap}
             />
+
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((current) => Math.max(0, current - 1))}
+                  disabled={page === 0 || isLoading}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {page + 1} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+                  disabled={page >= totalPages - 1 || isLoading}
+                >
+                  Next <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </>
         )}
       </main>

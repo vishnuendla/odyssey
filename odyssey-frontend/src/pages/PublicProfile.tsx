@@ -7,9 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, MapPin, User as UserIcon } from 'lucide-react';
+import { Calendar, MapPin, User as UserIcon, Users } from 'lucide-react';
 import { accountApi, ApiError } from '@/services/api';
 import { JournalEntry, User } from '@/types';
+import FollowButton from '@/components/social/FollowButton';
 
 const PublicProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -130,12 +131,26 @@ const PublicProfile = () => {
                   {profile.journalsCount ?? journals.length}{' '}
                   {(profile.journalsCount ?? journals.length) === 1 ? 'journal' : 'journals'}
                 </span>
+                <span className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  {profile.followersCount ?? 0} followers · {profile.followingCount ?? 0} following
+                </span>
               </div>
 
               {profile.bio && (
                 <p className="mt-4 whitespace-pre-wrap text-muted-foreground">{profile.bio}</p>
               )}
             </div>
+
+            <FollowButton
+              userId={profile.id}
+              initialFollowing={profile.following}
+              initialFollowers={profile.followersCount ?? 0}
+              size="default"
+              onChanged={(following, followers) => setProfile((current) => current
+                ? { ...current, following, followersCount: followers }
+                : current)}
+            />
           </CardContent>
         </Card>
 
