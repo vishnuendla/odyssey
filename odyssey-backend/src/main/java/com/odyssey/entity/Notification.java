@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class Notification {
 
     public enum Type {
-        FOLLOW, REACTION, COMMENT, REPLY, BOOKMARK
+        FOLLOW, REACTION, COMMENT, REPLY, BOOKMARK, MODERATION
     }
 
     @Id

@@ -7,11 +7,13 @@ import com.odyssey.entity.Journal;
 import com.odyssey.entity.Notification;
 import com.odyssey.entity.Reaction;
 import com.odyssey.entity.User;
+import com.odyssey.exception.ConflictException;
 import com.odyssey.exception.ResourceNotFoundException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.JournalRepository;
 import com.odyssey.repository.ReactionRepository;
 import com.odyssey.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +45,7 @@ public class ReactionService {
         Journal journal = journalRepository.findById(journalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
         
-        User user = userRepository.findByEmail(userEmail)
+        User user = userRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
         if ((journal.isHidden() || !journal.isPublic())
@@ -63,12 +65,17 @@ public class ReactionService {
         Optional<Reaction> existingReaction = reactionRepository.findByJournalAndUserAndType(journal, user, reactionType);
         
         if (existingReaction.isEmpty()) {
-            // Add new reaction
+            // Add new reaction. The (journal, user, type) unique key makes a
+            // concurrent duplicate fail cleanly instead of double counting.
             Reaction reaction = new Reaction();
             reaction.setJournal(journal);
             reaction.setUser(user);
             reaction.setType(reactionType);
-            reactionRepository.save(reaction);
+            try {
+                reactionRepository.saveAndFlush(reaction);
+            } catch (DataIntegrityViolationException ex) {
+                throw new ConflictException("You have already added that reaction.");
+            }
             notificationService.notify(journal.getUser(), user, Notification.Type.REACTION,
                     journal.getId(), null,
                     user.getName() + " reacted with " + reactionType.name().toLowerCase() + ".");
@@ -82,7 +89,7 @@ public class ReactionService {
         Journal journal = journalRepository.findById(journalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
         
-        User user = userRepository.findByEmail(userEmail)
+        User user = userRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
         
         Reaction.ReactionType type;

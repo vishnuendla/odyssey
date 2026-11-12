@@ -23,8 +23,8 @@ public class JournalRequest {
     @Valid
     private LocationDto location;
 
-    @Size(max = 10, message = "You can attach at most 10 images")
-    private List<String> images = new ArrayList<>();
+    @Size(max = 5, message = "You can attach at most 5 images")
+    private List<@NotBlank(message = "Image URL cannot be blank") String> images = new ArrayList<>();
 
     @Size(max = 8, message = "You can add at most 8 tags")
     private List<@NotBlank(message = "Tags cannot be blank")

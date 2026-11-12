@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,8 +23,10 @@ import java.util.UUID;
 @Service
 public class StorageService {
 
-    private static final int MAX_FILES_PER_REQUEST = 10;
-    private static final long MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024;
+    public static final String FILE_URL_PREFIX = "/api/storage/files/";
+
+    public static final int MAX_FILES_PER_REQUEST = 5;
+    public static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
     private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
             "image/jpeg", ".jpg",
@@ -65,7 +68,7 @@ public class StorageService {
                 Path targetLocation = this.fileStorageLocation.resolve(uniqueFileName);
                 Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-                fileUrls.add("/api/storage/files/" + uniqueFileName);
+                fileUrls.add(FILE_URL_PREFIX + uniqueFileName);
             } catch (IOException ex) {
                 throw new RuntimeException("Could not store uploaded file", ex);
             }
@@ -74,7 +77,16 @@ public class StorageService {
         return fileUrls;
     }
 
-    private void validate(MultipartFile file) {        String originalFileName = file.getOriginalFilename();
+    public Path getFileStorageLocation() {
+        return fileStorageLocation;
+    }
+
+    public static boolean isAllowedImageUrl(String url) {
+        return url != null && url.startsWith(FILE_URL_PREFIX);
+    }
+
+    private void validate(MultipartFile file) {
+        String originalFileName = file.getOriginalFilename();
         if (originalFileName == null || originalFileName.isBlank()) {
             throw new IllegalArgumentException("Every uploaded file needs a name.");
         }
@@ -89,13 +101,60 @@ public class StorageService {
         }
 
         if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new IllegalArgumentException("Each image must be 10 MB or smaller.");
+            throw new IllegalArgumentException("Each image must be 5 MB or smaller.");
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.containsKey(contentType.toLowerCase(Locale.ROOT))) {
             throw new IllegalArgumentException("Only JPEG, PNG, GIF and WebP images can be uploaded.");
         }
+
+        if (!hasValidSignature(file, contentType.toLowerCase(Locale.ROOT))) {
+            throw new IllegalArgumentException("That file does not look like a valid image.");
+        }
+    }
+
+    /**
+     * Trusts the bytes, not the declared content type, so a renamed HTML or
+     * executable file cannot be stored and later served from the API origin.
+     */
+    private boolean hasValidSignature(MultipartFile file, String contentType) {
+        byte[] header = new byte[12];
+        int read;
+        try (InputStream inputStream = file.getInputStream()) {
+            read = inputStream.read(header);
+        } catch (IOException ex) {
+            return false;
+        }
+        if (read < 6) {
+            return false;
+        }
+
+        return switch (contentType) {
+            case "image/jpeg" -> (header[0] & 0xFF) == 0xFF
+                    && (header[1] & 0xFF) == 0xD8
+                    && (header[2] & 0xFF) == 0xFF;
+            case "image/png" -> (header[0] & 0xFF) == 0x89
+                    && header[1] == 'P' && header[2] == 'N' && header[3] == 'G'
+                    && (header[4] & 0xFF) == 0x0D && (header[5] & 0xFF) == 0x0A;
+            case "image/gif" -> startsWith(header, read, "GIF87a") || startsWith(header, read, "GIF89a");
+            case "image/webp" -> startsWith(header, read, "RIFF")
+                    && read >= 12
+                    && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P';
+            default -> false;
+        };
+    }
+
+    private boolean startsWith(byte[] header, int read, String expected) {
+        if (read < expected.length()) {
+            return false;
+        }
+        for (int i = 0; i < expected.length(); i++) {
+            if (header[i] != (byte) expected.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

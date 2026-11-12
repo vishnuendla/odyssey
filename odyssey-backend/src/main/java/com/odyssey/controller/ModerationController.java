@@ -6,12 +6,11 @@ import com.odyssey.dto.ReportRequest;
 import com.odyssey.dto.ReportResolveRequest;
 import com.odyssey.service.ModerationService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 public class ModerationController {
@@ -29,8 +28,11 @@ public class ModerationController {
     }
 
     @GetMapping("/api/admin/reports")
-    public ResponseEntity<List<ReportDto>> listReports(@RequestParam(required = false) String status) {
-        return ResponseEntity.ok(moderationService.listReports(status));
+    public ResponseEntity<Page<ReportDto>> listReports(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(moderationService.listReports(status, page, size));
     }
 
     @PatchMapping("/api/admin/reports/{id}")
@@ -47,15 +49,17 @@ public class ModerationController {
 
     @PatchMapping("/api/admin/journals/{id}/visibility")
     public ResponseEntity<Void> hideJournal(@PathVariable String id,
-                                            @RequestParam boolean hidden) {
-        moderationService.setJournalHidden(id, hidden);
+                                            @RequestParam boolean hidden,
+                                            @AuthenticationPrincipal UserDetails userDetails) {
+        moderationService.setJournalHidden(id, hidden, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/api/admin/comments/{id}/visibility")
     public ResponseEntity<Void> hideComment(@PathVariable String id,
-                                            @RequestParam boolean hidden) {
-        moderationService.setCommentHidden(id, hidden);
+                                            @RequestParam boolean hidden,
+                                            @AuthenticationPrincipal UserDetails userDetails) {
+        moderationService.setCommentHidden(id, hidden, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 }
