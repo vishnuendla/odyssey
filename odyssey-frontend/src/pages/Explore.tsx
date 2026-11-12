@@ -250,8 +250,9 @@ const ExplorePage = () => {
               {totalPages > 1 ? ` · page ${page + 1} of ${totalPages}` : ''}
             </div>
             <JournalList
-              explore="true"
               journals={journals}
+              paginate={false}
+              showCreateButton={false}
               emptyMessage="No journals match your filters. Try changing your search criteria."
               userMap={userMap}
             />

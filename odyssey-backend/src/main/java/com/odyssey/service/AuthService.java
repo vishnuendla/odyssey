@@ -385,6 +385,18 @@ public class AuthService {
                 .flatMap(journal -> journal.getImages().stream())
                 .map(com.odyssey.entity.Image::getUrl)
                 .toList();
+
+        // Reports and notifications point at journals and comments by id, not by
+        // foreign key, so deleting the rows alone would leave dangling entries.
+        for (com.odyssey.entity.Journal journal : journals) {
+            notificationRepository.deleteByJournalId(journal.getId());
+            reportRepository.deleteByTarget(com.odyssey.entity.Report.TargetType.JOURNAL, journal.getId());
+            for (com.odyssey.entity.Comment comment : journal.getComments()) {
+                notificationRepository.deleteByCommentId(comment.getId());
+                reportRepository.deleteByTarget(com.odyssey.entity.Report.TargetType.COMMENT, comment.getId());
+            }
+        }
+
         journalRepository.deleteAll(journals);
         user.getJournals().clear();
         userRepository.delete(user);

@@ -6,6 +6,7 @@ import com.odyssey.dto.ReportRequest;
 import com.odyssey.dto.ReportResolveRequest;
 import com.odyssey.entity.Comment;
 import com.odyssey.entity.Journal;
+import com.odyssey.entity.Notification;
 import com.odyssey.entity.Report;
 import com.odyssey.entity.User;
 import com.odyssey.exception.ConflictException;
@@ -15,28 +16,38 @@ import com.odyssey.repository.CommentRepository;
 import com.odyssey.repository.JournalRepository;
 import com.odyssey.repository.ReportRepository;
 import com.odyssey.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class ModerationService {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final ReportRepository reportRepository;
     private final JournalRepository journalRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final ModerationAuditLogger auditLogger;
 
     public ModerationService(ReportRepository reportRepository,
                              JournalRepository journalRepository,
                              CommentRepository commentRepository,
-                             UserRepository userRepository) {
+                             UserRepository userRepository,
+                             NotificationService notificationService,
+                             ModerationAuditLogger auditLogger) {
         this.reportRepository = reportRepository;
         this.journalRepository = journalRepository;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
+        this.auditLogger = auditLogger;
     }
 
     @Transactional
@@ -90,10 +101,11 @@ public class ModerationService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReportDto> listReports(String status) {
-        List<Report> reports;
+    public Page<ReportDto> listReports(String status, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+        Page<Report> reports;
         if (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)) {
-            reports = reportRepository.findAllByOrderByCreatedAtDesc();
+            reports = reportRepository.findAllByOrderByCreatedAtDesc(pageable);
         } else {
             Report.Status parsed;
             try {
@@ -101,9 +113,9 @@ public class ModerationService {
             } catch (IllegalArgumentException e) {
                 throw new IllegalArgumentException("Unknown report status: " + status);
             }
-            reports = reportRepository.findByStatusOrderByCreatedAtDesc(parsed);
+            reports = reportRepository.findByStatusOrderByCreatedAtDesc(parsed, pageable);
         }
-        return reports.stream().map(this::convertToDto).toList();
+        return reports.map(this::convertToDto);
     }
 
     @Transactional
@@ -131,36 +143,51 @@ public class ModerationService {
         report.setResolutionNote(request.getNote());
         reportRepository.save(report);
 
-        // Close every other open report for the same content.
-        for (Report other : reportRepository.findByStatusOrderByCreatedAtDesc(Report.Status.OPEN)) {
-            if (!other.getId().equals(report.getId())
-                    && other.getTargetType() == report.getTargetType()
-                    && other.getTargetId().equals(report.getTargetId())) {
-                other.setStatus(status);
-                other.setResolvedAt(LocalDateTime.now());
-                other.setResolvedBy(admin);
-                other.setResolutionNote("Closed with report " + report.getId());
-                reportRepository.save(other);
-            }
+        auditLogger.reportResolved(adminEmail, report.getId(), report.getTargetType().name(),
+                report.getTargetId(), request.getAction().toUpperCase(),
+                request.getNote());
+
+        // Close every other open report for the same content without scanning all reports.
+        for (Report other : reportRepository.findByTargetTypeAndTargetIdAndStatusAndIdNot(
+                report.getTargetType(), report.getTargetId(), Report.Status.OPEN, report.getId())) {
+            other.setStatus(status);
+            other.setResolvedAt(LocalDateTime.now());
+            other.setResolvedBy(admin);
+            other.setResolutionNote("Closed with report " + report.getId());
+            reportRepository.save(other);
         }
 
         return convertToDto(report);
     }
 
     @Transactional
-    public void setJournalHidden(String journalId, boolean hidden) {
+    public void setJournalHidden(String journalId, boolean hidden, String adminEmail) {
         Journal journal = journalRepository.findById(journalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
+        boolean changed = journal.isHidden() != hidden;
         journal.setHidden(hidden);
         journalRepository.save(journal);
+        auditLogger.visibilityChanged(adminEmail, Report.TargetType.JOURNAL.name(), journalId, hidden);
+        if (changed && hidden) {
+            notificationService.notifySystem(journal.getUser(), Notification.Type.MODERATION,
+                    journal.getId(), null,
+                    "Your journal \"" + journal.getTitle() + "\" was hidden by a moderator.");
+        }
     }
 
     @Transactional
-    public void setCommentHidden(String commentId, boolean hidden) {
+    public void setCommentHidden(String commentId, boolean hidden, String adminEmail) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        boolean changed = comment.isHidden() != hidden;
         comment.setHidden(hidden);
         commentRepository.save(comment);
+        auditLogger.visibilityChanged(adminEmail, Report.TargetType.COMMENT.name(), commentId, hidden);
+        if (changed && hidden) {
+            notificationService.notifySystem(comment.getUser(), Notification.Type.MODERATION,
+                    comment.getJournal().getId(), comment.getId(),
+                    "A comment of yours was hidden by a moderator.");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -176,9 +203,27 @@ public class ModerationService {
 
     private void hideTarget(Report.TargetType targetType, String targetId, boolean hidden) {
         if (targetType == Report.TargetType.JOURNAL) {
-            setJournalHidden(targetId, hidden);
+            Journal journal = journalRepository.findById(targetId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
+            boolean changed = journal.isHidden() != hidden;
+            journal.setHidden(hidden);
+            journalRepository.save(journal);
+            if (changed && hidden) {
+                notificationService.notifySystem(journal.getUser(), Notification.Type.MODERATION,
+                        journal.getId(), null,
+                        "Your journal \"" + journal.getTitle() + "\" was hidden after a moderation review.");
+            }
         } else {
-            setCommentHidden(targetId, hidden);
+            Comment comment = commentRepository.findById(targetId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+            boolean changed = comment.isHidden() != hidden;
+            comment.setHidden(hidden);
+            commentRepository.save(comment);
+            if (changed && hidden) {
+                notificationService.notifySystem(comment.getUser(), Notification.Type.MODERATION,
+                        comment.getJournal().getId(), comment.getId(),
+                        "A comment of yours was hidden after a moderation review.");
+            }
         }
     }
 

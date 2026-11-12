@@ -79,13 +79,14 @@ public class JournalService {
 
     @Transactional(readOnly = true)
     public Page<JournalDto> searchPublicJournals(String query, String tag, String location,
-                                                 Pageable pageable, String userEmail) {
+                                                 Pageable pageable, boolean popular, String userEmail) {
         Set<String> bookmarked = bookmarkedJournalIds(userEmail);
-        String viewerId = userEmail == null ? null
-                : userRepository.findByEmailIgnoreCase(userEmail).map(User::getId).orElse(null);
-        return journalRepository.searchPublic(
-                        blankToNull(query), blankToNull(tag), blankToNull(location), viewerId, pageable)
-                .map(journal -> convertToDto(journal, bookmarked));
+        Page<Journal> page = popular
+                ? journalRepository.searchPublicPopular(
+                        blankToNull(query), blankToNull(tag), blankToNull(location), pageable)
+                : journalRepository.searchPublic(
+                        blankToNull(query), blankToNull(tag), blankToNull(location), pageable);
+        return page.map(journal -> convertToDto(journal, bookmarked));
     }
 
     @Transactional(readOnly = true)
@@ -138,7 +139,8 @@ public class JournalService {
             throw new ResourceNotFoundException("Journal not found");
         }
         if (!journal.isPublic() && !isOwner && !isAdmin) {
-            throw new UnauthorizedException("You do not have permission to view this journal");
+            // Same response as a missing journal so private ids cannot be probed.
+            throw new ResourceNotFoundException("Journal not found");
         }
 
         return convertToDto(journal, bookmarkedJournalIds(userEmail));
@@ -164,6 +166,7 @@ public class JournalService {
     public JournalDto createJournal(JournalRequest journalRequest, String userEmail) {
         User user = requireUser(userEmail);
         requireVerified(user);
+        validateRequest(journalRequest);
 
         Journal journal = new Journal();
         journal.setTitle(journalRequest.getTitle());
@@ -211,6 +214,7 @@ public class JournalService {
             throw new UnauthorizedException("You do not have permission to update this journal");
         }
         requireVerified(journal.getUser());
+        validateRequest(journalRequest);
 
         journal.setTitle(journalRequest.getTitle());
         journal.setContent(journalRequest.getContent());
@@ -318,6 +322,22 @@ public class JournalService {
         return userRepository.findByEmailIgnoreCase(userEmail)
                 .map(user -> bookmarkRepository.findJournalIdsByUserId(user.getId()))
                 .orElseGet(Set::of);
+    }
+
+    private void validateRequest(JournalRequest request) {
+        List<String> images = request.getImages();
+        if (images != null) {
+            for (String url : images) {
+                if (!StorageService.isAllowedImageUrl(url)) {
+                    throw new IllegalArgumentException(
+                            "Images must be uploaded through Odyssey. External or relative URLs are not allowed.");
+                }
+            }
+        }
+        LocationDto location = request.getLocation();
+        if (location != null && location.getLatitude() == 0 && location.getLongitude() == 0) {
+            throw new IllegalArgumentException("Please choose a real place on the map, not 0,0.");
+        }
     }
 
     private Set<String> normalizeTags(List<String> tags) {

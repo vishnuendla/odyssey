@@ -15,10 +15,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/journals")
 public class JournalController {
+
+    private static final int MAX_PAGE_SIZE = 50;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "updatedAt", "title");
 
     private final JournalService journalService;
 
@@ -39,11 +43,7 @@ public class JournalController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
             @AuthenticationPrincipal UserDetails userDetails) {
-        
-        Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-        
+        Pageable pageable = pageable(page, size, sortBy, sortDir);
         Page<JournalDto> journals = journalService.getPublicJournals(pageable, emailOf(userDetails));
         return ResponseEntity.ok(journals);
     }
@@ -57,12 +57,13 @@ public class JournalController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "recent") String sort,
             @AuthenticationPrincipal UserDetails userDetails) {
+        boolean popular = "popular".equalsIgnoreCase(sort);
         Sort.Direction direction = "oldest".equalsIgnoreCase(sort)
                 ? Sort.Direction.ASC
                 : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(direction, "createdAt"));
-        return ResponseEntity.ok(
-                journalService.searchPublicJournals(q, tag, location, pageable, emailOf(userDetails)));
+        Pageable pageable = PageRequest.of(safePage(page), safeSize(size), Sort.by(direction, "createdAt"));
+        return ResponseEntity.ok(journalService.searchPublicJournals(
+                q, tag, location, pageable, popular, emailOf(userDetails)));
     }
 
     @GetMapping("/tags")
@@ -83,7 +84,7 @@ public class JournalController {
 
     @GetMapping("/{id}")
     public ResponseEntity<JournalDto> getJournalById(
-            @PathVariable String id, 
+            @PathVariable String id,
             @AuthenticationPrincipal UserDetails userDetails) {
         // Anonymous visitors may view public journals (see SecurityConfig).
         return ResponseEntity.ok(journalService.getJournalById(id, emailOf(userDetails)));
@@ -91,29 +92,29 @@ public class JournalController {
 
     @PostMapping
     public ResponseEntity<JournalDto> createJournal(
-            @Valid @RequestBody JournalRequest journalRequest, 
+            @Valid @RequestBody JournalRequest journalRequest,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(journalService.createJournal(journalRequest, userDetails.getUsername()));
     }
 
     @GetMapping("/share/{id}")
     public ResponseEntity<JournalDto> shareJournal(
-            @PathVariable String id, 
+            @PathVariable String id,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(journalService.shareJournal(id, userDetails.getUsername()));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<JournalDto> updateJournal(
-            @PathVariable String id, 
-            @Valid @RequestBody JournalRequest journalRequest, 
+            @PathVariable String id,
+            @Valid @RequestBody JournalRequest journalRequest,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(journalService.updateJournal(id, journalRequest, userDetails.getUsername()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteJournal(
-            @PathVariable String id, 
+            @PathVariable String id,
             @AuthenticationPrincipal UserDetails userDetails) {
         journalService.deleteJournal(id, userDetails.getUsername());
         return ResponseEntity.ok().build();
@@ -131,6 +132,22 @@ public class JournalController {
             @PathVariable String id,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(journalService.removeBookmark(id, userDetails.getUsername()));
+    }
+
+    private Pageable pageable(int page, int size, String sortBy, String sortDir) {
+        String safeSort = ALLOWED_SORT_FIELDS.contains(sortBy) ? sortBy : "createdAt";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir)
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        return PageRequest.of(safePage(page), safeSize(size), Sort.by(direction, safeSort));
+    }
+
+    private int safePage(int page) {
+        return Math.max(page, 0);
+    }
+
+    private int safeSize(int size) {
+        return Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
     }
 
     private String emailOf(UserDetails userDetails) {

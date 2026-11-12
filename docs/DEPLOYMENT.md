@@ -19,8 +19,11 @@ The Compose stack is defined in [`docker-compose.yml`](../docker-compose.yml).
    cp .env.example .env
    ```
 
-   At minimum set `MYSQL_ROOT_PASSWORD` and `JWT_SECRET`. Generate the JWT
-   secret with `openssl rand -base64 48` (or any 32+ byte random string).
+   At minimum set `MYSQL_ROOT_PASSWORD`, `MYSQL_APP_PASSWORD` and
+   `JWT_SECRET`. The backend connects as the non-root `MYSQL_APP_USER`
+   (`odyssey` by default), so the root password is only used for administration.
+   Generate the JWT secret with `openssl rand -base64 48` (or any 32+ byte
+   random string).
 3. Start the stack:
 
    ```bash
@@ -31,7 +34,7 @@ The Compose stack is defined in [`docker-compose.yml`](../docker-compose.yml).
    <http://localhost:9090/api> and health at
    <http://localhost:9090/actuator/health>.
 
-Flyway applies `V1`–`V4` automatically on the first backend start.
+Flyway applies `V1`–`V5` automatically on the first backend start.
 
 ## Promote an administrator
 
@@ -54,11 +57,13 @@ passes the values from `.env`.
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `MYSQL_ROOT_PASSWORD` | yes | Database password; also used by the backend |
+| `MYSQL_ROOT_PASSWORD` | yes | Admin-only database password; the app never uses root |
+| `MYSQL_APP_USER` / `MYSQL_APP_PASSWORD` | yes | Non-root account the backend connects with |
 | `JWT_SECRET` | yes | At least 32 bytes; rotating it signs everyone out |
 | `FRONTEND_URL` | no | Used in verification/reset links |
 | `CORS_ALLOWED_ORIGINS` | no | Comma-separated public origins |
 | `COOKIE_SECURE` | no | Set to `true` behind HTTPS |
+| `GEOAPIFY_API_KEY` | no | Server-side geocoding proxy; never exposed to the browser |
 | `MAIL_MODE` | no | `log` writes links to logs; `smtp` sends real email |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | no | Required when `MAIL_MODE=smtp` |
 | `RATE_LIMIT_ENABLED` | no | Per-IP auth rate limiting, defaults to `true` |
@@ -74,7 +79,9 @@ When HTTPS is enabled:
 - set `COOKIE_SECURE=true`
 - set `FRONTEND_URL` and `CORS_ALLOWED_ORIGINS` to the public `https://` origin
 - keep the `X-Forwarded-*` headers intact so cookies and rate limiting see the
-  real client
+  real client. The bundled nginx overwrites `X-Forwarded-For` with the address
+  it sees; if a TLS terminator sits in front of it, configure nginx's `real_ip`
+  module with that proxy as a trusted source so client addresses survive.
 
 The bundled nginx config already proxies `/api` to the backend and serves
 hashed assets with long-lived cache headers.

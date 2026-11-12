@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { journalApi } from '@/services/api';
 import { JournalEntry, User } from '@/types';
 import JournalCard from './JournalCard';
@@ -10,11 +9,16 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 interface JournalListProps {
-  explore?: string;
-  emptyMessage?: string;
-  className?: string;
+  /** When provided, the list renders exactly these journals and does not fetch. */
   journals?: JournalEntry[];
   userMap?: Record<string, User>;
+  emptyMessage?: string;
+  className?: string;
+  /** Client-side pagination. Turn off when the parent already pages the API. */
+  paginate?: boolean;
+  pageSize?: number;
+  loading?: boolean;
+  showCreateButton?: boolean;
 }
 
 const JournalListSkeleton = () => (
@@ -29,63 +33,81 @@ const JournalListSkeleton = () => (
   </div>
 );
 
-export default function JournalList({ 
-  explore = "true", 
-  emptyMessage = "No journals found", 
-  className, 
-  journals: propJournals, 
-  userMap = {} 
+export default function JournalList({
+  journals: propJournals,
+  userMap = {},
+  emptyMessage = 'No journals found',
+  className,
+  paginate = true,
+  pageSize = 6,
+  loading: propLoading = false,
+  showCreateButton = true,
 }: JournalListProps) {
-  const { user } = useAuth();
-  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentPage, setCurrentPage] = useState(1);
+  const [fetchedJournals, setFetchedJournals] = useState<JournalEntry[]>([]);
+  const [fetching, setFetching] = useState(propJournals === undefined);
   const [error, setError] = useState<string | null>(null);
-  const itemsPerPage = 6;
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [journals, setJournals] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const fetchJournals = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      if (explore === "true") {
-        setJournals(propJournals ?? []);
-        setTotalPages(Math.ceil((propJournals?.length ?? 0) / itemsPerPage));
-      } else {
-        const response = await journalApi.getUserJournals();
-        setJournals(response);
-        setTotalPages(Math.ceil(response.length / itemsPerPage));
-      }
-    } catch (error) {
-      const errorMessage = 'Failed to fetch journals. Please try again.';
-      setError(errorMessage);
-      toast({
-        variant: "destructive",
-        description: errorMessage,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [explore, propJournals, itemsPerPage, toast]);
+  const useProps = propJournals !== undefined;
+  const journals = useProps ? propJournals : fetchedJournals;
 
   useEffect(() => {
-    fetchJournals();
-  }, [fetchJournals]);
+    if (useProps) {
+      return;
+    }
 
-  const handlePageChange = useCallback((pageNumber: number) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    let cancelled = false;
+    const fetchJournals = async () => {
+      setFetching(true);
+      setError(null);
+      try {
+        const response = await journalApi.getUserJournals();
+        if (!cancelled) {
+          setFetchedJournals(response);
+        }
+      } catch {
+        if (!cancelled) {
+          setError('Failed to fetch journals. Please try again.');
+          toast({
+            variant: 'destructive',
+            description: 'Failed to fetch journals. Please try again.',
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setFetching(false);
+        }
+      }
+    };
+
+    fetchJournals();
+    return () => {
+      cancelled = true;
+    };
+  }, [useProps, toast]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [journals.length, pageSize]);
+
+  const totalPages = paginate ? Math.max(1, Math.ceil(journals.length / pageSize)) : 1;
 
   const currentJournals = useMemo(() => {
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    return journals.slice(indexOfFirstItem, indexOfLastItem);
-  }, [journals, currentPage, itemsPerPage]);
+    if (!paginate) {
+      return journals;
+    }
+    const start = (currentPage - 1) * pageSize;
+    return journals.slice(start, start + pageSize);
+  }, [journals, paginate, currentPage, pageSize]);
+
+  const loading = propLoading || fetching;
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (loading) {
     return <JournalListSkeleton />;
@@ -96,7 +118,7 @@ export default function JournalList({
       <div className="flex flex-col items-center justify-center p-8 space-y-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-lg text-center text-muted-foreground">{error}</p>
-        <Button onClick={fetchJournals} variant="outline">
+        <Button onClick={() => window.location.reload()} variant="outline">
           Try Again
         </Button>
       </div>
@@ -107,7 +129,7 @@ export default function JournalList({
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground mb-4">{emptyMessage}</p>
-        {!explore && (
+        {showCreateButton && (
           <Button onClick={() => navigate('/create')}>
             Create your first journal
           </Button>
@@ -128,20 +150,29 @@ export default function JournalList({
           />
         ))}
       </div>
-      
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-8 space-x-2">
-          {[...Array(totalPages)].map((_, index) => (
-            <Button
-              key={index}
-              variant={currentPage === index + 1 ? "default" : "outline"}
-              onClick={() => handlePageChange(index + 1)}
-              className="w-10 h-10"
-            >
-              {index + 1}
-            </Button>
-          ))}
-        </div>
+
+      {paginate && totalPages > 1 && (
+        <nav className="flex items-center justify-center gap-2 mt-8" aria-label="Journal pages">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground" aria-live="polite">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </nav>
       )}
     </div>
   );

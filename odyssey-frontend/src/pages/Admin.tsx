@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Flag, Loader2, ShieldCheck, Eye, EyeOff, Check, X } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
@@ -15,6 +15,8 @@ import { AdminStats, ReportItem } from '@/types';
 
 type Filter = 'OPEN' | 'ALL' | 'RESOLVED' | 'DISMISSED';
 
+const PAGE_SIZE = 20;
+
 const statusVariant: Record<ReportItem['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
   OPEN: 'destructive',
   RESOLVED: 'default',
@@ -27,38 +29,38 @@ const AdminPage = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [filter, setFilter] = useState<Filter>('OPEN');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const [nextStats, nextReports] = await Promise.all([
         moderationApi.stats(),
-        moderationApi.listReports(filter === 'ALL' ? undefined : filter),
+        moderationApi.listReports(filter === 'ALL' ? undefined : filter, page, PAGE_SIZE),
       ]);
       setStats(nextStats);
-      setReports(nextReports);
+      setReports(nextReports.content);
+      setTotalPages(nextReports.totalPages);
+      setTotalElements(nextReports.totalElements);
     } catch (error) {
       console.error('Failed to load moderation queue', error);
       toast({ variant: 'destructive', description: 'Could not load the moderation queue.' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, page, toast]);
 
   useEffect(() => {
     if (authLoading || user?.role !== 'ADMIN') return;
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user?.role, filter]);
+  }, [authLoading, user?.role, load]);
 
-  const counts = useMemo(() => {
-    return {
-      open: reports.filter((report) => report.status === 'OPEN').length,
-    };
-  }, [reports]);
+  const openCount = stats?.openReports ?? 0;
 
   const resolve = async (report: ReportItem, action: 'HIDE' | 'DISMISS') => {
     setBusyId(report.id);
@@ -169,13 +171,16 @@ const AdminPage = () => {
               key={value}
               size="sm"
               variant={filter === value ? 'default' : 'outline'}
-              onClick={() => setFilter(value)}
+              onClick={() => {
+                setFilter(value);
+                setPage(0);
+              }}
             >
               {value === 'ALL' ? 'All reports' : value.charAt(0) + value.slice(1).toLowerCase()}
             </Button>
           ))}
-          {filter === 'OPEN' && counts.open > 0 && (
-            <Badge variant="destructive">{counts.open} open</Badge>
+          {filter === 'OPEN' && openCount > 0 && (
+            <Badge variant="destructive">{openCount} open</Badge>
           )}
         </div>
 
@@ -272,6 +277,34 @@ const AdminPage = () => {
               </Card>
             ))}
           </div>
+        )}
+
+        {!loading && totalElements > 0 && (
+          <nav className="mt-6 flex flex-wrap items-center justify-between gap-3" aria-label="Report pages">
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              Page {totalPages === 0 ? 1 : page + 1} of {Math.max(totalPages, 1)}
+              {' · '}
+              {totalElements} {totalElements === 1 ? 'report' : 'reports'}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((current) => current + 1)}
+                disabled={page + 1 >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </nav>
         )}
       </main>
       <Footer />

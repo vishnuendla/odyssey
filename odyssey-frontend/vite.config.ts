@@ -19,4 +19,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Keep rarely changing vendor code in its own long-lived chunks.
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-map': ['leaflet'],
+          'vendor-dates': ['date-fns'],
+        },
+      },
+    },
+  },
 })

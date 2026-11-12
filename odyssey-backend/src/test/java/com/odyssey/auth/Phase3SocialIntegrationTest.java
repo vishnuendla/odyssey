@@ -254,6 +254,11 @@ class Phase3SocialIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hidden").value(true));
 
+        // Hiding content tells the author why it disappeared.
+        mockMvc.perform(get("/api/notifications").cookie(authorAccess))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("MODERATION"));
+
         // The author can still edit hidden content, but editing does not silently
         // undo a moderation decision.
         Csrf csrfEdit = csrf();
@@ -326,7 +331,8 @@ class Phase3SocialIntegrationTest {
         MvcResult result = mockMvc.perform(get("/api/admin/reports").cookie(access))
                 .andExpect(status().isOk())
                 .andReturn();
-        return objectMapper.readTree(result.getResponse().getContentAsString()).get(0).get("id").asText();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("content").get(0).get("id").asText();
     }
 
     private void promoteToAdmin(String email) {

@@ -1,18 +1,5 @@
-const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
-
-if (!GEOAPIFY_API_KEY) {
-  console.error('VITE_GEOAPIFY_API_KEY is not set in environment variables. Please add it to your .env file.');
-}
-
-export interface GeoapifyLocation {
-  formatted: string;
-  lat: number;
-  lon: number;
-  country?: string;
-  city?: string;
-  state?: string;
-  place_id?: string;
-}
+import { locationApi } from '@/services/api';
+import type { GeocodingResult } from '@/types';
 
 export interface LocationSuggestion {
   name: string;
@@ -24,124 +11,80 @@ export interface LocationSuggestion {
 }
 
 /**
- * Get autocomplete suggestions using Geoapify Autocomplete API
+ * Geoapify is proxied by the backend so the API key never ships in the bundle.
+ * The endpoint returns already-normalised results.
  */
-export const getLocationSuggestions = async (query: string): Promise<LocationSuggestion[]> => {
-  if (!GEOAPIFY_API_KEY) {
-    console.error('Geoapify API key is not set');
-    return [];
+const cleanName = (result: GeocodingResult): string => {
+  if (!result.formatted) {
+    return [result.city, result.country].filter(Boolean).join(', ');
   }
+  return result.formatted
+    .replace(/,?\s*\d{5,}/g, '')
+    .replace(/,\s*,/g, ',')
+    .trim();
+};
 
+export const getLocationSuggestions = async (query: string): Promise<LocationSuggestion[]> => {
   if (!query || query.length < 3) {
     return [];
   }
 
   try {
-    const response = await fetch(
-      `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&limit=8&apiKey=${GEOAPIFY_API_KEY}`
-    );
+    const results = await locationApi.autocomplete(query, 8);
+    const seen = new Set<string>();
+    const suggestions: LocationSuggestion[] = [];
 
-    if (!response.ok) {
-      throw new Error(`Geoapify API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (!data.features || !Array.isArray(data.features)) {
-      return [];
-    }
-
-    // Filter and deduplicate results
-    const seenLocations = new Set<string>();
-    const uniqueResults: LocationSuggestion[] = [];
-
-    for (const feature of data.features) {
-      const props = feature.properties;
-      
-      // Create a clean, readable name
-      let cleanName = '';
-      if (props.name && props.city && props.country) {
-        cleanName = `${props.name}, ${props.city}, ${props.country}`;
-      } else if (props.city && props.country) {
-        cleanName = `${props.city}, ${props.country}`;
-      } else if (props.name && props.country) {
-        cleanName = `${props.name}, ${props.country}`;
-      } else if (props.formatted) {
-        // Remove postal codes and excessive details
-        cleanName = props.formatted
-          .replace(/,?\s*\d{5,}/g, '') // Remove postal codes
-          .replace(/,\s*,/g, ',') // Remove double commas
-          .trim();
-      } else {
-        cleanName = props.name || query;
-      }
-
-      // Skip if we've already seen this location (deduplicate)
-      const locationKey = `${props.name}-${props.city}-${props.country}`;
-      if (seenLocations.has(locationKey)) {
+    for (const result of results) {
+      const name = cleanName(result);
+      if (!name) {
         continue;
       }
-      seenLocations.add(locationKey);
+      const key = `${result.city ?? ''}-${result.country ?? ''}-${name}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
 
-      uniqueResults.push({
-        name: cleanName,
-        latitude: feature.geometry.coordinates[1],
-        longitude: feature.geometry.coordinates[0],
-        country: props.country,
-        city: props.city || props.town || props.village,
-        placeName: cleanName
+      suggestions.push({
+        name,
+        latitude: result.latitude,
+        longitude: result.longitude,
+        country: result.country,
+        city: result.city,
+        placeName: name,
       });
 
-      // Limit to 5 unique results
-      if (uniqueResults.length >= 5) {
+      if (suggestions.length >= 5) {
         break;
       }
     }
 
-    return uniqueResults;
+    return suggestions;
   } catch (error) {
     console.error('Error fetching location suggestions:', error);
     return [];
   }
 };
 
-/**
- * Get precise coordinates for a location using Geoapify Geocoding API
- */
 export const getCoordinatesFromPlaceName = async (placeName: string) => {
-  if (!GEOAPIFY_API_KEY) {
-    console.error('Geoapify API key is not set');
-    return null;
-  }
-
   if (!placeName || placeName.trim().length === 0) {
     return null;
   }
 
   try {
-    const response = await fetch(
-      `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(placeName)}&limit=1&apiKey=${GEOAPIFY_API_KEY}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Geoapify API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.features || data.features.length === 0) {
+    const results = await locationApi.geocode(placeName, 1);
+    const result = results[0];
+    if (!result) {
       console.warn('No coordinates found for:', placeName);
       return null;
     }
 
-    const feature = data.features[0];
-    const coordinates = feature.geometry.coordinates; // [lon, lat] in GeoJSON format
-
     return {
-      latitude: coordinates[1],
-      longitude: coordinates[0],
-      placeName: feature.properties.formatted || placeName,
-      country: feature.properties.country,
-      city: feature.properties.city || feature.properties.town || feature.properties.village
+      latitude: result.latitude,
+      longitude: result.longitude,
+      placeName: result.formatted || placeName,
+      country: result.country,
+      city: result.city,
     };
   } catch (error) {
     console.error('Error getting coordinates:', error);
@@ -153,8 +96,8 @@ export const debounce = <T extends (...args: never[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout;
-  
+  let timeout: ReturnType<typeof setTimeout>;
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);

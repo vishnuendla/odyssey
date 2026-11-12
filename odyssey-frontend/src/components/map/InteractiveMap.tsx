@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { JournalEntry } from '@/types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -60,12 +60,14 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
       const randomIndex = Math.floor(Math.random() * journals.length);
       const randomJournal = journals[randomIndex];
       onJournalSelect(randomJournal);
-      
-      // Smooth zoom to the random journal's location
-      if (randomJournal.location?.latitude && randomJournal.location?.longitude) {
+
+      // Smooth zoom to the random journal's location. Latitude 0 (the equator)
+      // is a real coordinate, so test for presence instead of truthiness.
+      const location = randomJournal.location;
+      if (location) {
         setTimeout(() => {
           initialMap.flyTo(
-            [randomJournal.location.latitude, randomJournal.location.longitude],
+            [location.latitude, location.longitude],
             12,
             {
               duration: 2,
@@ -93,9 +95,8 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
       return;
     }
 
-    // Get current center and zoom
+    // Get current center
     const currentCenter = map.getCenter();
-    const currentZoom = map.getZoom();
 
     // First zoom out from current location
     map.flyTo(
@@ -150,9 +151,13 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
         marker.bindPopup(journal.title);
         marker.on('click', () => {
           onJournalSelect(journal);
-          // Get current center and zoom
+          const location = journal.location;
+          if (!location) {
+            return;
+          }
+
+          // Get current center
           const currentCenter = map.getCenter();
-          const currentZoom = map.getZoom();
 
           // First zoom out from current location
           map.flyTo(
@@ -167,7 +172,7 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
           // After zooming out, move to new location while staying zoomed out
           setTimeout(() => {
             map.flyTo(
-              [journal.location.latitude, journal.location.longitude],
+              [location.latitude, location.longitude],
               4, // Keep zoom level 4
               {
                 duration: 0.5,
@@ -178,7 +183,7 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
             // Finally zoom in to the new location
             setTimeout(() => {
               map.flyTo(
-                [journal.location.latitude, journal.location.longitude],
+                [location.latitude, location.longitude],
                 12,
                 {
                   duration: 1,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { JournalEntry, Comment, User } from '@/types';
@@ -77,25 +77,21 @@ const JournalView = () => {
         const journalData = await journalApi.getJournalById(id);
         setJournal(journalData);
 
-        setAuthor(
-          journalData.userName
-            ? ({
-                id: journalData.userId,
-                name: journalData.userName,
-                avatar: journalData.userAvatar,
-                email: '',
-                createdAt: journalData.createdAt,
-              } as User)
-            : null
-        );
+        const fallbackAuthor: User = {
+          id: journalData.userId,
+          name: journalData.userName || 'Anonymous',
+          avatar: journalData.userAvatar,
+          email: '',
+          createdAt: journalData.createdAt,
+        };
+        setAuthor(fallbackAuthor);
 
-        if (!journalData.userName) {
-          try {
-            const authorData = await accountApi.getUser(journalData.userId);
-            setAuthor(authorData);
-          } catch (authorError) {
-            console.error('Failed to fetch author information:', authorError);
-          }
+        // Always resolve the full profile so follow counts and role are real.
+        try {
+          const authorData = await accountApi.getUser(journalData.userId);
+          setAuthor(authorData);
+        } catch (authorError) {
+          console.error('Failed to fetch author information:', authorError);
         }
       } catch (fetchError) {
         console.error('Failed to fetch journal:', fetchError);
@@ -112,6 +108,17 @@ const JournalView = () => {
 
   useEffect(() => {
     if (!journal) return;
+
+    // Snapshot the route-level defaults so leaving the page restores them
+    // instead of leaking this journal's title and preview into the next route.
+    const previousTitle = document.title;
+    const keys = ['description', 'og:title', 'og:description', 'og:type', 'og:url', 'og:image'];
+    const previous = keys.map((key) => {
+      const attr = key === 'description' ? 'name' : 'property';
+      const element = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
+      return { key, attr, element, content: element?.getAttribute('content') ?? null };
+    });
+
     document.title = `${journal.title} · Odyssey`;
     const description = journal.content.slice(0, 180).replace(/\s+/g, ' ').trim();
     setMeta('description', description, 'name');
@@ -121,10 +128,23 @@ const JournalView = () => {
     setMeta('og:url', window.location.href);
     if (journal.images?.[0]) {
       setMeta('og:image', new URL(journal.images[0], window.location.origin).toString());
+    } else {
+      document.head.querySelector('meta[property="og:image"]')?.remove();
     }
+
+    return () => {
+      document.title = previousTitle;
+      for (const entry of previous) {
+        if (entry.content === null) {
+          entry.element?.remove();
+        } else {
+          setMeta(entry.key, entry.content, entry.attr as 'name' | 'property');
+        }
+      }
+    };
   }, [journal]);
 
-  const comments = journal?.comments ?? [];
+  const comments = useMemo(() => journal?.comments ?? [], [journal]);
 
   const { topLevel, repliesByParent } = useMemo(() => {
     const top: Comment[] = [];
@@ -356,6 +376,16 @@ const JournalView = () => {
             </div>
           </div>
 
+          {journal.hidden && (
+            <div
+              role="status"
+              className="mb-6 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+            >
+              This journal is hidden from public view after a moderation review. Only you and
+              moderators can see it.
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
             <div className="flex items-center">
               <Calendar className="h-4 w-4 mr-1" />
@@ -408,7 +438,13 @@ const JournalView = () => {
           <Card className="mb-8">
             {journal.images && journal.images.length > 0 && (
               <div className="w-full h-64 md:h-96 overflow-hidden">
-                <img src={journal.images[0]} alt={journal.title} className="w-full h-full object-cover" />
+                <img
+                  src={journal.images[0]}
+                  alt={journal.title}
+                  loading="eager"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
               </div>
             )}
             <CardContent className="pt-6">
@@ -422,7 +458,13 @@ const JournalView = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
                   {journal.images.slice(1).map((image, index) => (
                     <div key={index} className="aspect-square overflow-hidden rounded-md">
-                      <img src={image} alt={`${journal.title} - ${index + 2}`} className="w-full h-full object-cover" />
+                      <img
+                        src={image}
+                        alt={`${journal.title} - ${index + 2}`}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   ))}
                 </div>
@@ -448,12 +490,14 @@ const JournalView = () => {
               </div>
 
               {journal.location && (
-                <Button
-                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${journal.location?.latitude},${journal.location?.longitude}`, '_blank')}
-                  variant="outline"
-                  size="sm"
-                >
-                  <MapPin className="h-4 w-4 mr-1" /> View on Map
+                <Button asChild variant="outline" size="sm">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${journal.location.latitude},${journal.location.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MapPin className="h-4 w-4 mr-1" /> View on Map
+                  </a>
                 </Button>
               )}
             </CardFooter>
