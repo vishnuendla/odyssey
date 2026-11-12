@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { Globe, Instagram, Twitter, Facebook, Mail, Github } from 'lucide-react';
 

@@ -156,8 +156,8 @@ const PublicProfile = () => {
 
         <h2 className="text-2xl font-bold mb-4">Public Journals</h2>
         <JournalList
-          explore="true"
           journals={journals}
+          showCreateButton={false}
           emptyMessage="This traveler has not published any public journals yet."
           userMap={{ [profile.id]: profile }}
         />

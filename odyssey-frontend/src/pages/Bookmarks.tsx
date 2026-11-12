@@ -83,8 +83,8 @@ const BookmarksPage = () => {
           </div>
         ) : (
           <JournalList
-            explore="true"
             journals={journals}
+            showCreateButton={false}
             emptyMessage="You haven't saved any journals yet. Tap the bookmark icon on a public journal to save it here."
             userMap={userMap}
           />

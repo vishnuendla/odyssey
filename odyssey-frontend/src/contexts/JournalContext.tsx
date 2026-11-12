@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { JournalEntry, Location } from '../types';
+import { JournalEntry } from '../types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 import { journalApi } from '@/services/api';
@@ -35,142 +34,104 @@ export const JournalProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const fetchJournals = async () => {
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        setIsLoading(true);
-        const fetchedJournals = await journalApi.getUserJournals();
-        setJournals(fetchedJournals);
-        setError(null);
-      } catch (error) {
-        setError('Failed to fetch journals');
-        console.error('Failed to fetch journals', error);
+        const fetched = isAuthenticated
+          ? await journalApi.getUserJournals()
+          : await journalApi.getPublicJournals();
+        if (!cancelled) {
+          setJournals(fetched);
+        }
+      } catch (err) {
+        if (!cancelled && (err as Error)?.name !== 'AbortError') {
+          setError(isAuthenticated ? 'Failed to fetch journals' : 'Failed to fetch public journals');
+          console.error('Failed to fetch journals', err);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
-    if (isAuthenticated) {
-      fetchJournals();
-    } else {
-      fetchPublicJournals();
-    }
-  }, [isAuthenticated]);
-
-  const fetchPublicJournals = async () => {
-    try {
-      setIsLoading(true);
-      const publicJournals = await journalApi.getPublicJournals();
-      setJournals(publicJournals);
-      setError(null);
-    } catch (error) {
-      setError('Failed to fetch public journals');
-      console.error('Failed to fetch public journals', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id]);
 
   const createJournal = async (journal: Omit<JournalEntry, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'reactions' | 'comments'>) => {
     if (!user) {
       toast({
-        variant: "destructive",
+        variant: 'destructive',
         description: 'You must be logged in to create a journal',
       });
       throw new Error('User not authenticated');
     }
 
     try {
-      setIsLoading(true);
       const newJournal = await journalApi.createJournal(journal);
-      setJournals(prevJournals => [...prevJournals, newJournal]);
-      toast({
-        description: 'Journal created successfully',
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        description: 'Failed to create journal',
-      });
-      console.error('Failed to create journal', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      setJournals((prev) => [...prev, newJournal]);
+      toast({ description: 'Journal created successfully' });
+    } catch (err) {
+      console.error('Failed to create journal', err);
+      throw err;
     }
   };
 
   const updateJournal = async (id: string, journal: Partial<JournalEntry>) => {
     if (!user) {
       toast({
-        variant: "destructive",
+        variant: 'destructive',
         description: 'You must be logged in to update a journal',
       });
       throw new Error('User not authenticated');
     }
 
     try {
-      setIsLoading(true);
       const updatedJournal = await journalApi.updateJournal(id, journal);
-      setJournals(prevJournals => 
-        prevJournals.map(j => j.id === id ? updatedJournal : j)
-      );
-      toast({
-        description: 'Journal updated successfully',
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        description: 'Failed to update journal',
-      });
-      console.error('Failed to update journal', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      setJournals((prev) => prev.map((entry) => (entry.id === id ? updatedJournal : entry)));
+      toast({ description: 'Journal updated successfully' });
+    } catch (err) {
+      console.error('Failed to update journal', err);
+      throw err;
     }
   };
 
   const deleteJournal = async (id: string) => {
     if (!user) {
       toast({
-        variant: "destructive",
+        variant: 'destructive',
         description: 'You must be logged in to delete a journal',
       });
       throw new Error('User not authenticated');
     }
 
     try {
-      setIsLoading(true);
       await journalApi.deleteJournal(id);
-      setJournals(prevJournals => prevJournals.filter(journal => journal.id !== id));
-      toast({
-        description: 'Journal deleted successfully',
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        description: 'Failed to delete journal',
-      });
-      console.error('Failed to delete journal', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      setJournals((prev) => prev.filter((entry) => entry.id !== id));
+      toast({ description: 'Journal deleted successfully' });
+    } catch (err) {
+      console.error('Failed to delete journal', err);
+      throw err;
     }
   };
 
   const getJournalById = (id: string) => {
-    return journals.find(journal => journal.id === id);
+    return journals.find((journal) => journal.id === id);
   };
 
   const getUserJournals = () => {
     if (!user) return [];
-    // Ensure journals is an array before filtering
-    const journalsArray = Array.isArray(journals) ? journals : [];
-    return journalsArray.filter(journal => journal.userId === user.id);
+    return journals.filter((journal) => journal.userId === user.id);
   };
 
   const getPublicJournals = () => {
-    // Ensure journals is an array before filtering
-    const journalsArray = Array.isArray(journals) ? journals : [];
-    return journalsArray.filter(journal => journal.isPublic);
+    return journals.filter((journal) => journal.isPublic);
   };
 
   const value = {

@@ -35,10 +35,27 @@ export default function NotificationBell() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    load();
     if (!isAuthenticated) return;
-    const timer = window.setInterval(load, 60000);
-    return () => window.clearInterval(timer);
+    load();
+
+    // Do not burn requests while the tab is in the background.
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        load();
+      }
+    }, 60000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        load();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isAuthenticated, load, location.pathname]);
 
   const handleMarkAll = async () => {

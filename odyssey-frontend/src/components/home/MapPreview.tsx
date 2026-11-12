@@ -11,8 +11,12 @@ export default function MapPreview() {
           <div className="order-2 md:order-1">
             <div className="relative rounded-xl overflow-hidden h-[400px] shadow-xl">
               <img 
-                src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?q=80&w=2940&auto=format&fit=crop" 
+                src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?q=70&w=1200&auto=format&fit=crop" 
                 alt="World map with travel markers" 
+                width={1200}
+                height={800}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>

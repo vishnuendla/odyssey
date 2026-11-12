@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
-import { journalApi } from '@/services/api';
+import { journalApi, MAX_FILES_PER_UPLOAD, MAX_FILE_SIZE } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
-import { JournalEntry, Location } from '@/types';
+import { Location } from '@/types';
 import { getCoordinatesFromPlaceName, getLocationSuggestions, debounce } from '@/utils/geocoding';
 
 import Navbar from '@/components/layout/Navbar';
@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, MapPin, Plus, X, ImagePlus } from 'lucide-react';
+import { Loader2, MapPin, X, ImagePlus } from 'lucide-react';
 import { Icons } from '@/components/shared/Icons';
 
 const journalSchema = z.object({
@@ -55,6 +55,19 @@ const JournalEdit = () => {
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const uploadedImagesRef = useRef<string[]>([]);
+
+  // Blob previews are only valid while this page is mounted; free them so long
+  // editing sessions do not keep decoded images in memory.
+  useEffect(() => {
+    uploadedImagesRef.current = uploadedImages;
+  }, [uploadedImages]);
+
+  useEffect(() => {
+    return () => {
+      uploadedImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const addTag = () => {
     const value = tagInput.trim().toLowerCase();
@@ -142,7 +155,7 @@ const JournalEdit = () => {
     };
     
     fetchJournal();
-  }, [id, user, isAuthenticated, navigate, toast, form]);
+  }, [id, user?.id, isAuthenticated, navigate, toast, form]);
 
   const handleLocationSearch = useCallback(
     debounce(async (query: string) => {
@@ -192,25 +205,90 @@ const JournalEdit = () => {
     setLocationSuggestions([]);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Pressing Enter geocodes the typed text. We never store a placeholder
+  // location with 0,0 coordinates, which used to put journals off Africa.
+  const handleLocationKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') {
+      return;
+    }
+    event.preventDefault();
+    const query = locationQuery.trim();
+    if (query.length < 3) {
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const coordinates = await getCoordinatesFromPlaceName(query);
+      if (!coordinates) {
+        toast({
+          variant: 'destructive',
+          description: 'Could not find that place. Pick one of the suggestions instead.',
+        });
+        return;
+      }
+      handleLocationSelect({
+        name: query,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        placeName: coordinates.placeName,
+        country: coordinates.country,
+        city: coordinates.city,
+      });
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
+    // Allow choosing the same file again after removing it.
+    e.target.value = '';
     if (!files || files.length === 0) return;
-    
+
     const newFiles = Array.from(files);
-    setUploadedFiles(prev => [...prev, ...newFiles]);
-    
-    const newImages: string[] = [];
-    newFiles.forEach(file => {
-      const imageUrl = URL.createObjectURL(file);
-      newImages.push(imageUrl);
-    });
-    
-    const updatedImages = [...uploadedImages, ...newImages];
-    setUploadedImages(updatedImages);
-    form.setValue('images', [...existingImages, ...updatedImages]);
+    const slotsLeft = MAX_FILES_PER_UPLOAD - existingImages.length - uploadedFiles.length;
+    if (slotsLeft <= 0) {
+      toast({
+        variant: 'destructive',
+        description: `A journal can have at most ${MAX_FILES_PER_UPLOAD} images.`,
+      });
+      return;
+    }
+    if (newFiles.length > slotsLeft) {
+      toast({
+        variant: 'destructive',
+        description: `You can add ${slotsLeft} more image${slotsLeft === 1 ? '' : 's'}.`,
+      });
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const tooLarge = newFiles.find((file) => file.size > MAX_FILE_SIZE);
+    if (tooLarge) {
+      toast({ variant: 'destructive', description: `${tooLarge.name} is larger than 5 MB.` });
+      return;
+    }
+    const badType = newFiles.find((file) => !allowedTypes.includes(file.type));
+    if (badType) {
+      toast({
+        variant: 'destructive',
+        description: 'Only JPEG, PNG, GIF and WebP images are allowed.',
+      });
+      return;
+    }
+
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    const newImages = newFiles.map((file) => URL.createObjectURL(file));
+    setUploadedImages((prev) => [...prev, ...newImages]);
+    form.setValue('images', [...existingImages, ...uploadedImages, ...newImages]);
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
+    const removed = uploadedImages[indexToRemove];
+    if (removed) {
+      URL.revokeObjectURL(removed);
+    }
     const updatedImages = uploadedImages.filter((_, index) => index !== indexToRemove);
     const updatedFiles = uploadedFiles.filter((_, index) => index !== indexToRemove);
     setUploadedImages(updatedImages);
@@ -234,8 +312,8 @@ const JournalEdit = () => {
         location: data.location && data.location.name
           ? {
               name: data.location.name || 'Unnamed Location',
-              latitude: data.location.latitude || 0,
-              longitude: data.location.longitude || 0,
+              latitude: data.location.latitude,
+              longitude: data.location.longitude,
               country: data.location.country,
               city: data.location.city,
             }
@@ -412,18 +490,10 @@ const JournalEdit = () => {
                           handleLocationSearch(e.target.value);
                         }}
                         onKeyDown={(e) => {
-                          // Allow manual entry by pressing Enter
+                          // Enter geocodes the typed text instead of storing 0,0.
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (locationQuery.trim()) {
-                              const manualLocation = {
-                                name: locationQuery,
-                                latitude: 0,
-                                longitude: 0,
-                                placeName: locationQuery
-                              };
-                              handleLocationSelect(manualLocation);
-                            }
+                            void handleLocationKeyDown(e);
                           }
                         }}
                         disabled={submitting}
@@ -527,20 +597,25 @@ const JournalEdit = () => {
                       </div>
                     ))}
                     
-                    <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleImageUpload}
-                        disabled={submitting}
-                      />
-                      <div className="text-center p-4">
-                        <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Add Images</span>
-                      </div>
-                    </label>
+                    {existingImages.length + uploadedFiles.length < MAX_FILES_PER_UPLOAD && (
+                      <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          multiple
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          disabled={submitting}
+                        />
+                        <div className="text-center p-4">
+                          <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Add Images</span>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {MAX_FILES_PER_UPLOAD - existingImages.length - uploadedFiles.length} left
+                          </span>
+                        </div>
+                      </label>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -556,8 +631,6 @@ const JournalEdit = () => {
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  onClick={(e) => {
-                  }}
                 >
                   {submitting ? (
                     <>

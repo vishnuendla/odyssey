@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { JournalEntry } from '@/types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, MapPin, X } from 'lucide-react';
 import { useJournal } from '@/contexts/JournalContext';
@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
+import { journalApi } from '@/services/api';
 
 // Fix Leaflet marker icons (Next.js workaround)
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -24,25 +25,61 @@ L.Icon.Default.mergeOptions({
 });
 
 const MapViewPage = () => {
-  const { journals, isLoading } = useJournal();
+  const { journals, isLoading: ownLoading } = useJournal();
   const { isAuthenticated, user } = useAuth();
-  const [showOnlyMyJournals, setShowOnlyMyJournals] = useState(false);
+  const [includePrivate, setIncludePrivate] = useState(false);
   const [selectedJournal, setSelectedJournal] = useState<JournalEntry | null>(null);
-  
-  // Filter journals based on the switch state
-  const filteredJournals = showOnlyMyJournals && isAuthenticated
-    ? journals.filter(journal => journal.userId === user?.id)
-    : journals.filter(journal => journal.isPublic);
+  const [publicJournals, setPublicJournals] = useState<JournalEntry[]>([]);
+  const [publicLoading, setPublicLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    journalApi.getPublicJournals()
+      .then((list) => {
+        if (!cancelled) setPublicJournals(list);
+      })
+      .catch((error) => console.error('Failed to load public journals for the map', error))
+      .finally(() => {
+        if (!cancelled) setPublicLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const ownJournals = useMemo(() => {
+    if (!isAuthenticated || !user) return [];
+    return journals.filter((journal) => journal.userId === user.id);
+  }, [isAuthenticated, journals, user]);
+
+  // The map always shows the world's public journeys. Signed-in readers can add
+  // their own private entries on top; that is what the toggle actually means.
+  const filteredJournals = useMemo(() => {
+    const merged = new Map<string, JournalEntry>();
+    publicJournals.filter((journal) => journal.isPublic).forEach((journal) => merged.set(journal.id, journal));
+    if (includePrivate) {
+      ownJournals.forEach((journal) => merged.set(journal.id, journal));
+    }
+    return Array.from(merged.values());
+  }, [publicJournals, ownJournals, includePrivate]);
+
+  useEffect(() => {
+    if (selectedJournal && !filteredJournals.some((journal) => journal.id === selectedJournal.id)) {
+      setSelectedJournal(null);
+    }
+  }, [filteredJournals, selectedJournal]);
+
+  const isLoading = publicLoading || (includePrivate && ownLoading);
 
   const selectNextJournal = () => {
-    if (!selectedJournal) return;
+    if (!selectedJournal || filteredJournals.length === 0) return;
     const currentIndex = filteredJournals.findIndex(j => j.id === selectedJournal.id);
     const nextIndex = (currentIndex + 1) % filteredJournals.length;
     setSelectedJournal(filteredJournals[nextIndex]);
   };
 
   const selectPrevJournal = () => {
-    if (!selectedJournal) return;
+    if (!selectedJournal || filteredJournals.length === 0) return;
     const currentIndex = filteredJournals.findIndex(j => j.id === selectedJournal.id);
     const prevIndex = (currentIndex - 1 + filteredJournals.length) % filteredJournals.length;
     setSelectedJournal(filteredJournals[prevIndex]);
@@ -62,11 +99,13 @@ const MapViewPage = () => {
         {isAuthenticated && (
           <div className="flex items-center space-x-2 mb-4 sm:mb-6">
             <Switch
-              id="show-only-my-journals"
-              checked={showOnlyMyJournals}
-              onCheckedChange={setShowOnlyMyJournals}
+              id="include-private-journals"
+              checked={includePrivate}
+              onCheckedChange={setIncludePrivate}
             />
-            <Label htmlFor="show-only-my-journals" className="text-sm">Show private also</Label>
+            <Label htmlFor="include-private-journals" className="text-sm">
+              Include my private journals
+            </Label>
           </div>
         )}
         
@@ -122,7 +161,7 @@ const MapViewPage = () => {
 
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" asChild className="flex-1 text-xs sm:text-sm">
-                        <a href={`/journals/${selectedJournal.id}`}>View Journal</a>
+                        <Link to={`/journals/${selectedJournal.id}`}>View Journal</Link>
                       </Button>
                       <Button 
                         size="sm" 
@@ -140,6 +179,11 @@ const MapViewPage = () => {
                   <CardContent className="p-3 sm:p-4">
                     <div className="mb-4">
                       <h3 className="font-bold text-base sm:text-lg mb-2">Journals</h3>
+                      {filteredJournals.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No journals with a location yet. Publish a journal with a place to see it here.
+                        </p>
+                      ) : (
                       <div className="space-y-2 max-h-60 sm:max-h-[calc(100vh-12rem)] overflow-y-auto">
                         {filteredJournals.map((journal) => (
                           <div
@@ -171,6 +215,7 @@ const MapViewPage = () => {
                           </div>
                         ))}
                       </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

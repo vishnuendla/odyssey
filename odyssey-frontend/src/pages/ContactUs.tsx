@@ -18,6 +18,8 @@ import {
   Heart
 } from 'lucide-react';
 
+const CONTACT_EMAIL = 'sakethdussa1234@gmail.com';
+
 const ContactUs = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -26,7 +28,6 @@ const ContactUs = () => {
     message: '',
     category: 'general'
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -34,36 +35,24 @@ const ContactUs = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // There is no contact inbox on the server, so the form opens the visitor's
+  // mail app with everything filled in. That is truthful about what happens.
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    try {
-      // Simulate form submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Message sent successfully!",
-        description: "We'll get back to you within 24 hours.",
-      });
-      
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-        category: 'general'
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error sending message",
-        description: "Please try again later.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    const subject = `[${formData.category}] ${formData.subject}`;
+    const body = [
+      `From: ${formData.name} <${formData.email}>`,
+      '',
+      formData.message,
+    ].join('\n');
+    const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    window.location.href = mailto;
+    toast({
+      title: 'Opening your email app',
+      description: `If nothing opens, email ${CONTACT_EMAIL} directly.`,
+    });
   };
 
   return (
@@ -179,20 +168,13 @@ const ContactUs = () => {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isSubmitting}
                   >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Send Message
-                      </>
-                    )}
+                    <Send className="h-4 w-4 mr-2" />
+                    Compose Email
                   </Button>
+                  <p className="text-xs text-muted-foreground">
+                    This opens your email app. Nothing is stored on our servers.
+                  </p>
                 </form>
               </CardContent>
             </Card>
@@ -209,7 +191,12 @@ const ContactUs = () => {
                     <Mail className="h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">sakethdussa1234@gmail.com</p>
+                      <a
+                        href={`mailto:${CONTACT_EMAIL}`}
+                        className="text-sm text-muted-foreground hover:text-primary"
+                      >
+                        {CONTACT_EMAIL}
+                      </a>
                     </div>
                   </div>
                   
@@ -217,7 +204,12 @@ const ContactUs = () => {
                     <Phone className="h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Phone</p>
-                      <p className="text-sm text-muted-foreground">+91 9398085750</p>
+                      <a
+                        href="tel:+919398085750"
+                        className="text-sm text-muted-foreground hover:text-primary"
+                      >
+                        +91 9398085750
+                      </a>
                     </div>
                   </div>
                   

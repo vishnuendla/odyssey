@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { MapPin, Clock, Calendar } from 'lucide-react';
+import { MapPin, Clock } from 'lucide-react';
 import { JournalEntry } from '@/types';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
 
   return (
     <div className="space-y-12">
-      {Object.entries(journalsByMonthYear).map(([monthYear, monthJournals], monthIndex) => (
+      {Object.entries(journalsByMonthYear).map(([monthYear, monthJournals]) => (
         <div key={monthYear} className="relative">
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 mb-4 border-b">
             <h3 className="text-xl font-bold text-primary">{monthYear}</h3>
