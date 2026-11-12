@@ -70,6 +70,8 @@ Set-Location odyssey-backend
 $env:DB_USERNAME = "root"
 $env:DB_PASSWORD = "your-local-mysql-password"
 $env:JWT_SECRET  = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+# Optional: enables location autocomplete through the backend proxy.
+$env:GEOAPIFY_API_KEY = "your-geoapify-key"
 mvn spring-boot:run
 ```
 
@@ -82,8 +84,6 @@ Email is not required for local development: with the default `MAIL_MODE=log`, v
 ```powershell
 Set-Location odyssey-frontend
 npm ci
-Copy-Item .env.example .env.local
-# put your Geoapify key in .env.local
 npm run dev
 ```
 
@@ -111,9 +111,9 @@ Open <http://localhost:3000>. Vite proxies `/api` requests to the backend on por
 | `MAIL_HOST` / `MAIL_PORT` | backend | no | SMTP host and port when `MAIL_MODE=smtp` |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | backend | no | SMTP credentials when `MAIL_MODE=smtp` |
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | backend | no | SMTP auth and STARTTLS toggles, default to `false` |
-| `VITE_GEOAPIFY_API_KEY` | frontend | yes | Location autocomplete and geocoding |
+| `GEOAPIFY_API_KEY` | backend | no | Location autocomplete and geocoding; proxied through `/api/locations/**` |
 
-`VITE_*` values are embedded in the browser bundle, so treat the Geoapify key as public and restrict it in the Geoapify dashboard. Never put provider secrets in a `VITE_*` variable — backend-only keys belong in backend environment variables.
+The Geoapify key stays on the backend. The browser only calls the Odyssey API, so the key is never embedded in the JavaScript bundle. Uploads accept up to 5 images per request, 5 MB each and 15 MB total.
 
 ## API overview
 
@@ -237,7 +237,7 @@ Docker files, a Compose stack, production configuration, and backup/restore
 runbooks live in the repository:
 
 ```bash
-cp .env.example .env   # set MYSQL_ROOT_PASSWORD and JWT_SECRET
+cp .env.example .env   # set MYSQL_ROOT_PASSWORD, MYSQL_APP_PASSWORD and JWT_SECRET
 docker compose up -d --build
 ```
 
@@ -259,7 +259,7 @@ UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
 - **No verification or reset email arrives** — this is expected in local development. With `MAIL_MODE=log` the link is printed in the backend console; copy it into the browser.
 - **`403` for a form submission** — the CSRF cookie is missing or blocked. Allow cookies for the site and reload the page.
 - **A journal card shows the placeholder graphic** — that entry has no photo, or its uploaded file is missing from `odyssey-backend/uploads/`. Missing images fall back to `public/placeholder.svg` instead of a broken-image icon.
-- **Location search returns nothing** — `VITE_GEOAPIFY_API_KEY` is missing or restricted in `.env.local`; restart Vite after changing env values.
+- **Location search returns nothing** — set `GEOAPIFY_API_KEY` for the backend and restart it; the key is no longer a `VITE_*` variable.
 - **`401`/`403` on private pages after changing `JWT_SECRET`** — old cookies are invalid, sign in again.
 
 ## License
