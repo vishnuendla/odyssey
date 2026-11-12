@@ -11,4 +11,8 @@ odyssey-backend/target/
 !.env.example
 *.log
 .idea/
+.vscode/
 backups/
+
+# Uploaded media is runtime data, not source.
+odyssey-backend/uploads/

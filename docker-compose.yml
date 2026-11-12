@@ -3,7 +3,7 @@
 # Copy .env.example to .env, set real secrets, then:
 #   docker compose up -d --build
 #
-# For a TLS-terminating reverse proxy, point it at http://localhost:8080.
+# For a TLS-terminating reverse proxy, point it at http://127.0.0.1:8080.
 
 services:
   mysql:
@@ -12,13 +12,18 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-odyssey_db}
+      # The application never connects as root. The official image creates this
+      # user and grants it full access to MYSQL_DATABASE only.
+      MYSQL_USER: ${MYSQL_APP_USER:-odyssey}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?set MYSQL_APP_PASSWORD in .env}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      # MYSQL_PWD keeps the password out of the process argument list.
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -31,13 +36,16 @@ services:
       mysql:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: production
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-odyssey_db}?allowPublicKeyRetrieval=true&useSSL=false
-      DB_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: ${MYSQL_APP_USER:-odyssey}
+      DB_PASSWORD: ${MYSQL_APP_PASSWORD:?set MYSQL_APP_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080}
+      # Geocoding is proxied by the backend; leave empty to disable suggestions.
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
       MAIL_MODE: ${MAIL_MODE:-log}
       MAIL_FROM: ${MAIL_FROM:-no-reply@odyssey.local}
       MAIL_HOST: ${MAIL_HOST:-localhost}
@@ -51,6 +59,7 @@ services:
     volumes:
       - uploads:/app/uploads
     ports:
+      # Only the local reverse proxy can reach the API directly.
       - "127.0.0.1:9090:9090"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9090/actuator/health"]
@@ -66,7 +75,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
 
 volumes:
   mysql-data:
