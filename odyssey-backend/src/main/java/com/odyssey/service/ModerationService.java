@@ -16,6 +16,7 @@ import com.odyssey.repository.CommentRepository;
 import com.odyssey.repository.JournalRepository;
 import com.odyssey.repository.ReportRepository;
 import com.odyssey.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -119,6 +120,7 @@ public class ModerationService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "publicTags", allEntries = true)
     public ReportDto resolveReport(String reportId, ReportResolveRequest request, String adminEmail) {
         User admin = requireUser(adminEmail);
         Report report = reportRepository.findById(reportId)
@@ -161,6 +163,7 @@ public class ModerationService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "publicTags", allEntries = true)
     public void setJournalHidden(String journalId, boolean hidden, String adminEmail) {
         Journal journal = journalRepository.findById(journalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
