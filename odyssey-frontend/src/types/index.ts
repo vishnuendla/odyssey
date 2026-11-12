@@ -73,7 +73,7 @@ export interface PageResponse<T> {
 
 export interface NotificationItem {
   id: string;
-  type: 'FOLLOW' | 'REACTION' | 'COMMENT' | 'REPLY' | 'BOOKMARK';
+  type: 'FOLLOW' | 'REACTION' | 'COMMENT' | 'REPLY' | 'BOOKMARK' | 'MODERATION';
   actorId?: string;
   actorName?: string;
   actorAvatar?: string;
@@ -112,3 +112,13 @@ export interface AdminStats {
 }
 
 export type ThemeMode = 'light' | 'dark';
+
+export interface GeocodingResult {
+  formatted: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  city?: string;
+  state?: string;
+  placeId?: string;
+}

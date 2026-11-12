@@ -1,4 +1,4 @@
-import { User, JournalEntry, Location, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats } from '@/types';
+import { User, JournalEntry, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats, GeocodingResult } from '@/types';
 
 // All backend calls go through the Vite proxy, so cookies stay first-party.
 const API_BASE_URL = '/api';
@@ -204,14 +204,6 @@ export const accountApi = {
     return apiRequest<JournalEntry[]>(`/auth/users/${userId}/journals`);
   },
 
-  getFollowers: async (userId: string): Promise<User[]> => {
-    return apiRequest<User[]>(`/users/${userId}/followers`);
-  },
-
-  getFollowing: async (userId: string): Promise<User[]> => {
-    return apiRequest<User[]>(`/users/${userId}/following`);
-  },
-
   follow: async (userId: string): Promise<User> => {
     return apiRequest<User>(`/users/${userId}/follow`, { method: 'POST' });
   },
@@ -225,31 +217,23 @@ export interface JournalSearchParams {
   q?: string;
   tag?: string;
   location?: string;
-  sort?: 'recent' | 'oldest';
+  sort?: 'recent' | 'oldest' | 'popular';
   page?: number;
   size?: number;
 }
 
-export const searchLocations = async (query: string): Promise<Location[]> => {
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`;
+export const locationApi = {
+  autocomplete: async (text: string, limit = 5): Promise<GeocodingResult[]> => {
+    return apiRequest<GeocodingResult[]>(
+      `/locations/autocomplete?text=${encodeURIComponent(text)}&limit=${limit}`
+    );
+  },
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) throw new Error('Failed to fetch locations');
-
-  const results: Array<{ display_name: string; lat: string; lon: string; address: { country?: string; city?: string; town?: string; village?: string } }> = await response.json();
-
-  return results.map((item) => ({
-    name: item.display_name,
-    latitude: parseFloat(item.lat),
-    longitude: parseFloat(item.lon),
-    country: item.address.country || '',
-    city: item.address.city || item.address.town || item.address.village || '',
-  }));
+  geocode: async (text: string, limit = 1): Promise<GeocodingResult[]> => {
+    return apiRequest<GeocodingResult[]>(
+      `/locations/geocode?text=${encodeURIComponent(text)}&limit=${limit}`
+    );
+  },
 };
 
 export interface SessionInfo {
@@ -440,7 +424,7 @@ export const journalApi = {
   },
 
   uploadImages: async (files: File[]): Promise<string[]> => {
-    files.forEach(validateFile);
+    validateFiles(files);
 
     const formData = new FormData();
     files.forEach(file => {
@@ -451,10 +435,6 @@ export const journalApi = {
       method: 'POST',
       body: formData,
     });
-  },
-
-  searchLocations: async (query: string): Promise<Location[]> => {
-    return apiRequest<Location[]>(`/locations/search?q=${encodeURIComponent(query)}`);
   },
 };
 
@@ -476,10 +456,6 @@ export const socialApi = {
       method: 'POST',
       body: JSON.stringify({ type: reactionType }),
     });
-  },
-
-  removeReaction: async (journalId: string, reactionType: string): Promise<void> => {
-    await apiRequest<void>(`/journals/${journalId}/reactions/${reactionType}`, { method: 'DELETE' });
   },
 };
 
@@ -521,9 +497,12 @@ export const moderationApi = {
     });
   },
 
-  listReports: async (status?: string): Promise<ReportItem[]> => {
-    const suffix = status ? `?status=${encodeURIComponent(status)}` : '';
-    return apiRequest<ReportItem[]>(`/admin/reports${suffix}`);
+  listReports: async (status?: string, page = 0, size = 20): Promise<PageResponse<ReportItem>> => {
+    const query = new URLSearchParams();
+    if (status && status !== 'ALL') query.set('status', status);
+    query.set('page', String(page));
+    query.set('size', String(size));
+    return apiRequest<PageResponse<ReportItem>>(`/admin/reports?${query.toString()}`);
   },
 
   resolveReport: async (id: string, action: 'HIDE' | 'DISMISS', note?: string): Promise<ReportItem> => {
@@ -550,15 +529,31 @@ export const moderationApi = {
   },
 };
 
-const validateFile = (file: File) => {
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+export const MAX_FILES_PER_UPLOAD = 5;
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+export const MAX_UPLOAD_SIZE = 15 * 1024 * 1024; // 15 MB total per request
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-  if (file.size > MAX_FILE_SIZE) {
-    throw new Error('File size must be less than 5MB');
+const validateFiles = (files: File[]) => {
+  if (files.length === 0) {
+    throw new Error('Choose at least one image.');
+  }
+  if (files.length > MAX_FILES_PER_UPLOAD) {
+    throw new Error(`You can upload up to ${MAX_FILES_PER_UPLOAD} images at a time.`);
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error('Only JPEG, PNG, and GIF images are allowed');
+  let total = 0;
+  files.forEach((file) => {
+    total += file.size;
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error(`${file.name} is larger than 5 MB.`);
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      throw new Error('Only JPEG, PNG, GIF and WebP images are allowed.');
+    }
+  });
+
+  if (total > MAX_UPLOAD_SIZE) {
+    throw new Error('The combined upload must be 15 MB or smaller.');
   }
 };

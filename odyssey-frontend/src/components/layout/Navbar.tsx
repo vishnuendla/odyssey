@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,22 +16,20 @@ import { useTheme } from '@/contexts/ThemeContext';
 import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
+const desktopLink = ({ isActive }: { isActive: boolean }) =>
+  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+    isActive ? 'text-primary bg-primary/10' : 'text-foreground hover:text-primary'
+  }`;
+
+const mobileLink = ({ isActive }: { isActive: boolean }) =>
+  `block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+    isActive ? 'text-primary bg-primary/10' : 'text-foreground hover:text-primary'
+  }`;
+
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const [customCursor, setCustomCursor] = useState(false);
-  const toggleCursor = () => {
-    setCustomCursor(prev => !prev);
-    document.body.style.cursor = customCursor
-      ? 'auto'
-      : "url('/pointer.png'), auto"; // ✅ Change to your actual image path
-  };
-  
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <>
@@ -39,36 +37,36 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex-shrink-0 flex items-center">
-              <Sun className="h-8 w-8 text-primary" />
+            <Link to="/" className="flex-shrink-0 flex items-center" aria-label="Odyssey home">
+              <Sun className="h-8 w-8 text-primary" aria-hidden="true" />
               <span className="ml-2 text-xl font-bold text-foreground">Odyssey</span>
             </Link>
           </div>
 
           {/* Desktop menu */}
           <div className="hidden md:flex md:items-center md:space-x-4">
-            <Link to="/explore" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+            <NavLink to="/explore" className={desktopLink}>
               Explore
-            </Link>
-            <Link to="/gallery" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+            </NavLink>
+            <NavLink to="/gallery" className={desktopLink}>
               Gallery
-            </Link>
-            <Link to="/map" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+            </NavLink>
+            <NavLink to="/map" className={desktopLink}>
               Map
-            </Link>
-            <Link to="/timeline" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+            </NavLink>
+            <NavLink to="/timeline" className={desktopLink}>
               Timeline
-            </Link>
+            </NavLink>
 
             {isAuthenticated ? (
               <>
-                <Link to="/journals" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                <NavLink to="/journals" className={desktopLink}>
                   My Journals
-                </Link>
+                </NavLink>
                 <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="Account menu">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={user?.avatar} alt={user?.name} />
                         <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
@@ -118,8 +116,13 @@ export default function Navbar() {
               </div>
             )}
 
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Moon className="h-5 w-5" aria-hidden="true" /> : <Sun className="h-5 w-5" aria-hidden="true" />}
             </Button>
           </div>
 
@@ -130,8 +133,9 @@ export default function Navbar() {
               size="icon"
               onClick={() => setIsOpen(!isOpen)}
               aria-label="Toggle menu"
+              aria-expanded={isOpen}
             >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
             </Button>
           </div>
         </div>
@@ -139,73 +143,37 @@ export default function Navbar() {
         {/* Mobile menu */}
         {isOpen && (
           <div className="md:hidden py-2 space-y-1 sm:px-3 border-t">
-            <Link
-              to="/explore"
-              className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => setIsOpen(false)}
-            >
+            <NavLink to="/explore" className={mobileLink} onClick={() => setIsOpen(false)}>
               Explore
-            </Link>
-            <Link
-              to="/gallery"
-              className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => setIsOpen(false)}
-            >
+            </NavLink>
+            <NavLink to="/gallery" className={mobileLink} onClick={() => setIsOpen(false)}>
               Gallery
-            </Link>
-            <Link
-              to="/map"
-              className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => setIsOpen(false)}
-            >
+            </NavLink>
+            <NavLink to="/map" className={mobileLink} onClick={() => setIsOpen(false)}>
               Map
-            </Link>
+            </NavLink>
 
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/timeline"
-                  className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
+                <NavLink to="/timeline" className={mobileLink} onClick={() => setIsOpen(false)}>
                   Timeline
-                </Link>
-                <Link
-                  to="/journals"
-                  className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
+                </NavLink>
+                <NavLink to="/journals" className={mobileLink} onClick={() => setIsOpen(false)}>
                   My Journals
-                </Link>
-                <Link
-                  to="/bookmarks"
-                  className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
+                </NavLink>
+                <NavLink to="/bookmarks" className={mobileLink} onClick={() => setIsOpen(false)}>
                   Saved Journals
-                </Link>
-                <Link
-                  to="/profile"
-                  className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
+                </NavLink>
+                <NavLink to="/profile" className={mobileLink} onClick={() => setIsOpen(false)}>
                   Profile
-                </Link>
-                <Link
-                  to="/notifications"
-                  className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
+                </NavLink>
+                <NavLink to="/notifications" className={mobileLink} onClick={() => setIsOpen(false)}>
                   Notifications
-                </Link>
+                </NavLink>
                 {user?.role === 'ADMIN' && (
-                  <Link
-                    to="/admin"
-                    className="block text-foreground hover:text-primary px-3 py-2 rounded-md text-base font-medium"
-                    onClick={() => setIsOpen(false)}
-                  >
+                  <NavLink to="/admin" className={mobileLink} onClick={() => setIsOpen(false)}>
                     Moderation
-                  </Link>
+                  </NavLink>
                 )}
                 <button
                   onClick={() => {
@@ -234,11 +202,11 @@ export default function Navbar() {
                 size="icon"
                 className="w-full justify-center"
                 onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                {theme === 'dark' ? <Moon className="h-5 w-5" aria-hidden="true" /> : <Sun className="h-5 w-5" aria-hidden="true" />}
                 <span className="ml-2">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
               </Button>
-              
             </div>
           </div>
         )}
