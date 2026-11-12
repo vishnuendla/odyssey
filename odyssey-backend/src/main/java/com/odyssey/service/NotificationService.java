@@ -32,6 +32,24 @@ public class NotificationService {
                 || recipient.getId().equals(actor.getId())) {
             return;
         }
+        persist(recipient, actor, type, journalId, commentId, message);
+    }
+
+    /**
+     * System messages (for example moderation decisions) have no visible actor,
+     * so they work even when the operator happens to own the affected content.
+     */
+    @Transactional
+    public void notifySystem(User recipient, Notification.Type type,
+                             String journalId, String commentId, String message) {
+        if (recipient == null || recipient.getId() == null) {
+            return;
+        }
+        persist(recipient, null, type, journalId, commentId, message);
+    }
+
+    private void persist(User recipient, User actor, Notification.Type type,
+                         String journalId, String commentId, String message) {
         Notification notification = new Notification();
         notification.setUser(recipient);
         notification.setActor(actor);

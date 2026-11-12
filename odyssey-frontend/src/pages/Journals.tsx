@@ -14,7 +14,7 @@ import { User } from '@/types';
 type JournalFilter = 'all' | 'published' | 'drafts';
 
 const JournalsPage = () => {
-  const { journals, getUserJournals, isLoading } = useJournal();
+  const { getUserJournals, isLoading } = useJournal();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [userMap, setUserMap] = useState<Record<string, User>>({});
@@ -111,8 +111,8 @@ const JournalsPage = () => {
           <>
             {userJournals.length === 0 && <Onboarding hasJournals={false} />}
             <JournalList 
-              explore="false"
               journals={visibleJournals}
+              showCreateButton={false}
               emptyMessage={
                 filter === 'drafts'
                   ? 'You have no drafts. Private journals appear here.'

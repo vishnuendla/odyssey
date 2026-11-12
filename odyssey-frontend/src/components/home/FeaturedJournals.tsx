@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { journalApi, accountApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import JournalCard from '@/components/journals/JournalCard';
-import { User } from '@/types';
+import { User, JournalEntry } from '@/types';
 
 const FeaturedJournals = () => {
-  const [journals, setJournals] = useState([]);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [userMap, setUserMap] = useState<Record<string, User>>({});
   const { user } = useAuth();
 
@@ -34,7 +34,7 @@ const FeaturedJournals = () => {
         const userInfoPromises = userIds.map(async (userId) => {
           try {
             const userInfo = await accountApi.getUser(userId);
-            return { id: userId, ...userInfo };
+            return { ...userInfo, id: userId };
           } catch (error) {
             console.error(`Failed to fetch user info for ${userId}:`, error);
             return { id: userId, name: 'Anonymous', email: '', createdAt: '' } as User;

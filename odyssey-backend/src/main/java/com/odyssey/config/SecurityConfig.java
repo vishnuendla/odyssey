@@ -112,6 +112,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/journals/public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/journals/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/journals/tags").permitAll()
+                        // Geocoding proxy is used while writing a journal, before saving.
+                        .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/journals/*").permitAll()
                         .requestMatchers("/api/journals/*/comments", "/api/journals/*/reactions/**").authenticated()
                         .anyRequest().authenticated())

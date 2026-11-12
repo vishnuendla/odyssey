@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,8 +21,8 @@ import { Icons } from '@/components/shared/Icons';
 import { MapPin, X, ImagePlus, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Location } from '@/types';
-import { journalApi } from '@/services/api';
-import { getCoordinatesFromPlaceName, debounce } from '@/utils/geocoding';
+import { journalApi, MAX_FILES_PER_UPLOAD, MAX_FILE_SIZE } from '@/services/api';
+import { getLocationSuggestions, debounce } from '@/utils/geocoding';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
@@ -34,8 +34,8 @@ const formSchema = z.object({
     latitude: z.number(),
     longitude: z.number(),
     placeName: z.string().optional(),
-    country: z.string().optional().nullable().default(null),
-    city: z.string().optional().nullable().default(null),
+    country: z.string().optional(),
+    city: z.string().optional(),
   }).optional(),  
   images: z.array(z.string()).optional(),
 });
@@ -53,9 +53,19 @@ const CreateJournalForm = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [isGeocoding, setIsGeocoding] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const uploadedImagesRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    uploadedImagesRef.current = uploadedImages;
+  }, [uploadedImages]);
+
+  useEffect(() => {
+    return () => {
+      uploadedImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const addTag = () => {
     const value = tagInput.trim().toLowerCase();
@@ -106,20 +116,17 @@ const CreateJournalForm = () => {
 
       setLocationQuery(query);
       setIsSearchingLocation(true);
-      setIsGeocoding(true);
-      
+
       try {
-        const coordinates = await getCoordinatesFromPlaceName(query);
-        if (coordinates) {
-          setLocationSuggestions([{
-            name: query,
-            latitude: coordinates.latitude,
-            longitude: coordinates.longitude,
-            placeName: query
-          }]);
-        } else {
-          setLocationSuggestions([]);
-        }
+        const suggestions = await getLocationSuggestions(query);
+        setLocationSuggestions(suggestions.map((suggestion) => ({
+          name: suggestion.name,
+          latitude: suggestion.latitude,
+          longitude: suggestion.longitude,
+          placeName: suggestion.placeName,
+          country: suggestion.country,
+          city: suggestion.city,
+        })));
       } catch (error) {
         console.error('Error searching for locations:', error);
         setLocationSuggestions([]);
@@ -129,7 +136,6 @@ const CreateJournalForm = () => {
         });
       } finally {
         setIsSearchingLocation(false);
-        setIsGeocoding(false);
       }
     }, 500),
     [toast]
@@ -151,25 +157,54 @@ const CreateJournalForm = () => {
     navigate(-1);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
+    e.target.value = '';
     if (!files || files.length === 0) return;
-    
+
     const newFiles = Array.from(files);
-    setUploadedFiles(prev => [...prev, ...newFiles]);
-    
-    const newImages: string[] = [];
-    newFiles.forEach(file => {
-      const imageUrl = URL.createObjectURL(file);
-      newImages.push(imageUrl);
-    });
-    
-    const updatedImages = [...uploadedImages, ...newImages];
-    setUploadedImages(updatedImages);
-    form.setValue('images', updatedImages);
+    const slotsLeft = MAX_FILES_PER_UPLOAD - uploadedFiles.length;
+    if (slotsLeft <= 0) {
+      toast({
+        variant: 'destructive',
+        description: `A journal can have at most ${MAX_FILES_PER_UPLOAD} images.`,
+      });
+      return;
+    }
+    if (newFiles.length > slotsLeft) {
+      toast({
+        variant: 'destructive',
+        description: `You can add ${slotsLeft} more image${slotsLeft === 1 ? '' : 's'}.`,
+      });
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const tooLarge = newFiles.find((file) => file.size > MAX_FILE_SIZE);
+    if (tooLarge) {
+      toast({ variant: 'destructive', description: `${tooLarge.name} is larger than 5 MB.` });
+      return;
+    }
+    const badType = newFiles.find((file) => !allowedTypes.includes(file.type));
+    if (badType) {
+      toast({
+        variant: 'destructive',
+        description: 'Only JPEG, PNG, GIF and WebP images are allowed.',
+      });
+      return;
+    }
+
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    const newImages = newFiles.map((file) => URL.createObjectURL(file));
+    setUploadedImages((prev) => [...prev, ...newImages]);
+    form.setValue('images', [...uploadedImages, ...newImages]);
   };
 
   const removeImage = (indexToRemove: number) => {
+    const removed = uploadedImages[indexToRemove];
+    if (removed) {
+      URL.revokeObjectURL(removed);
+    }
     const updatedImages = uploadedImages.filter((_, index) => index !== indexToRemove);
     const updatedFiles = uploadedFiles.filter((_, index) => index !== indexToRemove);
     setUploadedImages(updatedImages);
@@ -324,7 +359,7 @@ const CreateJournalForm = () => {
             <FormField
               control={form.control}
               name="location"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <div className="grid gap-3 relative">
@@ -338,7 +373,7 @@ const CreateJournalForm = () => {
                         }}
                         disabled={isSubmitting || !!selectedLocation}
                       />
-                      {(isSearchingLocation || isGeocoding) && (
+                      {(isSearchingLocation) && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                           <Icons.spinner className="h-4 w-4 animate-spin text-muted-foreground" />
                         </div>
@@ -421,20 +456,25 @@ const CreateJournalForm = () => {
                     </Button>
                   </div>
                 ))}
-                <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageUpload}
-                    disabled={isSubmitting}
-                  />
-                  <div className="text-center p-4">
-                    <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Add Images</span>
-                  </div>
-                </label>
+                {uploadedFiles.length < MAX_FILES_PER_UPLOAD && (
+                  <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={isSubmitting}
+                    />
+                    <div className="text-center p-4">
+                      <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Add Images</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {MAX_FILES_PER_UPLOAD - uploadedFiles.length} left
+                      </span>
+                    </div>
+                  </label>
+                )}
               </div>
               <FormDescription>
                 Upload images from your travel experience

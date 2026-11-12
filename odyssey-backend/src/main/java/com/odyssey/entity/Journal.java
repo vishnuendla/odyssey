@@ -45,19 +45,24 @@ public class Journal {
     @OneToOne(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true)
     private Location location;
 
-    @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Image> images = new ArrayList<>();
 
-    @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<Reaction> reactions = new HashSet<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "journal_tags", joinColumns = @JoinColumn(name = "journal_id"))
     @Column(name = "tag", nullable = false, length = 50)
     private Set<String> tags = new LinkedHashSet<>();
+
+    @PreUpdate
+    public void touchUpdatedAt() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
     // Getters and setters
     public String getId() {

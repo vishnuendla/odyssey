@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { journalApi } from '@/services/api';
 
 export default function CallToAction() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [journalCount, setJournalCount] = useState<number | null>(null); // null means loading
 
   useEffect(() => {

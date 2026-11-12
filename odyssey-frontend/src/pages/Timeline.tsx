@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import { useState,useEffect } from 'react';
 import { useJournal } from '@/contexts/JournalContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/layout/Navbar';
@@ -7,7 +7,6 @@ import Timeline from '@/components/timeline/Timeline';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Map } from 'lucide-react';
 import { Link,useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';

@@ -60,16 +60,34 @@ export default function Hero() {
             </div>
           </div>
           
-          <div className="hidden lg:block relative">
-            <div className="absolute left-16 top-0 w-80 h-64 bg-ocean-400 rounded-lg shadow-xl transform -rotate-6 z-10">
-              <img src="https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=80&w=2960&auto=format&fit=crop" alt="Travel journal entry" className="w-full h-full object-cover rounded-lg" />
-            </div>
-            <div className="absolute left-48 top-24 w-80 h-64 bg-sunset-400 rounded-lg shadow-xl transform rotate-3 z-20">
-              <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=3130&auto=format&fit=crop" alt="Travel experience" className="w-full h-full object-cover rounded-lg" />
-            </div>
-            <div className="absolute left-28 top-48 w-80 h-64 bg-earth-400 rounded-lg shadow-xl transform -rotate-3 z-30">
-              <img src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=2021&auto=format&fit=crop" alt="Map view" className="w-full h-full object-cover rounded-lg" />
-            </div>
+          <div className="hidden lg:grid grid-cols-2 gap-4">
+            <img
+              src="https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=70&w=900&auto=format&fit=crop"
+              alt="Travel journal entry"
+              width={900}
+              height={600}
+              loading="eager"
+              decoding="async"
+              className="col-span-2 h-56 w-full rounded-xl object-cover shadow-lg"
+            />
+            <img
+              src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=70&w=600&auto=format&fit=crop"
+              alt="Travel experience"
+              width={600}
+              height={450}
+              loading="lazy"
+              decoding="async"
+              className="h-44 w-full rounded-xl object-cover shadow-lg"
+            />
+            <img
+              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=70&w=600&auto=format&fit=crop"
+              alt="Map view"
+              width={600}
+              height={450}
+              loading="lazy"
+              decoding="async"
+              className="h-44 w-full rounded-xl object-cover shadow-lg"
+            />
           </div>
         </div>
       </div>

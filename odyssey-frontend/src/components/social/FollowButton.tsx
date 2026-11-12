@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCheck, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,16 @@ export default function FollowButton({
   const [following, setFollowing] = useState(initialFollowing);
   const [followers, setFollowers] = useState(initialFollowers);
   const [busy, setBusy] = useState(false);
+
+  // The profile often arrives after the first render, so keep local state in
+  // sync with the source of truth instead of freezing the first values.
+  useEffect(() => {
+    setFollowing(initialFollowing);
+  }, [initialFollowing, userId]);
+
+  useEffect(() => {
+    setFollowers(initialFollowers);
+  }, [initialFollowers, userId]);
 
   if (user?.id === userId) return null;
 
