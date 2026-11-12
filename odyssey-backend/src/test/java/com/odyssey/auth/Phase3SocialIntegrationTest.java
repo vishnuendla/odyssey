@@ -278,6 +278,106 @@ class Phase3SocialIntegrationTest {
                 .andExpect(jsonPath("$.hidden").value(true));
     }
 
+    @Test
+    void permissionFailuresUseCorrectStatuses() throws Exception {
+        String authorEmail = "perm-author@example.com";
+        MvcResult author = register(authorEmail);
+        markVerified(authorEmail);
+        Cookie authorAccess = cookie(author, "odyssey-token");
+        String publicId = createJournal(author, "Permissions", "Public journal for permission checks.", true);
+        String privateId = createJournal(author, "Private Permissions", "Private journal for permission checks.", false);
+
+        String readerEmail = "perm-reader@example.com";
+        MvcResult reader = register(readerEmail);
+        markVerified(readerEmail);
+        Cookie readerAccess = cookie(reader, "odyssey-token");
+
+        // Authenticated but not allowed is 403, not 401.
+        Csrf csrfUpdate = csrf();
+        mockMvc.perform(put("/api/journals/" + publicId)
+                        .cookie(csrfUpdate.cookie())
+                        .header("X-XSRF-TOKEN", csrfUpdate.token())
+                        .cookie(readerAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Hijacked",
+                                "content", "A reader must never be able to edit this.",
+                                "isPublic", true))))
+                .andExpect(status().isForbidden());
+
+        Csrf csrfDelete = csrf();
+        mockMvc.perform(delete("/api/journals/" + publicId)
+                        .cookie(csrfDelete.cookie())
+                        .header("X-XSRF-TOKEN", csrfDelete.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isForbidden());
+
+        // Private content must not leak its existence.
+        mockMvc.perform(get("/api/journals/" + privateId).cookie(readerAccess))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/journals/share/" + privateId).cookie(readerAccess))
+                .andExpect(status().isNotFound());
+
+        Csrf csrfPrivateComment = csrf();
+        mockMvc.perform(post("/api/journals/" + privateId + "/comments")
+                        .cookie(csrfPrivateComment.cookie())
+                        .header("X-XSRF-TOKEN", csrfPrivateComment.token())
+                        .cookie(readerAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("content", "Should not land"))))
+                .andExpect(status().isNotFound());
+
+        String authorComment = createComment(publicId, authorAccess, "Owner comment", null);
+        Csrf csrfDeleteOther = csrf();
+        mockMvc.perform(delete("/api/journals/" + publicId + "/comments/" + authorComment)
+                        .cookie(csrfDeleteOther.cookie())
+                        .header("X-XSRF-TOKEN", csrfDeleteOther.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isForbidden());
+
+        // The journal owner may moderate any comment on their own journal.
+        String readerComment = createComment(publicId, readerAccess, "Reader comment", null);
+        Csrf csrfOwnerDelete = csrf();
+        mockMvc.perform(delete("/api/journals/" + publicId + "/comments/" + readerComment)
+                        .cookie(csrfOwnerDelete.cookie())
+                        .header("X-XSRF-TOKEN", csrfOwnerDelete.token())
+                        .cookie(authorAccess))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void hidingAJournalEvictsThePublicTagCache() throws Exception {
+        String authorEmail = "cache-author@example.com";
+        MvcResult author = register(authorEmail);
+        markVerified(authorEmail);
+        Cookie authorAccess = cookie(author, "odyssey-token");
+        String journalId = createJournal(author, "Cache Tag Journal",
+                "Journal used to check that hidden tags leave the cache.", true, List.of("CacheTagUnique"));
+
+        assertThat(tags()).contains("cachetagunique");
+
+        promoteToAdmin(authorEmail);
+        Cookie adminAccess = cookie(login(authorEmail), "odyssey-token");
+        Csrf csrfHide = csrf();
+        mockMvc.perform(patch("/api/admin/journals/" + journalId + "/visibility")
+                        .param("hidden", "true")
+                        .cookie(csrfHide.cookie())
+                        .header("X-XSRF-TOKEN", csrfHide.token())
+                        .cookie(adminAccess))
+                .andExpect(status().isNoContent());
+
+        assertThat(tags()).doesNotContain("cachetagunique");
+    }
+
+    private List<String> tags() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/journals/tags"))
+                .andExpect(status().isOk())
+                .andReturn();
+        List<String> tags = new java.util.ArrayList<>();
+        objectMapper.readTree(result.getResponse().getContentAsString()).forEach(node -> tags.add(node.asText()));
+        return tags;
+    }
+
     private String createComment(String journalId, Cookie access, String content, String parentId) throws Exception {
         Map<String, Object> payload = parentId == null
                 ? Map.of("content", content)
@@ -296,6 +396,15 @@ class Phase3SocialIntegrationTest {
     }
 
     private String createPublicJournal(MvcResult session, String title, String content) throws Exception {
+        return createJournal(session, title, content, true, List.of("Norway"));
+    }
+
+    private String createJournal(MvcResult session, String title, String content, boolean isPublic) throws Exception {
+        return createJournal(session, title, content, isPublic, List.of("Norway"));
+    }
+
+    private String createJournal(MvcResult session, String title, String content, boolean isPublic,
+                                 List<String> tags) throws Exception {
         Cookie access = cookie(session, "odyssey-token");
         Csrf csrf = csrf();
         MvcResult created = mockMvc.perform(post("/api/journals")
@@ -306,8 +415,8 @@ class Phase3SocialIntegrationTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "title", title,
                                 "content", content,
-                                "isPublic", true,
-                                "tags", List.of("Norway")))))
+                                "isPublic", isPublic,
+                                "tags", tags))))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();

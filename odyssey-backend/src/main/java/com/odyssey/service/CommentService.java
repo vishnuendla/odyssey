@@ -59,7 +59,7 @@ public class CommentService {
             throw new ResourceNotFoundException("Journal not found");
         }
         if (!journal.isPublic() && !isOwner && !user.isAdmin()) {
-            throw new UnauthorizedException("You do not have permission to comment on this journal");
+            throw new ResourceNotFoundException("Journal not found");
         }
 
         Comment parent = null;
@@ -116,7 +116,7 @@ public class CommentService {
                 || comment.getJournal().getUser().getId().equals(user.getId())
                 || user.isAdmin();
         if (!canModerate) {
-            throw new UnauthorizedException("You do not have permission to delete this comment");
+            throw new ForbiddenException("You do not have permission to delete this comment");
         }
 
         deleteCommentTree(comment);

@@ -155,7 +155,7 @@ public class JournalService {
         boolean isOwner = viewer != null && journal.getUser().getId().equals(viewer.getId());
         if ((!journal.isPublic() || journal.isHidden()) && !isOwner
                 && (viewer == null || !viewer.isAdmin())) {
-            throw new UnauthorizedException("You do not have permission to share this journal");
+            throw new ResourceNotFoundException("Journal not found");
         }
 
         return convertToDto(journal, bookmarkedJournalIds(userEmail));
@@ -211,7 +211,7 @@ public class JournalService {
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
 
         if (!journal.getUser().getEmail().equalsIgnoreCase(userEmail)) {
-            throw new UnauthorizedException("You do not have permission to update this journal");
+            throw new ForbiddenException("You do not have permission to update this journal");
         }
         requireVerified(journal.getUser());
         validateRequest(journalRequest);
@@ -267,7 +267,7 @@ public class JournalService {
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
 
         if (!journal.getUser().getEmail().equalsIgnoreCase(userEmail)) {
-            throw new UnauthorizedException("You do not have permission to delete this journal");
+            throw new ForbiddenException("You do not have permission to delete this journal");
         }
 
         List<String> imageUrls = journal.getImages().stream()
