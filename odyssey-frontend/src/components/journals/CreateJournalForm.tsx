@@ -106,19 +106,26 @@ const CreateJournalForm = () => {
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<Location[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  // Autocomplete responses can arrive out of order; only the newest query wins.
+  const locationRequestId = useRef(0);
 
   const handleLocationSearch = useCallback(
     debounce(async (query: string) => {
       if (!query.trim() || query.length < MIN_SEARCH_LENGTH) {
+        locationRequestId.current += 1;
         setLocationSuggestions([]);
         return;
       }
 
+      const requestId = ++locationRequestId.current;
       setLocationQuery(query);
       setIsSearchingLocation(true);
 
       try {
         const suggestions = await getLocationSuggestions(query);
+        if (requestId !== locationRequestId.current) {
+          return;
+        }
         setLocationSuggestions(suggestions.map((suggestion) => ({
           name: suggestion.name,
           latitude: suggestion.latitude,
@@ -128,6 +135,9 @@ const CreateJournalForm = () => {
           city: suggestion.city,
         })));
       } catch (error) {
+        if (requestId !== locationRequestId.current) {
+          return;
+        }
         console.error('Error searching for locations:', error);
         setLocationSuggestions([]);
         toast({
@@ -135,7 +145,9 @@ const CreateJournalForm = () => {
           description: 'Failed to get location coordinates. Please try again.',
         });
       } finally {
-        setIsSearchingLocation(false);
+        if (requestId === locationRequestId.current) {
+          setIsSearchingLocation(false);
+        }
       }
     }, 500),
     [toast]
