@@ -22,6 +22,7 @@ public class Report {
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(nullable = false, length = 36, updatable = false)
     private String id;
 
     @ManyToOne(optional = false)

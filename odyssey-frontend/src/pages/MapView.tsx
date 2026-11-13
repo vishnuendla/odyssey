@@ -147,6 +147,10 @@ const MapViewPage = () => {
                         <img
                           src={selectedJournal.images[0]}
                           alt={selectedJournal.title}
+                          width={800}
+                          height={600}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -186,10 +190,11 @@ const MapViewPage = () => {
                       ) : (
                       <div className="space-y-2 max-h-60 sm:max-h-[calc(100vh-12rem)] overflow-y-auto">
                         {filteredJournals.map((journal) => (
-                          <div
+                          <button
+                            type="button"
                             key={journal.id}
                             onClick={() => setSelectedJournal(journal)}
-                            className="p-2 sm:p-3 rounded-lg border cursor-pointer hover:bg-accent transition-colors"
+                            className="w-full text-left p-2 sm:p-3 rounded-lg border cursor-pointer hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <div className="flex items-start gap-2 sm:gap-3">
                               {journal.images && journal.images.length > 0 && (
@@ -197,6 +202,10 @@ const MapViewPage = () => {
                                   <img
                                     src={journal.images[0]}
                                     alt={journal.title}
+                                    width={64}
+                                    height={64}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="w-full h-full object-cover"
                                   />
                                 </div>
@@ -212,7 +221,7 @@ const MapViewPage = () => {
                                 </p>
                               </div>
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                       )}

@@ -125,6 +125,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
             isLoading ? 'opacity-0' : 'opacity-100'
           )}
           loading="lazy"
+          decoding="async"
           {...props}
           onLoad={() => setIsLoading(false)}
           onError={handleError}

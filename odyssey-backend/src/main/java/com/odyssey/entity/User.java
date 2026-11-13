@@ -1,6 +1,7 @@
 package com.odyssey.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
@@ -9,11 +10,13 @@ import java.util.Set;
 
 @Entity
 @Table(name = "users")
+@BatchSize(size = 50)
 public class User {
 
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(nullable = false, length = 36, updatable = false)
     private String id;
 
     @Column(nullable = false)

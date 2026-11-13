@@ -31,11 +31,12 @@ Vite serves the app at http://localhost:3000 and proxies `/api` requests to `htt
 npm run dev
 npm run lint
 npm run typecheck
+npm run test
 npm run build
 npm run preview
 ```
 
-There is no automated frontend test suite configured yet. GitHub Actions runs lint, typecheck, and build on pushes and pull requests to `dev` and `main`.
+Automated tests use Vitest and Testing Library (`npm run test`). GitHub Actions runs lint, typecheck, tests, and build on pushes and pull requests to `dev` and `main`.
 
 ## Related files
 
