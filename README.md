@@ -26,6 +26,7 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 - **Accounts** — email/password registration with server-side validation, email verification, password reset, and session management. Access tokens live in short-lived HttpOnly cookies; rotating refresh tokens can be reviewed and revoked from the Security page.
 - **Operations** — Docker images for the API and web app, a Compose stack with MySQL, Actuator health probes, and backup/restore guides.
 - **Dark mode and responsive layout** — usable from a phone to a desktop.
+- **Accessible by default** — keyboard-operable journal cards and map markers, labelled pagination, lazy-loaded gallery images and a feed that loads authors and places without per-entry queries.
 
 ## Screenshots
 
@@ -41,6 +42,10 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 | --- | --- |
 | ![Create journal](docs/screenshots/07-create-journal.png) | ![My journals](docs/screenshots/06-my-journals.png) |
 
+| Photo gallery | Settings |
+| --- | --- |
+| ![Gallery](docs/screenshots/05-gallery.png) | ![Settings](docs/screenshots/08-settings.png) |
+
 | Profile | Mobile |
 | --- | --- |
 | ![Profile](docs/screenshots/11-profile.png) | ![Mobile home](docs/screenshots/12-mobile-home.png) |
@@ -53,7 +58,7 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 | Backend | Java 17, Spring Boot 3.2, Spring Security (JWT), Spring Data JPA, Hibernate, Maven |
 | Database | MySQL 8 |
 | Geocoding | Geoapify autocomplete and geocoding APIs |
-| CI | GitHub Actions (frontend lint/typecheck/build, backend Maven verify) |
+| CI | GitHub Actions (frontend lint/typecheck/test/build, backend Maven verify) |
 
 ## Getting started
 
@@ -191,8 +196,8 @@ odyssey/
 │   │   ├── repository/       Spring Data repositories
 │   │   ├── security/         JWT auth, CSRF and password hashing
 │   │   └── service/          Business logic, mail, rate limiting and audits
-│   ├── src/main/resources/db/migration/  Flyway schema migrations (V1–V4)
-│   ├── src/test/             Auth and Phase 3 integration tests (H2)
+│   ├── src/main/resources/db/migration/  Flyway schema migrations (V1–V6)
+│   ├── src/test/             Auth, social and query-count integration tests (H2)
 │   ├── Dockerfile            Multi-stage JDK 17 build
 │   └── uploads/              Uploaded journal images
 ├── odyssey-frontend/         React application
