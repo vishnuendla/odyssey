@@ -448,7 +448,7 @@ const JournalView = () => {
               </div>
             )}
             <CardContent className="pt-6">
-              <div className="prose max-w-none">
+              <div className="prose max-w-none dark:prose-invert">
                 {journal.content.split('\n').map((paragraph, index) => (
                   <p key={index} className="mb-4">{paragraph}</p>
                 ))}
