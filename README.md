@@ -120,6 +120,8 @@ Open <http://localhost:3000>. Vite proxies `/api` requests to the backend on por
 
 The Geoapify key stays on the backend. The browser only calls the Odyssey API, so the key is never embedded in the JavaScript bundle. Uploads accept up to 5 images per request, 5 MB each and 15 MB total.
 
+Location autocomplete is throttled on both sides: the form waits 500 ms after the last keystroke and requires three characters, and the backend forwards nothing shorter to Geoapify, caches each prefix for ten minutes in a bounded 512-entry cache, and rate limits lookups per IP. Typing a place name therefore costs a handful of provider calls, not one per keystroke.
+
 ## API overview
 
 All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` cookie. The SPA bootstraps it from `GET /api/auth/csrf` and handles this automatically.
