@@ -200,7 +200,8 @@ odyssey/
 │   │   ├── components/       UI, layout and feature components
 │   │   ├── contexts/         Auth and journal state
 │   │   ├── pages/            Route-level screens
-│   │   ├── services/         API client
+│   │   ├── services/         API client and its unit tests
+│   │   ├── test/             Vitest setup
 │   │   └── utils/            Geocoding and helpers
 │   ├── Dockerfile            Vite build served by nginx
 │   └── nginx.conf            SPA fallback and `/api` proxy
@@ -210,7 +211,6 @@ odyssey/
 │   └── screenshots/          README screenshots
 ├── docker-compose.yml        MySQL, backend and frontend stack
 ├── .env.example              Deployment environment template
-├── database_indexes.sql      Optional index definitions
 └── .github/workflows/ci.yml  CI pipeline
 ```
 
@@ -223,13 +223,14 @@ Set-Location odyssey-frontend
 npm ci
 npm run lint
 npm run typecheck
+npm run test
 npm run build
 
 Set-Location ../odyssey-backend
 mvn --batch-mode --no-transfer-progress verify
 ```
 
-There are no frontend unit tests; the backend integration suite covers registration, validation envelopes, CSRF enforcement, refresh-token rotation and reuse detection, verification gating, password changes, account deletion, bookmarks, tag/search filtering, public profiles, follows and notifications, threaded comments and report-driven moderation (`AuthFlowIntegrationTest`, `Phase3SocialIntegrationTest`).
+The backend suite covers registration, validation envelopes, CSRF enforcement, refresh-token rotation and reuse detection, verification gating, password changes, account deletion, bookmarks, tag/search filtering, public profiles, follows and notifications, threaded comments and report-driven moderation (`AuthFlowIntegrationTest`, `Phase3SocialIntegrationTest`). `JournalQueryCountTest` guards the feed against per-journal N+1 queries. The frontend uses Vitest and Testing Library for the API client (error envelopes, CSRF headers, refresh-and-retry) and route-level accessibility regressions.
 
 ## Deployment
 
