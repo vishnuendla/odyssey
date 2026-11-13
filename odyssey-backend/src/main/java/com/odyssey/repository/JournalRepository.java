@@ -4,6 +4,7 @@ import com.odyssey.entity.Journal;
 import com.odyssey.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,19 +15,30 @@ import java.util.List;
 @Repository
 public interface JournalRepository extends JpaRepository<Journal, String> {
     List<Journal> findByUser(User user);
+
+    @EntityGraph(attributePaths = {"user", "location"})
     List<Journal> findByUserOrderByCreatedAtDesc(User user);
+
     List<Journal> findByIsPublicTrue();
     List<Journal> findByIsPublicTrueAndHiddenFalse();
+
+    @EntityGraph(attributePaths = {"user", "location"})
     Page<Journal> findByIsPublicTrue(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"user", "location"})
     Page<Journal> findByIsPublicTrueAndHiddenFalse(Pageable pageable);
 
+    @EntityGraph(attributePaths = {"user", "location"})
     List<Journal> findByUserIdAndIsPublicTrueOrderByCreatedAtDesc(String userId);
+
+    @EntityGraph(attributePaths = {"user", "location"})
     List<Journal> findByUserIdAndIsPublicTrueAndHiddenFalseOrderByCreatedAtDesc(String userId);
     long countByUserIdAndIsPublicTrue(String userId);
     long countByUserIdAndIsPublicTrueAndHiddenFalse(String userId);
     long countByIsPublicTrueAndHiddenFalse();
     long countByHiddenTrue();
 
+    @EntityGraph(attributePaths = {"user", "location"})
     @Query("""
             select j from Journal j
             where j.hidden = false
@@ -35,6 +47,7 @@ public interface JournalRepository extends JpaRepository<Journal, String> {
             """)
     List<Journal> findVisibleToUser(@Param("userId") String userId);
 
+    @EntityGraph(attributePaths = {"user", "location"})
     @Query("""
             select j from Journal j
             left join j.location l
@@ -59,6 +72,7 @@ public interface JournalRepository extends JpaRepository<Journal, String> {
      * Sorting in SQL keeps "popular" correct across pages; the client cannot
      * inject an arbitrary sort column.
      */
+    @EntityGraph(attributePaths = {"user", "location"})
     @Query(value = """
             select j from Journal j
             left join j.location l

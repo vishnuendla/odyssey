@@ -2,6 +2,7 @@
 package com.odyssey.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
@@ -18,9 +19,10 @@ public class Journal {
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(nullable = false, length = 36, updatable = false)
     private String id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -42,19 +44,23 @@ public class Journal {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-    @OneToOne(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Location location;
 
+    @BatchSize(size = 50)
     @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Image> images = new ArrayList<>();
 
+    @BatchSize(size = 50)
     @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
 
+    @BatchSize(size = 50)
     @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<Reaction> reactions = new HashSet<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @BatchSize(size = 50)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "journal_tags", joinColumns = @JoinColumn(name = "journal_id"))
     @Column(name = "tag", nullable = false, length = 50)
     private Set<String> tags = new LinkedHashSet<>();

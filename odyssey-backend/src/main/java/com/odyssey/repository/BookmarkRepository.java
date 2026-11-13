@@ -1,6 +1,7 @@
 package com.odyssey.repository;
 
 import com.odyssey.entity.Bookmark;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +17,7 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, String> {
 
     Optional<Bookmark> findByUserIdAndJournalId(String userId, String journalId);
 
+    @EntityGraph(attributePaths = {"journal", "journal.user", "journal.location"})
     List<Bookmark> findByUserIdOrderByCreatedAtDesc(String userId);
 
     @Query("select b.journal.id from Bookmark b where b.user.id = :userId")
