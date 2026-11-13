@@ -258,7 +258,7 @@ const ExplorePage = () => {
             />
 
             {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-3">
+              <nav aria-label="Journal pages" className="mt-8 flex items-center justify-center gap-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -267,7 +267,7 @@ const ExplorePage = () => {
                 >
                   <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground" aria-current="page">
                   {page + 1} / {totalPages}
                 </span>
                 <Button
@@ -278,7 +278,7 @@ const ExplorePage = () => {
                 >
                   Next <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
-              </div>
+              </nav>
             )}
           </>
         )}

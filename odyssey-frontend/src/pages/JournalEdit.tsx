@@ -557,6 +557,8 @@ const JournalEdit = () => {
                         <img
                           src={image}
                           alt={`Existing ${index + 1}`}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover rounded-md"
                         />
                         <Button
@@ -582,6 +584,8 @@ const JournalEdit = () => {
                         <img
                           src={image}
                           alt={`Upload ${index + 1}`}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover rounded-md"
                         />
                         <Button
