@@ -6,7 +6,6 @@ React 18 and TypeScript single-page application for creating and exploring trave
 
 - Node.js 20 and npm
 - A running Odyssey backend at `http://localhost:9090`
-- A Geoapify key for location autocomplete
 
 ## Setup
 
@@ -14,16 +13,12 @@ From `odyssey-frontend/`:
 
 ```powershell
 npm ci
-Copy-Item .env.example .env.local
-```
-
-Set `VITE_GEOAPIFY_API_KEY` in `.env.local`, then start the frontend:
-
-```powershell
 npm run dev
 ```
 
-Vite serves the app at http://localhost:3000 and proxies `/api` requests to `http://localhost:9090`. `VITE_*` values are included in browser assets; restrict the Geoapify key in the provider console.
+The frontend needs no environment variables of its own: geocoding and the Geoapify key live on the backend, which the browser only reaches through `/api`.
+
+Vite serves the app at http://localhost:3000 and proxies `/api` requests to `http://localhost:9090`.
 
 ## Available commands
 
