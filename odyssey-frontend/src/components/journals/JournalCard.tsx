@@ -99,6 +99,8 @@ const JournalCard = memo(({
                 <img
                   src={userAvatar}
                   alt={userName}
+                  loading="lazy"
+                  decoding="async"
                   className="w-8 h-8 rounded-full"
                 />
               ) : (

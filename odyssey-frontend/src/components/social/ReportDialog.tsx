@@ -70,7 +70,7 @@ export default function ReportDialog({ targetType, targetId, label = 'Report' }:
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" aria-label={label || `Report ${targetType.toLowerCase()}`}>
           <Flag className="mr-1 h-4 w-4" /> {label}
         </Button>
       </DialogTrigger>
