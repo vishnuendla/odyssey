@@ -50,6 +50,8 @@ const JournalEdit = () => {
   const [locationSuggestions, setLocationSuggestions] = useState<Location[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  // Autocomplete responses can arrive out of order; only the newest query wins.
+  const locationRequestId = useRef(0);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -160,16 +162,21 @@ const JournalEdit = () => {
   const handleLocationSearch = useCallback(
     debounce(async (query: string) => {
       if (!query.trim() || query.length < 3) {
+        locationRequestId.current += 1;
         setLocationSuggestions([]);
         return;
       }
 
+      const requestId = ++locationRequestId.current;
       setLocationQuery(query);
       setIsSearchingLocation(true);
-      
+
       try {
         // Use the proper autocomplete function
         const suggestions = await getLocationSuggestions(query);
+        if (requestId !== locationRequestId.current) {
+          return;
+        }
         if (suggestions && suggestions.length > 0) {
           // Convert suggestions to the Location interface format
           const locations: Location[] = suggestions.map(suggestion => ({
@@ -186,6 +193,9 @@ const JournalEdit = () => {
           setLocationSuggestions([]);
         }
       } catch (error) {
+        if (requestId !== locationRequestId.current) {
+          return;
+        }
         console.error('Error searching for locations:', error);
         setLocationSuggestions([]);
         toast({
@@ -193,7 +203,9 @@ const JournalEdit = () => {
           description: 'Location search temporarily unavailable. Please try again.',
         });
       } finally {
-        setIsSearchingLocation(false);
+        if (requestId === locationRequestId.current) {
+          setIsSearchingLocation(false);
+        }
       }
     }, 500),
     [toast]
