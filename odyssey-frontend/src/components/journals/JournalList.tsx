@@ -161,7 +161,7 @@ export default function JournalList({
           >
             Previous
           </Button>
-          <span className="text-sm text-muted-foreground" aria-live="polite">
+          <span className="text-sm text-muted-foreground" aria-live="polite" aria-current="page">
             Page {currentPage} of {totalPages}
           </span>
           <Button

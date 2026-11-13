@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -334,6 +335,7 @@ const Profile = () => {
           </Card>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

@@ -23,6 +23,13 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
     navigate(`/journals/${id}`);
   };
 
+  const handleJournalKeyDown = (event: React.KeyboardEvent, id: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleJournalClick(id);
+    }
+  };
+
   // Group journals by month and year
   const journalsByMonthYear = sortedJournals.reduce((acc, journal) => {
     const date = new Date(journal.createdAt);
@@ -80,7 +87,11 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                     {/* Journal card column */}
                     <div className={`w-1/2 ${isEven ? 'pl-12' : 'pr-12'}`}>
                       <Card 
-                        className="overflow-hidden hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] hover:translate-y-[-2px]"
+                        role="link"
+                        tabIndex={0}
+                        aria-label={`Open journal: ${journal.title}`}
+                        onKeyDown={(event) => handleJournalKeyDown(event, journal.id)}
+                        className="overflow-hidden hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] hover:translate-y-[-2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => handleJournalClick(journal.id)}
                       >
                         {journal.images && journal.images.length > 0 && (
@@ -88,6 +99,10 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                             <img 
                               src={journal.images[0]} 
                               alt={journal.title} 
+                              width={800}
+                              height={400}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                             />
                           </div>
@@ -137,7 +152,11 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                       
                       {/* Journal card */}
                       <Card 
-                        className="overflow-hidden hover:shadow-md transition-all cursor-pointer"
+                        role="link"
+                        tabIndex={0}
+                        aria-label={`Open journal: ${journal.title}`}
+                        onKeyDown={(event) => handleJournalKeyDown(event, journal.id)}
+                        className="overflow-hidden hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => handleJournalClick(journal.id)}
                       >
                         {journal.images && journal.images.length > 0 && (
@@ -145,6 +164,10 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                             <img 
                               src={journal.images[0]} 
                               alt={journal.title} 
+                              width={640}
+                              height={320}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover"
                             />
                           </div>
