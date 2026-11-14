@@ -122,3 +122,15 @@ export interface GeocodingResult {
   state?: string;
   placeId?: string;
 }
+
+/** Travel statistics for the signed-in user, served by GET /api/stats/me. */
+export interface UserStats {
+  journals: number;
+  countries: number;
+  cities: number;
+  photos: number;
+  words: number;
+  kilometres: number;
+  journalsByMonth: Array<{ month: string; count: number }>;
+  topTags: Array<{ tag: string; count: number }>;
+}
