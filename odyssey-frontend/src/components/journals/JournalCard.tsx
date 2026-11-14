@@ -13,6 +13,8 @@ interface JournalCardProps {
   journal: JournalEntry;
   userName: string;
   userAvatar?: string;
+  /** Masonry cards let the cover image keep its natural shape. */
+  masonry?: boolean;
 }
 
 const getInitials = (name: string) => {
@@ -26,7 +28,8 @@ const getInitials = (name: string) => {
 const JournalCard = memo(({ 
   journal, 
   userName, 
-  userAvatar
+  userAvatar,
+  masonry = false,
 }: JournalCardProps) => {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -71,12 +74,13 @@ const JournalCard = memo(({
 
   return (
     <Link to={`/journals/${journal.id}`} className="block">
-      <div className="group relative bg-card rounded-lg overflow-hidden border transition-all duration-200 hover:shadow-lg h-full">
-        <div className="relative aspect-[16/9] overflow-hidden">
+      <div className="group relative bg-card rounded-lg overflow-hidden border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/40 h-full">
+        <div className={`relative overflow-hidden ${masonry ? 'max-h-[420px]' : 'aspect-[16/9]'}`}>
           <OptimizedImage
             src={coverImage}
             alt={journal.title}
-            className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+            aspectRatio={masonry ? 'auto' : 'video'}
+            className={`object-cover w-full transition-transform duration-500 group-hover:scale-105 ${masonry ? 'h-auto' : 'h-full'}`}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <Button
@@ -86,10 +90,16 @@ const JournalCard = memo(({
             onClick={handleBookmark}
             disabled={savingBookmark}
             aria-label={bookmarked ? 'Remove bookmark' : 'Save journal'}
-            className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full shadow"
+            className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full shadow opacity-90 transition-opacity group-hover:opacity-100"
           >
             <Bookmark className={`h-4 w-4 ${bookmarked ? 'fill-current text-primary' : ''}`} />
           </Button>
+          {journal.location && masonry && (
+            <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs text-white backdrop-blur-sm">
+              <MapPin className="h-3 w-3" />
+              <span className="max-w-[180px] truncate">{journal.location.name}</span>
+            </div>
+          )}
         </div>
 
         <div className="p-4">
@@ -119,7 +129,7 @@ const JournalCard = memo(({
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">{journal.title}</h3>
+          <h3 className="font-display text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">{journal.title}</h3>
 
           {journal.tags && journal.tags.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1">
@@ -149,7 +159,7 @@ const JournalCard = memo(({
                 <span>{commentCount}</span>
               </div>
             </div>
-            {journal.location && (
+            {journal.location && !masonry && (
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-1" />
                 <span className="truncate">{journal.location.name}</span>
