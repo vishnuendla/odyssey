@@ -10,7 +10,9 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 ## Features
 
 - **Travel journals** — create, edit and delete entries with a title, story text, cover photos and a tagged location.
-- **Tags and search** — add up to eight tags per journal, filter the public feed by tag, and search titles, stories and places from the server.
+- **Tags and search** - add up to eight tags per journal, filter the public feed by tag, and search titles, stories and places from the server. Keyword search runs on MySQL FULLTEXT indexes with title-weighted relevance ranking.
+- **Draft autosave** - the create and edit forms persist what you type locally every 800 ms; after a reload or crash the form comes back with a banner and a Discard button.
+- **Travel stats** - your profile shows journals, countries, cities, photos, words and the great-circle distance between consecutive trips.
 - **Photo galleries** — upload images per journal; files are stored by the backend and served through `/api/storage/files/...`. A public gallery collects photos from every public journal.
 - **Bookmarks** — save any public journal and return to it from the Saved Journals page.
 - **Public profiles** — every author has a public page listing their published journals, without exposing their email address.
@@ -25,7 +27,8 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 - **Sharing** — shareable links for public journals, Open Graph previews for journal pages, and visibility control (public vs private) per entry.
 - **Accounts** — email/password registration with server-side validation, email verification, password reset, and session management. Access tokens live in short-lived HttpOnly cookies; rotating refresh tokens can be reviewed and revoked from the Security page.
 - **Operations** — Docker images for the API and web app, a Compose stack with MySQL, Actuator health probes, and backup/restore guides.
-- **Dark mode and responsive layout** — usable from a phone to a desktop.
+- **Dark mode and responsive layout** - usable from a phone to a desktop.
+- **Installable app** - a web app manifest and service worker let browsers install Odyssey to a home screen and serve the shell offline; API traffic is never cached.
 - **Accessible by default** — keyboard-operable journal cards and map markers, labelled pagination, lazy-loaded gallery images and a feed that loads authors and places without per-entry queries.
 
 ## Screenshots
@@ -148,7 +151,7 @@ All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` c
 | DELETE | `/api/auth/account` | user | Permanently delete the account and its data |
 | GET | `/api/journals` | user | Public journals plus the caller's own entries; admins see everything |
 | GET | `/api/journals/public?page=&size=` | public | Paged public journals |
-| GET | `/api/journals/search?q=&tag=&location=&sort=&page=&size=` | public | Search public journals by text, tag and place |
+| GET | `/api/journals/search?q=&tag=&location=&sort=&page=&size=` | public | Search public journals by text, tag and place (relevance-ranked when a query is given) |
 | GET | `/api/journals/tags` | public | Tags used by public journals |
 | GET | `/api/journals/bookmarks` | user | Journals saved by the caller |
 | GET | `/api/journals/my` | user | Journals owned by the caller |
@@ -165,6 +168,7 @@ All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` c
 | DELETE | `/api/users/{id}/follow` | user | Unfollow a traveller |
 | GET | `/api/users/{id}/followers` | public | Followers of a traveller |
 | GET | `/api/users/{id}/following` | public | Accounts a traveller follows |
+| GET | `/api/stats/me` | user | Travel statistics for the caller |
 | GET | `/api/notifications` | user | Activity for the caller |
 | GET | `/api/notifications/unread-count` | user | Unread badge count |
 | POST | `/api/notifications/{id}/read` | user | Mark one notification read |
@@ -198,7 +202,7 @@ odyssey/
 │   │   ├── repository/       Spring Data repositories
 │   │   ├── security/         JWT auth, CSRF and password hashing
 │   │   └── service/          Business logic, mail, rate limiting and audits
-│   ├── src/main/resources/db/migration/  Flyway schema migrations (V1–V6)
+│   ├── src/main/resources/db/migration/  Flyway schema migrations (V1-V7)
 │   ├── src/test/             Auth, social and query-count integration tests (H2)
 │   ├── Dockerfile            Multi-stage JDK 17 build
 │   └── uploads/              Uploaded journal images
