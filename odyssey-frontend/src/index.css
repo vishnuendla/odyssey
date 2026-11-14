@@ -28,44 +28,47 @@ img {
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+    /* Warm editorial neutrals: paper background, stone borders, ink text. */
+    --background: 40 33% 98%;
+    --foreground: 24 10% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 24 10% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 24 10% 11%;
 
-    --primary: 221.2 83% 53.3%;
+    /* Deep teal — the Odyssey brand colour from the manifest/icons. */
+    --primary: 175 80% 26%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 40 25% 94%;
+    --secondary-foreground: 24 10% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 25% 94%;
+    --muted-foreground: 25 8% 44%;
 
-    --accent: 146.7 80.4% 32.7%;
+    /* Warm amber accent against the cool teal. */
+    --accent: 32 89% 44%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83% 53.3%;
+    --border: 35 18% 88%;
+    --input: 35 18% 88%;
+    --ring: 175 80% 26%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-background: 40 33% 98%;
+    --sidebar-foreground: 24 5.3% 26.1%;
+    --sidebar-primary: 175 80% 26%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 40 25% 94%;
+    --sidebar-accent-foreground: 24 5.9% 10%;
+    --sidebar-border: 35 18% 88%;
+    --sidebar-ring: 175 80% 26%;
   }
 
   .dark {
@@ -78,7 +81,7 @@ img {
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 173 80% 40%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -87,24 +90,24 @@ img {
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 146.7 80.4% 38.4%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 32 60% 12%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 173 80% 40%;
     
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 173 80% 40%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 173 80% 40%;
   }
 }
 

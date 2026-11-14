@@ -21,6 +21,17 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				/* Editorial serif for display headings; system stacks only, no webfont. */
+				display: [
+					'"Iowan Old Style"',
+					'"Palatino Linotype"',
+					'Palatino',
+					'Charter',
+					'Georgia',
+					'serif',
+				],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -154,6 +165,25 @@ export default {
 						opacity: '1'
 					}
 				},
+				'route-dash': {
+					to: {
+						strokeDashoffset: '0'
+					}
+				},
+				'pin-drop': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(-8px)'
+					},
+					'60%': {
+						opacity: '1',
+						transform: 'translateY(1px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -161,6 +191,8 @@ export default {
 				'fade-in': 'fade-in 0.3s ease-out',
 				'fade-out': 'fade-out 0.3s ease-out',
 				'scale-in': 'scale-in 0.2s ease-out',
+				'route-dash': 'route-dash 2.4s ease-in-out infinite',
+				'pin-drop': 'pin-drop 0.5s ease-out both',
 			}
 		}
 	},
