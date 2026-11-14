@@ -13,7 +13,7 @@ export default function Hero() {
       <div className="container relative z-10 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
+            <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">
               Document Your Journey, <span className="text-primary">Share Your Adventures</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl">
@@ -61,33 +61,62 @@ export default function Hero() {
           </div>
           
           <div className="hidden lg:grid grid-cols-2 gap-4">
-            <img
-              src="https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=70&w=900&auto=format&fit=crop"
-              alt="Travel journal entry"
-              width={900}
-              height={600}
-              loading="eager"
-              decoding="async"
-              className="col-span-2 h-56 w-full rounded-xl object-cover shadow-lg"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=70&w=600&auto=format&fit=crop"
-              alt="Travel experience"
-              width={600}
-              height={450}
-              loading="lazy"
-              decoding="async"
-              className="h-44 w-full rounded-xl object-cover shadow-lg"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=70&w=600&auto=format&fit=crop"
-              alt="Map view"
-              width={600}
-              height={450}
-              loading="lazy"
-              decoding="async"
-              className="h-44 w-full rounded-xl object-cover shadow-lg"
-            />
+            <div className="col-span-2 overflow-hidden rounded-xl shadow-lg transition-transform duration-300 hover:rotate-0 group">
+              <img
+                src="https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=70&w=900&auto=format&fit=crop"
+                alt="Travel journal entry"
+                width={900}
+                height={600}
+                loading="eager"
+                decoding="async"
+                className="h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
+            <div className="overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:rotate-0 hover:-translate-y-1 group -rotate-2">
+              <img
+                src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=70&w=600&auto=format&fit=crop"
+                alt="Travel experience"
+                width={600}
+                height={450}
+                loading="lazy"
+                decoding="async"
+                className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
+            {/* Animated route teaser: a dashed journey path drawing itself between pins. */}
+            <div className="relative h-44 w-full rounded-xl bg-primary shadow-lg transition-all duration-300 hover:rotate-0 hover:-translate-y-1 group rotate-2 overflow-hidden">
+              <svg viewBox="0 0 200 120" className="h-full w-full" role="img" aria-label="A route drawn between three places on a map">
+                <g stroke="currentColor" strokeWidth="0.5" opacity="0.25">
+                  <line x1="0" y1="20" x2="200" y2="20" />
+                  <line x1="0" y1="50" x2="200" y2="50" />
+                  <line x1="0" y1="80" x2="200" y2="80" />
+                  <line x1="0" y1="110" x2="200" y2="110" />
+                  <line x1="30" y1="0" x2="30" y2="120" />
+                  <line x1="80" y1="0" x2="80" y2="120" />
+                  <line x1="140" y1="0" x2="140" y2="120" />
+                  <line x1="185" y1="0" x2="185" y2="120" />
+                </g>
+                <path
+                  d="M 20 95 C 55 60, 85 105, 115 55 S 165 20, 185 35"
+                  fill="none"
+                  stroke="#fbbf24"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray="6 5"
+                  className="animate-route-dash"
+                />
+                {[
+                  { x: 20, y: 95, d: '0s' },
+                  { x: 115, y: 55, d: '0.6s' },
+                  { x: 185, y: 35, d: '1.2s' },
+                ].map((pin) => (
+                  <g key={`${pin.x}-${pin.y}`} className="animate-pin-drop" style={{ animationDelay: pin.d }}>
+                    <circle cx={pin.x} cy={pin.y} r="5.5" fill="#fbbf24" />
+                    <circle cx={pin.x} cy={pin.y} r="2" fill="#134e4a" />
+                  </g>
+                ))}
+              </svg>
+            </div>
           </div>
         </div>
       </div>
