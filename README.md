@@ -13,6 +13,7 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 - **Tags and search** - add up to eight tags per journal, filter the public feed by tag, and search titles, stories and places from the server. Keyword search runs on MySQL FULLTEXT indexes with title-weighted relevance ranking.
 - **Draft autosave** - the create and edit forms persist what you type locally every 800 ms; after a reload or crash the form comes back with a banner and a Discard button.
 - **Travel stats** - your profile shows journals, countries, cities, photos, words and the great-circle distance between consecutive trips.
+- **Ask your journal (RAG)** - journals are split into paragraph chunks and embedded on every save; you can then ask questions in natural language and get answers with numbered citations that link back to the exact excerpts. Semantic search ranks your own entries by meaning, and hidden journals are never searched. Works with any OpenAI-compatible provider (OpenAI, OpenRouter, or a local Ollama via `AI_BASE_URL`); the key stays on the server.
 - **Photo galleries** — upload images per journal; files are stored by the backend and served through `/api/storage/files/...`. A public gallery collects photos from every public journal.
 - **Bookmarks** — save any public journal and return to it from the Saved Journals page.
 - **Public profiles** — every author has a public page listing their published journals, without exposing their email address.
@@ -169,6 +170,9 @@ All mutating requests need the `X-XSRF-TOKEN` header, echoing the `XSRF-TOKEN` c
 | GET | `/api/users/{id}/followers` | public | Followers of a traveller |
 | GET | `/api/users/{id}/following` | public | Accounts a traveller follows |
 | GET | `/api/stats/me` | user | Travel statistics for the caller |
+| GET | `/api/ai/status` | user | Whether AI features are configured |
+| POST | `/api/ai/ask` | user | Answer a question over the caller's own journals, with citations |
+| POST | `/api/ai/search` | user | Semantic search over the caller's own journals |
 | GET | `/api/notifications` | user | Activity for the caller |
 | GET | `/api/notifications/unread-count` | user | Unread badge count |
 | POST | `/api/notifications/{id}/read` | user | Mark one notification read |
@@ -202,7 +206,7 @@ odyssey/
 │   │   ├── repository/       Spring Data repositories
 │   │   ├── security/         JWT auth, CSRF and password hashing
 │   │   └── service/          Business logic, mail, rate limiting and audits
-│   ├── src/main/resources/db/migration/  Flyway schema migrations (V1-V7)
+│   ├── src/main/resources/db/migration/  Flyway schema migrations (V1-V8)
 │   ├── src/test/             Auth, social and query-count integration tests (H2)
 │   ├── Dockerfile            Multi-stage JDK 17 build
 │   └── uploads/              Uploaded journal images

@@ -1,4 +1,4 @@
-import { User, JournalEntry, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats, GeocodingResult, UserStats } from '@/types';
+import { User, JournalEntry, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats, GeocodingResult, UserStats, AiStatus, AskAnswer, SemanticSearchHit } from '@/types';
 
 // All backend calls go through the Vite proxy, so cookies stay first-party.
 const API_BASE_URL = '/api';
@@ -240,6 +240,28 @@ export const locationApi = {
 export const statsApi = {
   my: async (): Promise<UserStats> => {
     return apiRequest<UserStats>('/stats/me');
+  },
+};
+
+// AI features (RAG "Ask your journal"). The provider key stays on the backend;
+// the browser only talks to the Odyssey API, like the Geoapify proxy.
+export const aiApi = {
+  status: async (): Promise<AiStatus> => {
+    return apiRequest<AiStatus>('/ai/status');
+  },
+
+  ask: async (question: string): Promise<AskAnswer> => {
+    return apiRequest<AskAnswer>('/ai/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    });
+  },
+
+  search: async (query: string): Promise<SemanticSearchHit[]> => {
+    return apiRequest<SemanticSearchHit[]>('/ai/search', {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+    });
   },
 };
 
