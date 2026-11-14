@@ -42,6 +42,7 @@ public class JournalService {
     private final ReportRepository reportRepository;
     private final NotificationService notificationService;
     private final StorageService storageService;
+    private final JournalIndexService journalIndexService;
     /** Enabled in production where V7 added the MySQL FULLTEXT indexes. */
     private final boolean fulltextSearchEnabled;
 
@@ -54,6 +55,7 @@ public class JournalService {
                           ReportRepository reportRepository,
                           NotificationService notificationService,
                           StorageService storageService,
+                          JournalIndexService journalIndexService,
                           @Value("${app.search.fulltext:false}") boolean fulltextSearchEnabled) {
         this.journalRepository = journalRepository;
         this.userRepository = userRepository;
@@ -64,6 +66,7 @@ public class JournalService {
         this.reportRepository = reportRepository;
         this.notificationService = notificationService;
         this.storageService = storageService;
+        this.journalIndexService = journalIndexService;
         this.fulltextSearchEnabled = fulltextSearchEnabled;
     }
 
@@ -254,6 +257,7 @@ public class JournalService {
             }
         }
 
+        journalIndexService.indexAfterCommit(savedJournal.getId());
         return convertToDto(savedJournal, Set.of());
     }
 
@@ -310,6 +314,7 @@ public class JournalService {
         }
 
         Journal updatedJournal = journalRepository.save(journal);
+        journalIndexService.indexAfterCommit(updatedJournal.getId());
         return convertToDto(updatedJournal, bookmarkedJournalIds(userEmail));
     }
 
@@ -329,6 +334,7 @@ public class JournalService {
         bookmarkRepository.deleteByJournalId(journal.getId());
         notificationRepository.deleteByJournalId(journal.getId());
         reportRepository.deleteByTarget(Report.TargetType.JOURNAL, journal.getId());
+        journalIndexService.deleteIndex(journal.getId());
         journalRepository.delete(journal);
         storageService.deleteFilesAfterCommit(imageUrls);
     }
