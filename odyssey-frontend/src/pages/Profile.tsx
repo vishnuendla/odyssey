@@ -20,9 +20,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, Settings, MapPin, Mail, Calendar, Check, X } from 'lucide-react';
+import { Camera, Settings, MapPin, Mail, Calendar, Check, X, BookOpen, Globe, Camera as CameraIcon, FileText, Route, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { authApi, journalApi } from '@/services/api';
+import { authApi, journalApi, statsApi } from '@/services/api';
+import type { UserStats } from '@/types';
 import { useEffect, useState } from 'react';
 
 const profileSchema = z.object({
@@ -39,6 +40,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [JournalsCount, setDemoJournals] = useState<number>(0);
+  const [stats, setStats] = useState<UserStats | null>(null);
 
   useEffect(() => {
     const fetchJournals = async () => {
@@ -51,6 +53,21 @@ const Profile = () => {
     };
 
     fetchJournals();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    statsApi
+      .my()
+      .then((data) => {
+        if (!cancelled) {
+          setStats(data);
+        }
+      })
+      .catch((error) => console.error('Error fetching stats:', error));
+    return () => {
+      cancelled = true;
+    };
   }, []);
   
   const form = useForm<ProfileFormValues>({
@@ -334,6 +351,46 @@ const Profile = () => {
             </CardContent>
           </Card>
         </div>
+
+        {stats && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Travel stats</CardTitle>
+              <CardDescription>Everything you have written, mapped and photographed</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {[
+                  { icon: BookOpen, label: 'Journals', value: stats.journals.toLocaleString() },
+                  { icon: Globe, label: 'Countries', value: stats.countries.toLocaleString() },
+                  { icon: MapPin, label: 'Cities', value: stats.cities.toLocaleString() },
+                  { icon: CameraIcon, label: 'Photos', value: stats.photos.toLocaleString() },
+                  { icon: FileText, label: 'Words', value: stats.words.toLocaleString() },
+                  { icon: Route, label: 'Km travelled', value: stats.kilometres.toLocaleString(undefined, { maximumFractionDigits: 1 }) },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="rounded-md border border-border p-3 text-center">
+                    <Icon className="mx-auto h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <div className="mt-1 text-xl font-semibold">{value}</div>
+                    <div className="text-xs text-muted-foreground">{label}</div>
+                  </div>
+                ))}
+              </div>
+              {stats.topTags.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Tag className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {stats.topTags.map(({ tag, count }) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-border px-3 py-0.5 text-xs text-muted-foreground"
+                    >
+                      {tag} · {count}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
       <Footer />
     </div>

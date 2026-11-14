@@ -23,6 +23,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Location } from '@/types';
 import { journalApi, MAX_FILES_PER_UPLOAD, MAX_FILE_SIZE } from '@/services/api';
 import { getLocationSuggestions, debounce } from '@/utils/geocoding';
+import { clearDraft, draftAgeLabel, loadDraft, saveDraft } from '@/utils/drafts';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
@@ -44,6 +45,17 @@ type FormData = z.infer<typeof formSchema>;
 
 const MIN_SEARCH_LENGTH = 3; // Minimum characters before searching
 const MAX_TAGS = 8;
+const DRAFT_KEY = 'journal:create';
+
+/** Everything the form keeps in state, persisted for crash recovery. */
+interface JournalDraft {
+  title?: string;
+  content?: string;
+  isPublic?: boolean;
+  locationQuery?: string;
+  tags?: string[];
+  selectedLocation?: Location | null;
+}
 
 const CreateJournalForm = () => {
   const { createJournal } = useJournal();
@@ -102,12 +114,66 @@ const CreateJournalForm = () => {
     },
     shouldUnregister: true,
   });
-  
+
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<Location[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   // Autocomplete responses can arrive out of order; only the newest query wins.
   const locationRequestId = useRef(0);
+
+  // Draft autosave: restore once on mount, then persist keystrokes so a reload
+  // or crash never loses the entry. Blob previews are not restored because
+  // object URLs die with the page.
+  const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
+  const draftRestoredRef = useRef(false);
+
+  useEffect(() => {
+    if (draftRestoredRef.current) {
+      return;
+    }
+    draftRestoredRef.current = true;
+    const draft = loadDraft<JournalDraft>(DRAFT_KEY);
+    if (!draft) {
+      return;
+    }
+    const values = draft.values;
+    form.reset({
+      title: values.title ?? '',
+      content: values.content ?? '',
+      isPublic: values.isPublic ?? false,
+      images: [],
+    });
+    if (values.locationQuery) {
+      setLocationQuery(values.locationQuery);
+    }
+    if (values.selectedLocation) {
+      setSelectedLocation(values.selectedLocation);
+    }
+    if (values.tags) {
+      setTags(values.tags);
+    }
+    setDraftRestoredAt(draft.savedAt);
+  }, [form]);
+
+  useEffect(() => {
+    const persist = debounce((draft: JournalDraft) => saveDraft(DRAFT_KEY, draft), 800);
+    const subscription = form.watch((values, info) => {
+      // Programmatic updates from the draft restore must not rewrite the
+      // savedAt stamp before the user types anything.
+      if (!info || !info.type) {
+        return;
+      }
+      persist({
+        title: values.title,
+        content: values.content,
+        isPublic: values.isPublic,
+        locationQuery,
+        tags,
+        selectedLocation,
+      });
+    });
+    return () => subscription.unsubscribe();
+  }, [form, locationQuery, tags, selectedLocation]);
 
   const handleLocationSearch = useCallback(
     debounce(async (query: string) => {
@@ -245,7 +311,8 @@ const CreateJournalForm = () => {
         images: imageUrls,
         tags,
       });
-      
+
+      clearDraft(DRAFT_KEY);
       navigate('/journals');
     } catch (error) {
       console.error('Failed to create journal', error);
@@ -267,6 +334,24 @@ const CreateJournalForm = () => {
             Back
           </Button>
         </div>
+
+        {draftRestoredAt && (
+          <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-4 py-2 mb-4 text-sm">
+            <span className="text-muted-foreground">
+              Draft restored — last saved {draftAgeLabel(draftRestoredAt)}.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                clearDraft(DRAFT_KEY);
+                setDraftRestoredAt(null);
+              }}
+            >
+              Discard
+            </Button>
+          </div>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

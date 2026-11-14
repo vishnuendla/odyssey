@@ -1,4 +1,4 @@
-import { User, JournalEntry, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats, GeocodingResult } from '@/types';
+import { User, JournalEntry, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats, GeocodingResult, UserStats } from '@/types';
 
 // All backend calls go through the Vite proxy, so cookies stay first-party.
 const API_BASE_URL = '/api';
@@ -233,6 +233,13 @@ export const locationApi = {
     return apiRequest<GeocodingResult[]>(
       `/locations/geocode?text=${encodeURIComponent(text)}&limit=${limit}`
     );
+  },
+};
+
+// Travel statistics for the signed-in user.
+export const statsApi = {
+  my: async (): Promise<UserStats> => {
+    return apiRequest<UserStats>('/stats/me');
   },
 };
 
