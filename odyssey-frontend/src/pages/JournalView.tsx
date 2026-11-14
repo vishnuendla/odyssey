@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Bookmark,
+  BookOpen,
   Calendar,
   Clock,
   Edit,
@@ -247,6 +248,31 @@ const JournalView = () => {
     }
   };
 
+  // Reading progress across the article, shown as a thin fixed bar at the top.
+  const [readingProgress, setReadingProgress] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const article = document.getElementById('journal-article');
+      if (!article) {
+        return;
+      }
+      const start = article.offsetTop;
+      const total = article.offsetHeight - window.innerHeight;
+      if (total <= 0) {
+        setReadingProgress(100);
+        return;
+      }
+      setReadingProgress(Math.min(100, Math.max(0, ((window.scrollY - start) / total) * 100)));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [journal?.id]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -282,7 +308,9 @@ const JournalView = () => {
   const canModerate = isOwner || user?.role === 'ADMIN';
   const formattedDate = new Date(journal.createdAt).toLocaleDateString();
   const formattedTime = new Date(journal.createdAt).toLocaleTimeString();
-
+  // ~200 words per minute is the usual guide for prose.
+  const wordCount = journal.content.trim().split(/\s+/).filter(Boolean).length;
+  const readingMinutes = Math.max(1, Math.round(wordCount / 200));
   const commentCard = (item: Comment, isReply = false) => (
     <Card key={item.id} className={isReply ? 'ml-8 border-l-2' : ''}>
       <CardHeader className="py-3">
@@ -345,9 +373,14 @@ const JournalView = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <div
+        aria-hidden="true"
+        className="fixed top-0 left-0 z-50 h-0.5 bg-primary transition-[width] duration-150 ease-out"
+        style={{ width: `${readingProgress}%` }}
+      />
       <Navbar />
       <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto" id="journal-article">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
             <h1 className="text-3xl font-bold">{journal.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
@@ -394,6 +427,12 @@ const JournalView = () => {
             <div className="flex items-center">
               <Clock className="h-4 w-4 mr-1" />
               <span>{formattedTime}</span>
+            </div>
+            <div className="flex items-center">
+              <BookOpen className="h-4 w-4 mr-1" />
+              <span>
+                {readingMinutes} min read · {wordCount.toLocaleString()} words
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <UserIcon className="h-4 w-4" />
