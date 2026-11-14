@@ -8,7 +8,7 @@ interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> 
   alt: string;
   className?: string;
   fallbackSrc?: string;
-  aspectRatio?: 'square' | 'video' | 'portrait' | 'landscape';
+  aspectRatio?: 'square' | 'video' | 'portrait' | 'landscape' | 'auto';
   objectFit?: 'cover' | 'contain';
 }
 
@@ -60,11 +60,12 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     return () => observer.disconnect();
   }, [src]);
 
-  const aspectRatioClasses = {
+  const aspectRatioClasses: Record<string, string> = {
     square: 'aspect-square',
     video: 'aspect-video',
     portrait: 'aspect-[3/4]',
     landscape: 'aspect-[4/3]',
+    auto: '',
   };
 
   const objectFitClasses = {
@@ -120,7 +121,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           src={resolvedSrc}
           alt={alt}
           className={cn(
-            'w-full h-full transition-opacity duration-300',
+            'w-full transition-opacity duration-300',
+            aspectRatio === 'auto' ? 'h-auto' : 'h-full',
             objectFitClasses[objectFit],
             isLoading ? 'opacity-0' : 'opacity-100'
           )}

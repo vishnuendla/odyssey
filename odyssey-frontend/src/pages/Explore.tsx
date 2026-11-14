@@ -255,6 +255,7 @@ const ExplorePage = () => {
               showCreateButton={false}
               emptyMessage="No journals match your filters. Try changing your search criteria."
               userMap={userMap}
+              layout="masonry"
             />
 
             {totalPages > 1 && (
