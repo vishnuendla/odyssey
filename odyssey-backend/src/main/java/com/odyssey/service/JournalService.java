@@ -6,15 +6,20 @@ import com.odyssey.exception.ForbiddenException;
 import com.odyssey.exception.ResourceNotFoundException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +42,8 @@ public class JournalService {
     private final ReportRepository reportRepository;
     private final NotificationService notificationService;
     private final StorageService storageService;
+    /** Enabled in production where V7 added the MySQL FULLTEXT indexes. */
+    private final boolean fulltextSearchEnabled;
 
     public JournalService(JournalRepository journalRepository,
                           UserRepository userRepository,
@@ -46,7 +53,8 @@ public class JournalService {
                           NotificationRepository notificationRepository,
                           ReportRepository reportRepository,
                           NotificationService notificationService,
-                          StorageService storageService) {
+                          StorageService storageService,
+                          @Value("${app.search.fulltext:false}") boolean fulltextSearchEnabled) {
         this.journalRepository = journalRepository;
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
@@ -56,6 +64,7 @@ public class JournalService {
         this.reportRepository = reportRepository;
         this.notificationService = notificationService;
         this.storageService = storageService;
+        this.fulltextSearchEnabled = fulltextSearchEnabled;
     }
 
     @Transactional(readOnly = true)
@@ -81,12 +90,56 @@ public class JournalService {
     public Page<JournalDto> searchPublicJournals(String query, String tag, String location,
                                                  Pageable pageable, boolean popular, String userEmail) {
         Set<String> bookmarked = bookmarkedJournalIds(userEmail);
+        String q = blankToNull(query);
+        if (q != null && fulltextSearchEnabled) {
+            return searchWithFulltext(q, blankToNull(tag), blankToNull(location), pageable, popular, bookmarked);
+        }
         Page<Journal> page = popular
                 ? journalRepository.searchPublicPopular(
                         blankToNull(query), blankToNull(tag), blankToNull(location), pageable)
                 : journalRepository.searchPublic(
                         blankToNull(query), blankToNull(tag), blankToNull(location), pageable);
         return page.map(journal -> convertToDto(journal, bookmarked));
+    }
+
+    /**
+     * Fulltext path: the native query returns relevance-ranked id rows, then the
+     * matching entities are loaded through the graph-fetching finder so DTO
+     * conversion keeps the same batching behaviour as the rest of the feed.
+     */
+    private Page<JournalDto> searchWithFulltext(String q, String tag, String location,
+                                                Pageable pageable, boolean popular,
+                                                Set<String> bookmarked) {
+        // Orderings live in the native SQL; the sort in the incoming pageable is
+        // only there to signal "oldest" from the controller.
+        Pageable unpaged = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Sort.Order createdAtOrder = pageable.getSort().getOrderFor("createdAt");
+        boolean oldest = createdAtOrder != null && createdAtOrder.getDirection() == Sort.Direction.ASC;
+
+        Page<JournalSearchHit> hits;
+        if (popular) {
+            hits = journalRepository.searchFulltextPopular(q, tag, location, unpaged);
+        } else if (oldest) {
+            hits = journalRepository.searchFulltextOldest(q, tag, location, unpaged);
+        } else {
+            hits = journalRepository.searchFulltextRelevance(q, tag, location, unpaged);
+        }
+
+        if (hits.isEmpty()) {
+            return new PageImpl<>(List.of(), unpaged, 0);
+        }
+
+        List<String> orderedIds = hits.getContent().stream().map(JournalSearchHit::getId).toList();
+        Map<String, Journal> byId = journalRepository.findByIdIn(orderedIds).stream()
+                .collect(Collectors.toMap(Journal::getId, j -> j, (a, b) -> a, LinkedHashMap::new));
+        List<JournalDto> dtos = new ArrayList<>(orderedIds.size());
+        for (String id : orderedIds) {
+            Journal journal = byId.get(id);
+            if (journal != null) {
+                dtos.add(convertToDto(journal, bookmarked));
+            }
+        }
+        return new PageImpl<>(dtos, unpaged, hits.getTotalElements());
     }
 
     @Transactional(readOnly = true)

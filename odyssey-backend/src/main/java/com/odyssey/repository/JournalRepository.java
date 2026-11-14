@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -109,4 +110,135 @@ public interface JournalRepository extends JpaRepository<Journal, String> {
 
     @Query("select distinct t from Journal j join j.tags t where j.isPublic = true and j.hidden = false order by t")
     List<String> findPublicTags();
+
+    @EntityGraph(attributePaths = {"user", "location"})
+    List<Journal> findByIdIn(Collection<String> ids);
+
+    /*
+     * Fulltext search (MySQL only, see V7__add_fulltext_search.sql). Each query
+     * returns lightweight id+score rows; the service reorders them and loads the
+     * matching entities through {@link #findByIdIn} so the lazy associations
+     * keep their batched fetching.
+     *
+     * Scoring weights title matches three times higher than body matches, which
+     * needs the single-column indexes; the WHERE clause needs the composite one.
+     */
+
+    @Query(value = """
+            select j.id as id,
+                   (3 * match(j.title) against (:q in natural language mode)
+                      + match(j.content) against (:q in natural language mode)) as score
+            from journals j
+            left join locations l on l.journal_id = j.id
+            where j.is_public = true
+              and j.hidden = false
+              and match(j.title, j.content) against (:q in natural language mode) > 0
+              and (:tag is null
+                   or exists (select 1 from journal_tags jt
+                              where jt.journal_id = j.id and jt.tag = :tag))
+              and (:location is null
+                   or lower(l.name) like concat('%', lower(:location), '%')
+                   or lower(l.city) like concat('%', lower(:location), '%')
+                   or lower(l.country) like concat('%', lower(:location), '%'))
+            order by score desc, j.created_at desc
+            """,
+            countQuery = """
+            select count(*)
+            from journals j
+            left join locations l on l.journal_id = j.id
+            where j.is_public = true
+              and j.hidden = false
+              and match(j.title, j.content) against (:q in natural language mode) > 0
+              and (:tag is null
+                   or exists (select 1 from journal_tags jt
+                              where jt.journal_id = j.id and jt.tag = :tag))
+              and (:location is null
+                   or lower(l.name) like concat('%', lower(:location), '%')
+                   or lower(l.city) like concat('%', lower(:location), '%')
+                   or lower(l.country) like concat('%', lower(:location), '%'))
+            """,
+            nativeQuery = true)
+    Page<JournalSearchHit> searchFulltextRelevance(@Param("q") String query,
+                                                   @Param("tag") String tag,
+                                                   @Param("location") String location,
+                                                   Pageable pageable);
+
+    @Query(value = """
+            select j.id as id,
+                   (3 * match(j.title) against (:q in natural language mode)
+                      + match(j.content) against (:q in natural language mode)) as score
+            from journals j
+            left join locations l on l.journal_id = j.id
+            where j.is_public = true
+              and j.hidden = false
+              and match(j.title, j.content) against (:q in natural language mode) > 0
+              and (:tag is null
+                   or exists (select 1 from journal_tags jt
+                              where jt.journal_id = j.id and jt.tag = :tag))
+              and (:location is null
+                   or lower(l.name) like concat('%', lower(:location), '%')
+                   or lower(l.city) like concat('%', lower(:location), '%')
+                   or lower(l.country) like concat('%', lower(:location), '%'))
+            order by (select count(*) from reactions r where r.journal_id = j.id) desc,
+                     j.created_at desc
+            """,
+            countQuery = """
+            select count(*)
+            from journals j
+            left join locations l on l.journal_id = j.id
+            where j.is_public = true
+              and j.hidden = false
+              and match(j.title, j.content) against (:q in natural language mode) > 0
+              and (:tag is null
+                   or exists (select 1 from journal_tags jt
+                              where jt.journal_id = j.id and jt.tag = :tag))
+              and (:location is null
+                   or lower(l.name) like concat('%', lower(:location), '%')
+                   or lower(l.city) like concat('%', lower(:location), '%')
+                   or lower(l.country) like concat('%', lower(:location), '%'))
+            """,
+            nativeQuery = true)
+    Page<JournalSearchHit> searchFulltextPopular(@Param("q") String query,
+                                                 @Param("tag") String tag,
+                                                 @Param("location") String location,
+                                                 Pageable pageable);
+
+    @Query(value = """
+            select j.id as id,
+                   (3 * match(j.title) against (:q in natural language mode)
+                      + match(j.content) against (:q in natural language mode)) as score
+            from journals j
+            left join locations l on l.journal_id = j.id
+            where j.is_public = true
+              and j.hidden = false
+              and match(j.title, j.content) against (:q in natural language mode) > 0
+              and (:tag is null
+                   or exists (select 1 from journal_tags jt
+                              where jt.journal_id = j.id and jt.tag = :tag))
+              and (:location is null
+                   or lower(l.name) like concat('%', lower(:location), '%')
+                   or lower(l.city) like concat('%', lower(:location), '%')
+                   or lower(l.country) like concat('%', lower(:location), '%'))
+            order by j.created_at asc
+            """,
+            countQuery = """
+            select count(*)
+            from journals j
+            left join locations l on l.journal_id = j.id
+            where j.is_public = true
+              and j.hidden = false
+              and match(j.title, j.content) against (:q in natural language mode) > 0
+              and (:tag is null
+                   or exists (select 1 from journal_tags jt
+                              where jt.journal_id = j.id and jt.tag = :tag))
+              and (:location is null
+                   or lower(l.name) like concat('%', lower(:location), '%')
+                   or lower(l.city) like concat('%', lower(:location), '%')
+                   or lower(l.country) like concat('%', lower(:location), '%'))
+            """,
+            nativeQuery = true)
+    Page<JournalSearchHit> searchFulltextOldest(@Param("q") String query,
+                                                @Param("tag") String tag,
+                                                @Param("location") String location,
+                                                Pageable pageable);
 }
