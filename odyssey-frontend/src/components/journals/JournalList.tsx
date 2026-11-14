@@ -19,19 +19,34 @@ interface JournalListProps {
   pageSize?: number;
   loading?: boolean;
   showCreateButton?: boolean;
+  /** Masonry renders a photo wall with natural-height covers (Explore). */
+  layout?: 'grid' | 'masonry';
 }
 
-const JournalListSkeleton = () => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {[...Array(6)].map((_, i) => (
-      <div key={i} className="space-y-4">
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
+const JournalListSkeleton = ({ layout = 'grid' }: { layout?: 'grid' | 'masonry' }) => {
+  if (layout === 'masonry') {
+    return (
+      <div className="columns-1 sm:columns-2 lg:columns-3 gap-5">
+        {[200, 260, 180, 240, 210, 280].map((height, i) => (
+          <div key={i} className="mb-5 break-inside-avoid">
+            <Skeleton className="w-full rounded-lg" style={{ height }} />
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-);
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="space-y-4">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export default function JournalList({
   journals: propJournals,
@@ -42,6 +57,7 @@ export default function JournalList({
   pageSize = 6,
   loading: propLoading = false,
   showCreateButton = true,
+  layout = 'grid',
 }: JournalListProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -110,7 +126,7 @@ export default function JournalList({
   };
 
   if (loading) {
-    return <JournalListSkeleton />;
+    return <JournalListSkeleton layout={layout} />;
   }
 
   if (error) {
@@ -140,14 +156,22 @@ export default function JournalList({
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        className={
+          layout === 'masonry'
+            ? 'columns-1 sm:columns-2 lg:columns-3 gap-5'
+            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+        }
+      >
         {currentJournals.map((journal) => (
-          <JournalCard
-            key={journal.id}
-            journal={journal}
-            userName={userMap[journal.userId]?.name || journal.userName || 'Anonymous'}
-            userAvatar={userMap[journal.userId]?.avatar || journal.userAvatar}
-          />
+          <div key={journal.id} className={layout === 'masonry' ? 'mb-5 break-inside-avoid' : ''}>
+            <JournalCard
+              journal={journal}
+              masonry={layout === 'masonry'}
+              userName={userMap[journal.userId]?.name || journal.userName || 'Anonymous'}
+              userAvatar={userMap[journal.userId]?.avatar || journal.userAvatar}
+            />
+          </div>
         ))}
       </div>
 

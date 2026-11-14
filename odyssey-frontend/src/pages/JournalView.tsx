@@ -382,7 +382,7 @@ const JournalView = () => {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto" id="journal-article">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
-            <h1 className="text-3xl font-bold">{journal.title}</h1>
+            <h1 className="font-display text-3xl md:text-4xl font-bold">{journal.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               {isOwner && (
                 <div className="flex gap-2">
@@ -487,7 +487,7 @@ const JournalView = () => {
               </div>
             )}
             <CardContent className="pt-6">
-              <div className="prose max-w-none dark:prose-invert">
+              <div className="prose prose-neutral dark:prose-invert max-w-none prose-lg prose-p:leading-8 prose-a:text-primary">
                 {journal.content.split('\n').map((paragraph, index) => (
                   <p key={index} className="mb-4">{paragraph}</p>
                 ))}
