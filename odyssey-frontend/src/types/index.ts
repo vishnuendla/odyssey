@@ -134,3 +134,35 @@ export interface UserStats {
   journalsByMonth: Array<{ month: string; count: number }>;
   topTags: Array<{ tag: string; count: number }>;
 }
+
+/** GET /api/ai/status — whether AI features are usable on this server. */
+export interface AiStatus {
+  configured: boolean;
+  embeddingModel: string;
+  chatModel: string;
+}
+
+/** One cited excerpt behind an AI answer; index matches the [n] in the text. */
+export interface SourceRef {
+  index: number;
+  journalId: string;
+  journalTitle: string;
+  chunkIndex: number;
+  snippet: string;
+}
+
+/** POST /api/ai/ask response. */
+export interface AskAnswer {
+  question: string;
+  answer: string;
+  sources: SourceRef[];
+}
+
+/** One row of POST /api/ai/search. */
+export interface SemanticSearchHit {
+  journalId: string;
+  journalTitle: string;
+  chunkIndex: number;
+  snippet: string;
+  score: number;
+}
