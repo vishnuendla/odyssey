@@ -8,6 +8,7 @@ import { journalApi, MAX_FILES_PER_UPLOAD, MAX_FILE_SIZE } from '@/services/api'
 import { useToast } from '@/hooks/use-toast';
 import { Location } from '@/types';
 import { getCoordinatesFromPlaceName, getLocationSuggestions, debounce } from '@/utils/geocoding';
+import { clearDraft, draftAgeLabel, loadDraft, saveDraft } from '@/utils/drafts';
 
 import Navbar from '@/components/layout/Navbar';
 import {
@@ -38,6 +39,16 @@ const journalSchema = z.object({
 type JournalFormValues = z.infer<typeof journalSchema>;
 
 const MAX_TAGS = 8;
+
+/** Everything the edit form keeps in state, persisted for crash recovery. */
+interface JournalDraft {
+  title?: string;
+  content?: string;
+  isPublic?: boolean;
+  location?: unknown;
+  locationQuery?: string;
+  tags?: string[];
+}
 
 const JournalEdit = () => {
   const { id } = useParams<{ id: string }>();
@@ -106,6 +117,58 @@ const JournalEdit = () => {
     },
   });
 
+  // Draft autosave keyed per journal: a reload or crash restores the newest
+  // local edits instead of silently reverting to the last saved version.
+  const draftKey = id ? `journal:edit:${id}` : null;
+  const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
+  const draftRestoredRef = useRef(false);
+
+  const applyDraft = useCallback((values: JournalDraft) => {
+    if (values.title !== undefined) {
+      form.setValue('title', values.title);
+    }
+    if (values.content !== undefined) {
+      form.setValue('content', values.content);
+    }
+    if (values.isPublic !== undefined) {
+      form.setValue('isPublic', values.isPublic);
+    }
+    if (values.location !== undefined) {
+      form.setValue('location', values.location);
+    }
+    if (values.locationQuery) {
+      setLocationQuery(values.locationQuery);
+    }
+    if (values.tags) {
+      setTags(values.tags);
+    }
+  }, [form]);
+
+  useEffect(() => {
+    const persist = draftKey
+      ? debounce((draft: JournalDraft) => saveDraft(draftKey, draft), 800)
+      : null;
+    if (!persist) {
+      return;
+    }
+    const subscription = form.watch((values, info) => {
+      // Programmatic updates from the initial load must not overwrite the
+      // draft with server values before the user types anything.
+      if (!info || !info.type) {
+        return;
+      }
+      persist({
+        title: values.title,
+        content: values.content,
+        isPublic: values.isPublic,
+        location: values.location,
+        locationQuery,
+        tags,
+      });
+    });
+    return () => subscription.unsubscribe();
+  }, [form, draftKey, locationQuery, tags]);
+
   useEffect(() => {
     // Check if user is authenticated
     if (!isAuthenticated) {
@@ -143,6 +206,20 @@ const JournalEdit = () => {
           form.setValue('location', journalData.location);
           form.setValue('images', journalData.images || []);
           setTags(journalData.tags || []);
+
+          // Restore local autosave when it is newer than the server copy, so
+          // unsaved edits from a crashed tab come back instead of vanishing.
+          if (draftKey && !draftRestoredRef.current) {
+            draftRestoredRef.current = true;
+            const draft = loadDraft<JournalDraft>(draftKey);
+            const savedAt = draft ? new Date(draft.savedAt).getTime() : 0;
+            const serverUpdatedAt = new Date(journalData.updatedAt || 0).getTime();
+            if (draft && savedAt > serverUpdatedAt) {
+              applyDraft(draft.values);
+              setDraftRestoredAt(draft.savedAt);
+            }
+          }
+          draftRestoredRef.current = true;
         }
       } catch (error) {
         console.error('Failed to fetch journal:', error);
@@ -157,7 +234,7 @@ const JournalEdit = () => {
     };
     
     fetchJournal();
-  }, [id, user?.id, isAuthenticated, navigate, toast, form]);
+  }, [id, user?.id, isAuthenticated, navigate, toast, form, draftKey, applyDraft]);
 
   const handleLocationSearch = useCallback(
     debounce(async (query: string) => {
@@ -334,6 +411,9 @@ const JournalEdit = () => {
         tags,
       };
       await journalApi.updateJournal(id, updatedData);
+      if (draftKey) {
+        clearDraft(draftKey);
+      }
       toast({
         description: 'Journal updated successfully',
       });
@@ -368,7 +448,27 @@ const JournalEdit = () => {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold mb-8">Edit Journal</h1>
-          
+
+          {draftRestoredAt && (
+            <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-4 py-2 mb-6 text-sm">
+              <span className="text-muted-foreground">
+                Unsaved draft restored — last saved {draftAgeLabel(draftRestoredAt)}.
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (draftKey) {
+                    clearDraft(draftKey);
+                  }
+                  setDraftRestoredAt(null);
+                }}
+              >
+                Discard
+              </Button>
+            </div>
+          )}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <Card>
