@@ -6,7 +6,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import JournalList from '@/components/journals/JournalList';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Onboarding from '@/components/onboarding/Onboarding';
 import { User } from '@/types';
@@ -62,11 +62,18 @@ const JournalsPage = () => {
                 : 'Start documenting your travel experiences'}
             </p>
           </div>
-          <Button className="mt-4 md:mt-0" asChild>
-            <Link to="/create">
-              <PlusCircle className="h-4 w-4 mr-2" /> New Journal
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2 mt-4 md:mt-0">
+            <Button variant="outline" asChild>
+              <Link to="/ask">
+                <Sparkles className="h-4 w-4 mr-2" /> Ask your journal
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/create">
+                <PlusCircle className="h-4 w-4 mr-2" /> New Journal
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
