@@ -1,5 +1,5 @@
-import { Suspense, lazy } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // Pages are split per route so the first paint only ships the shell plus the
@@ -39,9 +39,26 @@ const RouteFallback = () => (
   </div>
 );
 
+/**
+ * Fades each page in as it mounts and scrolls back to the top, so navigation
+ * feels deliberate instead of an instant hard cut.
+ */
+const PageFade = ({ children }: { children: React.ReactNode }) => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [pathname]);
+  return (
+    <div key={pathname} className="animate-fade-in">
+      {children}
+    </div>
+  );
+};
+
 export const AppRoutes = () => (
   <Suspense fallback={<RouteFallback />}>
-    <Routes>
+    <PageFade>
+      <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ProtectedRoute requireAuth={false}><Login /></ProtectedRoute>} />
       <Route path="/register" element={<ProtectedRoute requireAuth={false}><Register /></ProtectedRoute>} />
@@ -70,7 +87,8 @@ export const AppRoutes = () => (
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/contact" element={<ContactUs />} />
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </PageFade>
   </Suspense>
 );
 
