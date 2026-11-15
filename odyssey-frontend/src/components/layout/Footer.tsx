@@ -7,13 +7,13 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-border/70 bg-secondary/40">
+    <footer className="border-t border-border/60 bg-card/40 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-4 md:gap-8">
           <div className="space-y-3">
             <div className="flex items-center">
               <LogoMark className="h-6 w-6" />
-              <span className="ml-2 text-lg font-semibold tracking-tight">Odyssey</span>
+              <span className="ml-2 font-display text-lg font-semibold tracking-tight">Odyssey</span>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Write trip journals with photos, places and maps, share them publicly or keep them private.

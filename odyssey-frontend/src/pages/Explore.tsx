@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AppPage from '@/components/layout/AppPage';
 import JournalList from '@/components/journals/JournalList';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -152,20 +151,12 @@ const ExplorePage = () => {
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
-        <div className="page-head">
-          <div className="page-head-body">
-            <span className="eyebrow">Explore</span>
-            <h1 className="text-3xl font-semibold tracking-tight">Explore journals</h1>
-            <p className="text-muted-foreground">
-              Travel stories from around the world
-            </p>
-          </div>
-        </div>
-
-        <div className="sticky top-4 z-30 mb-6 rounded-xl border bg-card/85 p-3 shadow-sm backdrop-blur-md">
+      <AppPage
+        eyebrow="Explore"
+        title="Discover travel stories"
+        description="Photo-led journals from everywhere — filter by place, tag, or what’s trending."
+      >
+        <div className="sticky top-[4.5rem] z-30 mb-6 rounded-2xl border border-border/70 bg-card/90 p-3 shadow-sm backdrop-blur-md">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="flex-1">
               <div className="relative">
@@ -285,9 +276,7 @@ const ExplorePage = () => {
             )}
           </>
         )}
-      </main>
-      <Footer />
-    </>
+      </AppPage>
   );
 };
 

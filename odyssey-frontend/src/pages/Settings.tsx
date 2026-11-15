@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AccountLayout from '@/components/layout/AccountLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -64,23 +63,10 @@ const Settings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="mx-auto w-full max-w-4xl px-4 py-8">
-        <div className="page-head">
-          <div className="page-head-body">
-            <span className="eyebrow">Account</span>
-            <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-            <p className="text-muted-foreground">Manage your account preferences</p>
-          </div>
-          <div className="page-head-actions">
-            <Button variant="outline" onClick={() => navigate('/profile')}>
-              <UserRound className="mr-2 h-4 w-4" />
-              View Profile
-            </Button>
-          </div>
-        </div>
-
+    <AccountLayout
+      title="Preferences"
+      description="Theme, account details, and irreversible actions for your Odyssey account."
+    >
         <Tabs defaultValue="appearance" className="space-y-6">
           <TabsList className="w-full md:w-fit grid grid-cols-2 md:inline-flex">
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
@@ -323,9 +309,7 @@ const Settings = () => {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-      <Footer />
-    </div>
+    </AccountLayout>
   );
 };
 

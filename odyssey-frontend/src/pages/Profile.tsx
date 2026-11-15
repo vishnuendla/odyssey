@@ -5,8 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AccountLayout from '@/components/layout/AccountLayout';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -20,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Camera, Settings, MapPin, Mail, Calendar, Check, X, BookOpen, Globe, Camera as CameraIcon, FileText, Route, Tag } from 'lucide-react';
+import { Camera, MapPin, Mail, Calendar, Check, X, BookOpen, Globe, Camera as CameraIcon, FileText, Route, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { authApi, journalApi, statsApi } from '@/services/api';
 import type { UserStats } from '@/types';
@@ -157,28 +156,15 @@ const Profile = () => {
   const watchedBio = form.watch('bio');
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="mx-auto w-full max-w-4xl px-4 py-8">
-        <div className="page-head">
-          <div className="page-head-body">
-            <span className="eyebrow">Account</span>
-            <h1 className="text-3xl font-semibold tracking-tight">My Profile</h1>
-            <p className="text-muted-foreground">Update your personal information</p>
-          </div>
-          <div className="page-head-actions">
-            <Button variant="outline" onClick={() => navigate('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              Go to Settings
-            </Button>
-          </div>
-        </div>
-
+    <AccountLayout
+      title="My profile"
+      description="Your public identity, travel stats, and how other travellers see you on Odyssey."
+    >
         <section
           aria-label="Profile header"
-          className="overflow-hidden rounded-xl border bg-card shadow-sm"
+          className="surface-panel overflow-hidden p-0"
         >
-          <div className="h-24 w-full bg-secondary sm:h-32" />
+          <div className="profile-cover" />
           <div className="px-4 pb-5 sm:px-6">
             <Avatar className="-mt-10 h-20 w-20 border-4 border-background shadow-md sm:-mt-12 sm:h-24 sm:w-24">
               <AvatarImage
@@ -399,9 +385,7 @@ const Profile = () => {
             </CardContent>
           </Card>
         </section>
-      </div>
-      <Footer />
-    </div>
+    </AccountLayout>
   );
 };
 
