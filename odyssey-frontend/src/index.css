@@ -52,40 +52,37 @@ blockquote,
 
 @layer base {
   :root {
-    /* Sky, sea and maps: ice-sky paper, deep ocean navy ink, sky-blue primary
-       with dark navy text on it, adventure-orange accent with dark text.
-       Palette grounded in the Travel/Tourism profile. */
-    --background: 204 100% 97%;
-    --foreground: 201 79% 24%;
+    /* Editorial travel journal: warm parchment, deep ink, teal ocean, coral warmth.
+       Patterns from Polarsteps (map-first, photo-forward) and Day One (calm density). */
+    --background: 38 32% 97%;
+    --foreground: 210 28% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 201 79% 24%;
+    --card-foreground: 210 28% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 201 79% 24%;
+    --popover-foreground: 210 28% 16%;
 
-    /* Sky blue — buttons carry dark navy text for contrast. */
-    --primary: 201 90% 39%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 187 78% 32%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 204 44% 94%;
-    --secondary-foreground: 201 79% 24%;
+    --secondary: 36 28% 93%;
+    --secondary-foreground: 210 28% 16%;
 
-    --muted: 204 44% 94%;
-    --muted-foreground: 215 19% 35%;
+    --muted: 36 22% 94%;
+    --muted-foreground: 215 14% 42%;
 
-    /* Adventure orange, dark text on it. */
-    --accent: 20 90% 48%;
-    --accent-foreground: 24 60% 8%;
+    --accent: 16 88% 52%;
+    --accent-foreground: 24 80% 12%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 203 45% 88%;
-    --input: 203 45% 88%;
-    --ring: 201 90% 39%;
+    --border: 36 22% 88%;
+    --input: 36 22% 88%;
+    --ring: 187 78% 32%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
     /* Layered elevation: a tight contact shadow plus a wide soft one, so cards
        sit on the page like printed plates instead of floating boxes. */
@@ -106,35 +103,33 @@ blockquote,
   }
 
   .dark {
-    /* Ocean night: true dark blue-black surfaces, sky-400 primary, warm
-       orange accent — no washed hero, no blue-slate leftovers. */
-    --background: 203 62% 8%;
-    --foreground: 199 92% 94%;
+    --background: 210 32% 7%;
+    --foreground: 36 24% 94%;
 
-    --card: 205 57% 15%;
-    --card-foreground: 199 92% 94%;
+    --card: 210 28% 11%;
+    --card-foreground: 36 24% 94%;
 
-    --popover: 205 57% 15%;
-    --popover-foreground: 199 92% 94%;
+    --popover: 210 28% 11%;
+    --popover-foreground: 36 24% 94%;
 
-    --primary: 199 93% 60%;
-    --primary-foreground: 205 80% 16%;
+    --primary: 187 65% 48%;
+    --primary-foreground: 210 40% 8%;
 
-    --secondary: 206 55% 19%;
-    --secondary-foreground: 199 92% 94%;
+    --secondary: 210 24% 15%;
+    --secondary-foreground: 36 24% 94%;
 
-    --muted: 206 55% 19%;
-    --muted-foreground: 202 33% 66%;
+    --muted: 210 24% 15%;
+    --muted-foreground: 215 14% 62%;
 
-    --accent: 27 97% 61%;
-    --accent-foreground: 13 73% 15%;
+    --accent: 22 92% 58%;
+    --accent-foreground: 24 80% 10%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 206 46% 22%;
     --input: 206 46% 22%;
-    --ring: 199 93% 60%;
+    --ring: 187 65% 48%;
 
     /* Night elevation: darkness deepens instead of casting shadows. */
     --shadow-card: 0 1px 2px hsl(203 80% 2% / 0.4), 0 4px 16px hsl(203 80% 2% / 0.3);
@@ -159,13 +154,11 @@ blockquote,
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-  /* Every heading inherits the editorial display serif centrally, tightened
-     for large sizes like the reference dashboards. */
   h1, h2, h3, h4 {
-    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+    @apply font-display;
     text-wrap: balance;
   }
   h1 {
@@ -177,18 +170,21 @@ blockquote,
   /* Page background: a single quiet sky wash at the top of the document, the
      way the reference products use one gradient — not decoration per section. */
   body {
-    background-image: radial-gradient(
-      1200px 480px at 50% -180px,
-      hsl(var(--primary) / 0.07),
-      transparent 70%
-    );
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -20%, hsl(var(--primary) / 0.06), transparent 65%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(var(--accent) / 0.04), transparent 55%);
     background-repeat: no-repeat;
   }
   .dark body {
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -20%, hsl(var(--primary) / 0.12), transparent 65%),
+      radial-gradient(ellipse 50% 35% at 0% 0%, hsl(var(--accent) / 0.06), transparent 50%);
+  }
+  .page-hero-wash main {
     background-image: radial-gradient(
-      1200px 480px at 50% -180px,
-      hsl(var(--primary) / 0.10),
-      transparent 70%
+      ellipse 120% 80% at 50% -30%,
+      hsl(var(--primary) / 0.08),
+      transparent 60%
     );
   }
   :focus-visible {
@@ -310,6 +306,60 @@ blockquote,
   }
   .stat-tile-label {
     @apply text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground;
+  }
+
+  .surface-panel {
+    @apply rounded-2xl border border-border/80 bg-card/95 shadow-sm backdrop-blur-sm;
+    box-shadow: var(--shadow-card);
+  }
+
+  .auth-marketing-panel {
+    @apply flex flex-col justify-between rounded-2xl border border-border/70 bg-gradient-to-br from-primary/10 via-card to-secondary/60 p-10;
+    box-shadow: var(--shadow-card);
+  }
+
+  .feature-icon-ring {
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card;
+    box-shadow: var(--shadow-card);
+  }
+
+  .account-nav {
+    @apply flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0;
+    scrollbar-width: none;
+  }
+  .account-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .account-nav-link {
+    @apply flex min-w-[11rem] shrink-0 items-start gap-3 rounded-xl border border-transparent px-3 py-3 text-left transition-colors lg:min-w-0 lg:w-full;
+  }
+  .account-nav-link:hover {
+    @apply border-border/60 bg-card/80;
+  }
+  .account-nav-link-active {
+    @apply border-border bg-card;
+    box-shadow: var(--shadow-card);
+  }
+
+  .nav-pill-bar {
+    @apply hidden items-center gap-0.5 rounded-full border border-border/70 bg-card/70 p-1 shadow-sm backdrop-blur-md md:flex;
+  }
+  .nav-pill-link {
+    @apply rounded-full px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors;
+  }
+  .nav-pill-link[data-active='true'] {
+    @apply bg-secondary text-foreground shadow-sm;
+  }
+
+  .profile-cover {
+    @apply relative h-28 w-full overflow-hidden sm:h-36;
+    background: linear-gradient(
+      120deg,
+      hsl(var(--primary) / 0.35) 0%,
+      hsl(var(--accent) / 0.22) 45%,
+      hsl(var(--secondary)) 100%
+    );
   }
 }
 

@@ -17,12 +17,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
-const desktopLink = ({ isActive }: { isActive: boolean }) =>
-  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-    isActive
-      ? 'text-primary underline decoration-dashed decoration-accent underline-offset-4'
-      : 'text-muted-foreground hover:text-foreground'
-  }`;
+import { cn } from '@/lib/utils';
+
+const desktopPill = ({ isActive }: { isActive: boolean }) =>
+  cn('nav-pill-link', isActive && 'bg-secondary text-foreground shadow-sm');
 
 const mobileLink = ({ isActive }: { isActive: boolean }) =>
   `block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -36,34 +34,36 @@ export default function Navbar() {
 
   return (
     <>
-    <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-md">
-      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
+      <div className="relative mx-auto flex h-[4.25rem] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <Link to="/" className="flex-shrink-0 flex items-center" aria-label="Odyssey home">
             <LogoMark className="h-7 w-7" />
-            <span className="ml-2 text-lg font-semibold tracking-tight">Odyssey</span>
+            <span className="ml-2 font-display text-lg font-semibold tracking-tight">Odyssey</span>
           </Link>
         </div>
 
         {/* Desktop menu — centered on the bar */}
-        <div className="absolute left-1/2 hidden -translate-x-1/2 items-center md:flex">
-          <NavLink to="/explore" className={desktopLink}>
-            Explore
-          </NavLink>
-          <NavLink to="/gallery" className={desktopLink}>
-            Gallery
-          </NavLink>
-          <NavLink to="/map" className={desktopLink}>
-            Map
-          </NavLink>
-          <NavLink to="/timeline" className={desktopLink}>
-            Timeline
-          </NavLink>
-          {isAuthenticated && (
-            <NavLink to="/journals" className={desktopLink}>
-              My Journals
+        <div className="absolute left-1/2 hidden -translate-x-1/2 md:block">
+          <div className="nav-pill-bar">
+            <NavLink to="/explore" className={desktopPill}>
+              Explore
             </NavLink>
-          )}
+            <NavLink to="/gallery" className={desktopPill}>
+              Gallery
+            </NavLink>
+            <NavLink to="/map" className={desktopPill}>
+              Map
+            </NavLink>
+            <NavLink to="/timeline" className={desktopPill}>
+              Timeline
+            </NavLink>
+            {isAuthenticated ? (
+              <NavLink to="/journals" className={desktopPill}>
+                Journals
+              </NavLink>
+            ) : null}
+          </div>
         </div>
 
         {/* Right cluster — consistent h-9 controls */}
