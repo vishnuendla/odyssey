@@ -9,12 +9,12 @@ export default function Hero() {
   
   return (
     <section className="py-12 md:py-20 px-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1488085061387-422e29b40080?q=70&w=1600&auto=format&fit=crop')] bg-cover bg-center opacity-15 z-0"></div>
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1488085061387-422e29b40080?q=70&w=1600&auto=format&fit=crop')] bg-cover bg-center opacity-15 dark:opacity-[0.05] z-0"></div>
       <div className="container relative z-10 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight">
-              Document Your Journey, <span className="text-primary">Share Your Adventures</span>
+              Document Your Journey, Share Your Adventures
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl">
               Write trip journals with photos, tagged places and maps, then share the story when you are ready.
