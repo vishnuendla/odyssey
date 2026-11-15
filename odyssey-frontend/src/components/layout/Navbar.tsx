@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Moon, Sun } from 'lucide-react';
+import { Compass, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -38,8 +38,8 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center" aria-label="Odyssey home">
-              <Sun className="h-8 w-8 text-primary" aria-hidden="true" />
-              <span className="ml-2 text-xl font-bold text-foreground">Odyssey</span>
+              <Compass className="h-7 w-7 text-primary" aria-hidden="true" />
+              <span className="ml-2 text-xl font-semibold tracking-tight">Odyssey</span>
             </Link>
           </div>
 
@@ -126,17 +126,19 @@ export default function Navbar() {
             </Button>
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile menu button — morphing hamburger (Uiverse.io galaxy) */}
           <div className="flex items-center md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(!isOpen)}
-              aria-label="Toggle menu"
-              aria-expanded={isOpen}
-            >
-              {isOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
-            </Button>
+            <label className="nav-burger" aria-label="Toggle menu">
+              <input
+                type="checkbox"
+                checked={isOpen}
+                onChange={(event) => setIsOpen(event.target.checked)}
+                aria-expanded={isOpen}
+              />
+              <span></span>
+              <span></span>
+              <span></span>
+            </label>
           </div>
         </div>
 
