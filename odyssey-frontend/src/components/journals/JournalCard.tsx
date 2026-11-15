@@ -74,13 +74,13 @@ const JournalCard = memo(({
 
   return (
     <Link to={`/journals/${journal.id}`} className="block">
-      <div className="group relative bg-card rounded-lg overflow-hidden border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/40 h-full">
+      <div className="group relative bg-card rounded-lg overflow-hidden border transition-[transform,box-shadow,border-color] duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/40 h-full">
         <div className={`relative overflow-hidden ${masonry ? 'max-h-[420px]' : 'aspect-[16/9]'}`}>
           <OptimizedImage
             src={coverImage}
             alt={journal.title}
             aspectRatio={masonry ? 'auto' : 'video'}
-            className={`object-cover w-full transition-transform duration-500 group-hover:scale-105 ${masonry ? 'h-auto' : 'h-full'}`}
+            className={`object-cover w-full ${masonry ? 'h-auto' : 'h-full'}`}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <Button

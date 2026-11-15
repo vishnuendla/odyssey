@@ -141,7 +141,7 @@ const AdminPage = () => {
       <Navbar />
       <main className="container max-w-5xl py-10 px-4">
         <div className="mb-8 flex flex-col gap-2">
-          <h1 className="flex items-center gap-2 text-3xl font-bold">
+          <h1 className="flex items-center gap-2 text-3xl font-semibold">
             <ShieldCheck className="h-7 w-7" /> Moderation
           </h1>
           <p className="text-muted-foreground">
@@ -158,8 +158,8 @@ const AdminPage = () => {
           ].map((item) => (
             <Card key={item.label}>
               <CardContent className="py-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                <p className="mt-1 text-2xl font-bold">{item.value ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{item.value ?? '—'}</p>
               </CardContent>
             </Card>
           ))}

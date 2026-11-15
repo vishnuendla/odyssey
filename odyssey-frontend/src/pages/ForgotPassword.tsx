@@ -69,7 +69,7 @@ const ForgotPassword = () => {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Mail className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Reset your password</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold">Reset your password</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
               Enter the email address for your account and we'll send you a reset link.
             </p>

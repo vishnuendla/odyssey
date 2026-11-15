@@ -60,14 +60,14 @@ const FeaturedJournals = () => {
       <div className="container">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Featured Journals</h2>
+            <h2 className="text-2xl font-semibold mb-2">From other travellers</h2>
             <p className="text-muted-foreground mb-4 md:mb-0">
-              Discover inspiring travel stories from our community
+              The latest public journals
             </p>
           </div>
           <Link
             to="/explore"
-            className="text-primary hover:underline md:mt-0"
+            className="link-route text-primary"
           >
             View all journals
           </Link>

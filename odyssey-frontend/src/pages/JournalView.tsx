@@ -293,7 +293,7 @@ const JournalView = () => {
         <Navbar />
         <div className="container mx-auto py-8 px-4">
           <div className="flex flex-col justify-center items-center min-h-[50vh]">
-            <h1 className="text-2xl font-bold mb-4">Journal not found</h1>
+            <h1 className="text-2xl font-semibold mb-4">Journal not found</h1>
             <p className="mb-6">{error || 'This journal may have been removed or is private.'}</p>
             <Button asChild>
               <Link to="/journals">Back to Journals</Link>
@@ -382,7 +382,7 @@ const JournalView = () => {
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto" id="journal-article">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
-            <h1 className="font-display text-3xl md:text-4xl font-bold">{journal.title}</h1>
+            <h1 className="font-display text-3xl md:text-4xl font-semibold">{journal.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               {isOwner && (
                 <div className="flex gap-2">
@@ -542,7 +542,7 @@ const JournalView = () => {
             </CardFooter>
           </Card>
 
-          <h2 className="text-2xl font-bold mb-4">Comments</h2>
+          <h2 className="text-2xl font-semibold mb-4">Comments</h2>
 
           {isAuthenticated ? (
             <div className="mb-6">

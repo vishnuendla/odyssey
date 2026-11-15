@@ -192,7 +192,7 @@ const Security = () => {
       <Navbar />
       <div className="container max-w-4xl mx-auto py-8 px-4 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Security</h1>
+          <h1 className="text-3xl font-semibold">Security</h1>
           <p className="text-muted-foreground">Manage your password and active sign-ins.</p>
         </div>
 
