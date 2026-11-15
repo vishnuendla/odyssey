@@ -1,6 +1,7 @@
 
 import { Link } from 'react-router-dom';
-import { Compass, Mail, Github } from 'lucide-react';
+import { Mail, Github } from 'lucide-react';
+import LogoMark from '@/components/brand/LogoMark';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -11,7 +12,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center">
-              <Compass className="h-5 w-5 text-primary" />
+              <LogoMark className="h-5 w-5" />
               <span className="ml-2 text-lg font-semibold">Odyssey</span>
             </div>
             <p className="text-sm text-muted-foreground">

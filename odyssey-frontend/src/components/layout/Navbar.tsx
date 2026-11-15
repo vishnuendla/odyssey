@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Compass, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
+import LogoMark from '@/components/brand/LogoMark';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -38,7 +39,7 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center" aria-label="Odyssey home">
-              <Compass className="h-7 w-7 text-primary" aria-hidden="true" />
+              <LogoMark className="h-7 w-7" />
               <span className="ml-2 text-xl font-semibold tracking-tight">Odyssey</span>
             </Link>
           </div>
