@@ -3,17 +3,16 @@
 @tailwind components;
 @tailwind utilities;
 
-*{
-  user-select: none;
-}
-
 /* Prevent horizontal overflow on mobile */
 html {
   overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 body {
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* Ensure images don't overflow containers */
@@ -22,8 +21,33 @@ img {
   height: auto;
 }
 
-::-webkit-scrollbar{
-  display: none;
+/* Chrome is content — let people select and copy their own words, and keep a
+   slim visible scrollbar. Interactive chrome stays unselectable. */
+input,
+textarea,
+[contenteditable],
+article,
+article p,
+article li,
+blockquote,
+.select-allow {
+  user-select: text;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 8px;
+  border: 2px solid hsl(var(--background));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
 }
 
 @layer base {
@@ -62,6 +86,12 @@ img {
     --ring: 201 90% 39%;
 
     --radius: 0.75rem;
+
+    /* Layered elevation: a tight contact shadow plus a wide soft one, so cards
+       sit on the page like printed plates instead of floating boxes. */
+    --shadow-card: 0 1px 2px hsl(204 60% 20% / 0.06), 0 4px 16px hsl(204 60% 20% / 0.05);
+    --shadow-card-hover: 0 2px 4px hsl(204 60% 20% / 0.07), 0 12px 32px hsl(204 60% 20% / 0.10);
+    --shadow-pop: 0 4px 12px hsl(204 60% 20% / 0.10), 0 20px 48px hsl(204 60% 20% / 0.14);
 
     --sidebar-background: 204 100% 97%;
     --sidebar-foreground: 201 79% 24%;
@@ -106,6 +136,11 @@ img {
     --input: 206 46% 22%;
     --ring: 199 93% 60%;
 
+    /* Night elevation: darkness deepens instead of casting shadows. */
+    --shadow-card: 0 1px 2px hsl(203 80% 2% / 0.4), 0 4px 16px hsl(203 80% 2% / 0.3);
+    --shadow-card-hover: 0 2px 4px hsl(203 80% 2% / 0.5), 0 12px 32px hsl(203 80% 2% / 0.4);
+    --shadow-pop: 0 4px 12px hsl(203 80% 2% / 0.5), 0 20px 48px hsl(203 80% 2% / 0.55);
+
     --sidebar-background: 203 62% 8%;
     --sidebar-foreground: 199 92% 94%;
     --sidebar-primary: 199 93% 60%;
@@ -127,29 +162,58 @@ img {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-  /* Every heading inherits the editorial display serif centrally. */
+  /* Every heading inherits the editorial display serif centrally, tightened
+     for large sizes like the reference dashboards. */
   h1, h2, h3, h4 {
     font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+    text-wrap: balance;
+  }
+  h1 {
+    letter-spacing: -0.02em;
+  }
+  h2, h3 {
+    letter-spacing: -0.01em;
+  }
+  /* Page background: a single quiet sky wash at the top of the document, the
+     way the reference products use one gradient — not decoration per section. */
+  body {
+    background-image: radial-gradient(
+      1200px 480px at 50% -180px,
+      hsl(var(--primary) / 0.07),
+      transparent 70%
+    );
+    background-repeat: no-repeat;
+  }
+  .dark body {
+    background-image: radial-gradient(
+      1200px 480px at 50% -180px,
+      hsl(var(--primary) / 0.10),
+      transparent 70%
+    );
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring) / 0.6);
+    outline-offset: 2px;
   }
 }
 
 @layer components {
   /* Rubber-stamp primary action: ink border, solid offset shadow that seats on
-     press. Adapted from Uiverse.io galaxy (0xnihilism), re-inked in tokens. */
+     press. Calmed to a 2px seat so it reads premium next to the soft cards. */
   .btn-stamp {
-    @apply relative border-2 border-foreground bg-primary text-primary-foreground;
-    box-shadow: 4px 4px 0 0 hsl(var(--foreground));
+    @apply relative border border-foreground/80 bg-primary text-primary-foreground;
+    box-shadow: 2px 2px 0 0 hsl(var(--foreground));
     transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
   }
   .btn-stamp:hover {
     @apply bg-primary/90;
   }
   .btn-stamp:active {
-    transform: translate(3px, 3px);
-    box-shadow: 1px 1px 0 0 hsl(var(--foreground));
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 0 hsl(var(--foreground));
   }
   .btn-stamp:active:focus-visible {
-    transform: translate(3px, 3px);
+    transform: translate(2px, 2px);
   }
 
   /* Morphing hamburger for the mobile nav. Adapted from Uiverse.io galaxy
@@ -199,21 +263,69 @@ img {
   @media (prefers-reduced-motion: reduce) {
     .route-loader { animation: none; }
   }
+
+  /* Page header pattern: eyebrow label over the display title over a one-line
+     description, with optional right-side actions. The repeating unit every
+     page starts with (Linear's section header, re-inked). */
+  .page-head {
+    @apply mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between;
+  }
+  .page-head-body {
+    @apply flex flex-col gap-1.5;
+  }
+  .page-head-actions {
+    @apply mt-4 flex flex-wrap items-center gap-2 sm:mt-0;
+  }
+
+  /* Eyebrow: a small uppercase waypoint label above titles. */
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  /* Settings row: label + description on the left, control on the right, one
+     quiet divider per row. The repeating unit of every settings surface. */
+  .settings-row {
+    @apply flex flex-col gap-2 border-b border-border/70 py-4 first:pt-0 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-8;
+  }
+  .settings-row-label {
+    @apply flex flex-col gap-0.5;
+  }
+  .settings-row-title {
+    @apply text-sm font-medium text-foreground;
+  }
+  .settings-row-description {
+    @apply text-sm text-muted-foreground;
+  }
+  .settings-row-control {
+    @apply flex shrink-0 items-center gap-2;
+  }
+
+  /* Stat tile: a number doing the talking, used on profile surfaces. */
+  .stat-tile {
+    @apply flex flex-col gap-0.5 rounded-xl border bg-card px-4 py-3;
+    box-shadow: var(--shadow-card);
+  }
+  .stat-tile-value {
+    @apply font-display text-2xl font-semibold tracking-tight text-foreground;
+  }
+  .stat-tile-label {
+    @apply text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
-  
+
   .text-shadow {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
   }
-  
+
   .text-shadow-lg {
     text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.6);
   }
-  
+
   .gradient-mask {
     mask-image: linear-gradient(to top, transparent, black 50%);
   }
@@ -229,5 +341,22 @@ img {
     text-decoration-style: dashed;
     text-decoration-color: hsl(var(--accent));
     text-underline-offset: 4px;
+  }
+
+  /* Card lift: the standard interactive-card hover, from the elevation scale. */
+  .card-lift {
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease-out, transform 0.2s ease-out;
+  }
+  .card-lift:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card-lift,
+    .card-lift:hover {
+      transform: none;
+      transition: none;
+    }
   }
 }

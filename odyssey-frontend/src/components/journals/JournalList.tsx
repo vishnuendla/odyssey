@@ -4,7 +4,7 @@ import { journalApi } from '@/services/api';
 import { JournalEntry, User } from '@/types';
 import JournalCard from './JournalCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,10 +26,10 @@ interface JournalListProps {
 const JournalListSkeleton = ({ layout = 'grid' }: { layout?: 'grid' | 'masonry' }) => {
   if (layout === 'masonry') {
     return (
-      <div className="columns-1 sm:columns-2 lg:columns-3 gap-5">
+      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6">
         {[200, 260, 180, 240, 210, 280].map((height, i) => (
-          <div key={i} className="mb-5 break-inside-avoid">
-            <Skeleton className="w-full rounded-lg" style={{ height }} />
+          <div key={i} className="mb-6 break-inside-avoid">
+            <Skeleton className="w-full rounded-xl" style={{ height }} />
           </div>
         ))}
       </div>
@@ -38,10 +38,20 @@ const JournalListSkeleton = ({ layout = 'grid' }: { layout?: 'grid' | 'masonry' 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="space-y-4">
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
+        <div key={i} className="overflow-hidden rounded-xl border bg-card">
+          <Skeleton className="aspect-[4/3] w-full rounded-none" />
+          <div className="space-y-3 p-5">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
         </div>
       ))}
     </div>
@@ -131,9 +141,11 @@ export default function JournalList({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-center text-muted-foreground">{error}</p>
+      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+          <AlertCircle className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <p className="text-muted-foreground">{error}</p>
         <Button onClick={() => window.location.reload()} variant="outline">
           Try Again
         </Button>
@@ -143,12 +155,18 @@ export default function JournalList({
 
   if (journals.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground mb-4">{emptyMessage}</p>
+      <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+          <BookOpen className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <p className="font-medium">Nothing here yet</p>
+        <p className="max-w-md text-sm text-muted-foreground">{emptyMessage}</p>
         {showCreateButton && (
-          <Button onClick={() => navigate('/create')}>
-            Create your first journal
-          </Button>
+          <div className="pt-4">
+            <Button onClick={() => navigate('/create')}>
+              Create your first journal
+            </Button>
+          </div>
         )}
       </div>
     );
@@ -159,12 +177,12 @@ export default function JournalList({
       <div
         className={
           layout === 'masonry'
-            ? 'columns-1 sm:columns-2 lg:columns-3 gap-5'
+            ? 'columns-1 sm:columns-2 lg:columns-3 gap-6'
             : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
         }
       >
         {currentJournals.map((journal) => (
-          <div key={journal.id} className={layout === 'masonry' ? 'mb-5 break-inside-avoid' : ''}>
+          <div key={journal.id} className={layout === 'masonry' ? 'mb-6 break-inside-avoid' : ''}>
             <JournalCard
               journal={journal}
               masonry={layout === 'masonry'}

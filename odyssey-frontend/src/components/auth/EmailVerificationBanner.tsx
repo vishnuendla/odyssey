@@ -29,15 +29,15 @@ const EmailVerificationBanner = () => {
   };
 
   return (
-    <div className="border-b bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
-        <div className="flex items-start sm:items-center gap-2">
+    <div className="border-b border-border/60 bg-primary/5 text-foreground">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+        <div className="flex items-start sm:items-center gap-2.5 min-w-0">
           {sent ? (
             <CheckCircle2 className="h-4 w-4 mt-0.5 sm:mt-0 flex-shrink-0 text-green-600 dark:text-green-400" />
           ) : (
-            <MailWarning className="h-4 w-4 mt-0.5 sm:mt-0 flex-shrink-0" />
+            <MailWarning className="h-4 w-4 mt-0.5 sm:mt-0 flex-shrink-0 text-primary" />
           )}
-          <span>
+          <span className="min-w-0">
             {sent
               ? `Verification email sent to ${user.email}. Check your inbox.`
               : error ?? `Verify ${user.email} to publish journals and comment.`}
@@ -47,7 +47,7 @@ const EmailVerificationBanner = () => {
           <Button
             size="sm"
             variant="outline"
-            className="h-8 border-amber-900/30 bg-transparent hover:bg-amber-900/10"
+            className="h-7 bg-transparent"
             onClick={resend}
             disabled={isSending || sent}
           >
@@ -61,7 +61,7 @@ const EmailVerificationBanner = () => {
               'Resend email'
             )}
           </Button>
-          <Button asChild size="sm" variant="ghost" className="h-8 hover:bg-amber-900/10">
+          <Button asChild size="sm" variant="ghost" className="h-7">
             <Link to="/settings">Settings</Link>
           </Button>
         </div>

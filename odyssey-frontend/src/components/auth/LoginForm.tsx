@@ -72,9 +72,9 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold">Welcome back</h1>
+    <div className="mx-auto w-full max-w-md space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight">Welcome back</h1>
         <p className="text-muted-foreground">Enter your credentials to sign in to your account</p>
       </div>
 
@@ -85,7 +85,7 @@ export default function LoginForm() {
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <FormField
             control={form.control}
             name="email"
@@ -161,7 +161,7 @@ export default function LoginForm() {
             )}
           />
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full h-11" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
@@ -174,9 +174,9 @@ export default function LoginForm() {
         </form>
       </Form>
 
-      <div className="text-center text-sm">
+      <div className="text-center text-sm text-muted-foreground">
         Don't have an account?{' '}
-        <Link to="/register" className="text-primary hover:underline">
+        <Link to="/register" className="font-medium text-primary hover:underline">
           Sign up
         </Link>
       </div>

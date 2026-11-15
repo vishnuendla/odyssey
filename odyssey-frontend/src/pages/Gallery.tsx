@@ -4,6 +4,8 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Image as ImageIcon } from 'lucide-react';
 import { journalApi } from '@/services/api';
 import { JournalEntry } from '@/types';
 
@@ -44,25 +46,39 @@ const GalleryPage = () => {
   return (
     <>
       <Navbar />
-      <main className="container py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold mb-2">Travel Gallery</h1>
-          <p className="text-muted-foreground">
-            {items.length > 0
-              ? `${items.length} photos from ${journalCount} public ${journalCount === 1 ? 'journal' : 'journals'}`
-              : 'Photos shared by the Odyssey community'}
-          </p>
+      <main className="mx-auto w-full max-w-6xl px-4 py-12">
+        <div className="page-head">
+          <div className="page-head-body">
+            <span className="eyebrow">Gallery</span>
+            <h1 className="text-3xl font-semibold tracking-tight">Travel Gallery</h1>
+            <p className="text-muted-foreground">
+              {items.length > 0
+                ? `${items.length} photos from ${journalCount} public ${journalCount === 1 ? 'journal' : 'journals'}`
+                : 'Photos shared by the Odyssey community'}
+            </p>
+          </div>
         </div>
 
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, index) => (
-              <Skeleton key={index} className="aspect-square w-full rounded-lg" />
+              <Skeleton key={index} className="aspect-square w-full rounded-xl" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground">
-            No photos have been shared yet.
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="font-medium">No photos yet</p>
+            <p className="text-sm text-muted-foreground">
+              No photos have been shared yet.
+            </p>
+            <div className="pt-4">
+              <Button variant="outline" asChild>
+                <Link to="/explore">Explore journals</Link>
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -70,7 +86,7 @@ const GalleryPage = () => {
               <Link
                 key={`${journal.id}-${index}`}
                 to={`/journals/${journal.id}`}
-                className="group relative aspect-square overflow-hidden rounded-lg border"
+                className="card-lift group relative aspect-square overflow-hidden rounded-xl border"
               >
                 <OptimizedImage
                   src={image}

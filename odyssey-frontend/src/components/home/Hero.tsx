@@ -8,18 +8,18 @@ export default function Hero() {
   const { isAuthenticated } = useAuth();
   
   return (
-    <section className="py-12 md:py-20 px-4 relative overflow-hidden">
+    <section className="relative overflow-hidden px-4 py-12 md:py-20">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1488085061387-422e29b40080?q=70&w=1600&auto=format&fit=crop')] bg-cover bg-center opacity-15 dark:opacity-[0.05] z-0"></div>
-      <div className="container relative z-10 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div className="relative z-10 mx-auto max-w-6xl">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-center">
           <div className="space-y-6">
-            <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight">
+            <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-balance sm:text-5xl lg:text-6xl">
               Document Your Journey, Share Your Adventures
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl">
+            <p className="text-lg text-muted-foreground sm:text-xl max-w-2xl">
               Write trip journals with photos, tagged places and maps, then share the story when you are ready.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
               <Button size="lg" className="btn-stamp" asChild>
                 <Link to={isAuthenticated ? "/create" : "/register"}>
                   {isAuthenticated ? "Start journaling" : "Create an account"}
@@ -30,29 +30,29 @@ export default function Hero() {
               </Button>
             </div>
             
-            <div className="pt-4">
+            <div className="pt-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <MapPin className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+                    <MapPin className="h-4 w-4 text-foreground" />
                   </div>
                   <span className="text-sm font-medium">Location Tagging</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <BookOpen className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+                    <BookOpen className="h-4 w-4 text-foreground" />
                   </div>
                   <span className="text-sm font-medium">Rich Text Editor</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Camera className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+                    <Camera className="h-4 w-4 text-foreground" />
                   </div>
                   <span className="text-sm font-medium">Photo Galleries</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Globe className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+                    <Globe className="h-4 w-4 text-foreground" />
                   </div>
                   <span className="text-sm font-medium">Interactive Maps</span>
                 </div>
