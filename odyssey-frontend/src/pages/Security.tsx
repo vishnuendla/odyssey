@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AccountLayout from '@/components/layout/AccountLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -188,14 +187,10 @@ const Security = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container max-w-4xl mx-auto py-8 px-4 space-y-6">
-        <div>
-          <h1 className="text-3xl font-semibold">Security</h1>
-          <p className="text-muted-foreground">Manage your password and active sign-ins.</p>
-        </div>
-
+    <AccountLayout
+      title="Security"
+      description="Password, active sessions, and how Odyssey keeps your account signed in safely."
+    >
         {!user.emailVerified && (
           <Alert>
             <ShieldAlert className="h-4 w-4" />
@@ -370,9 +365,7 @@ const Security = () => {
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           Sessions use rotating, single-use refresh tokens stored in HttpOnly cookies.
         </div>
-      </div>
-      <Footer />
-    </div>
+    </AccountLayout>
   );
 };
 

@@ -74,7 +74,7 @@ const JournalCard = memo(({
 
   return (
     <Link to={`/journals/${journal.id}`} className="block h-full">
-      <article className="card-lift group relative flex h-full flex-col overflow-hidden rounded-xl border bg-card">
+      <article className="card-lift group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card">
         <div className={`relative overflow-hidden ${masonry ? 'max-h-[420px]' : ''}`}>
           <OptimizedImage
             src={coverImage}

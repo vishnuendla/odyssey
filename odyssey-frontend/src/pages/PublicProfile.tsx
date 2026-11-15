@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AppPage from '@/components/layout/AppPage';
+import PageShell from '@/components/layout/PageShell';
 import JournalList from '@/components/journals/JournalList';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -59,8 +59,7 @@ const PublicProfile = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
+      <PageShell>
         <div className="mx-auto w-full max-w-4xl py-12 px-4">
           <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
             <Skeleton className="h-24 w-full rounded-none sm:h-32" />
@@ -81,14 +80,13 @@ const PublicProfile = () => {
             ))}
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (notFound || !profile) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
+      <PageShell>
         <div className="mx-auto w-full max-w-4xl py-24 px-4">
           <div className="flex flex-col items-center text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
@@ -103,21 +101,24 @@ const PublicProfile = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   const journalsCount = profile.journalsCount ?? journals.length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main className="mx-auto w-full max-w-4xl py-8 px-4">
+      <AppPage
+        eyebrow="Traveller"
+        title={profile.name}
+        description={profile.bio || 'Public journals and travel stats from the Odyssey community.'}
+        width="wide"
+      >
         <section
           aria-label="Profile header"
-          className="overflow-hidden rounded-xl border bg-card shadow-sm"
+          className="surface-panel overflow-hidden p-0 -mt-2"
         >
-          <div className="h-24 w-full bg-secondary sm:h-32" />
+          <div className="profile-cover" />
           <div className="px-4 pb-5 sm:px-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <Avatar className="-mt-10 h-20 w-20 border-4 border-background shadow-md sm:-mt-12 sm:h-24 sm:w-24">
@@ -141,9 +142,7 @@ const PublicProfile = () => {
             </div>
 
             <div className="mt-3">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{profile.name}</h1>
-
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 {profile.location && (
                   <span className="flex items-center gap-1.5">
                     <MapPin className="h-4 w-4" aria-hidden="true" />
@@ -206,9 +205,7 @@ const PublicProfile = () => {
             userMap={{ [profile.id]: profile }}
           />
         </section>
-      </main>
-      <Footer />
-    </div>
+      </AppPage>
   );
 };
 

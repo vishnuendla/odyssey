@@ -8,60 +8,48 @@ export default function Hero() {
   const { isAuthenticated } = useAuth();
   
   return (
-    <section className="relative overflow-hidden px-4 py-12 md:py-20">
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1488085061387-422e29b40080?q=70&w=1600&auto=format&fit=crop')] bg-cover bg-center opacity-15 dark:opacity-[0.05] z-0"></div>
+    <section className="relative overflow-hidden px-4 py-14 md:py-24">
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1488085061387-422e29b40080?q=70&w=1600&auto=format&fit=crop')] bg-cover bg-center opacity-[0.12] dark:opacity-[0.06] z-0" />
       <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-center">
-          <div className="space-y-6">
-            <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-balance sm:text-5xl lg:text-6xl">
-              Document Your Journey, Share Your Adventures
+        <div className="grid grid-cols-1 gap-14 lg:grid-cols-2 lg:items-center">
+          <div className="space-y-7">
+            <p className="eyebrow text-primary">Travel journaling, reimagined</p>
+            <h1 className="font-display text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-[3.35rem]">
+              Every mile deserves a story worth returning to
             </h1>
-            <p className="text-lg text-muted-foreground sm:text-xl max-w-2xl">
-              Write trip journals with photos, tagged places and maps, then share the story when you are ready.
+            <p className="max-w-xl text-lg text-muted-foreground sm:text-xl">
+              Photo-first entries, maps that follow the route, and a calm editor built for the way you actually travel — inspired by the best journal apps in the world.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-              <Button size="lg" className="btn-stamp" asChild>
-                <Link to={isAuthenticated ? "/create" : "/register"}>
-                  {isAuthenticated ? "Start journaling" : "Create an account"}
+              <Button size="lg" asChild>
+                <Link to={isAuthenticated ? '/create' : '/register'}>
+                  {isAuthenticated ? 'Write today’s entry' : 'Start free'}
                 </Link>
               </Button>
               <Button variant="outline" size="lg" asChild>
-                <Link to="/explore">Explore journals</Link>
+                <Link to="/explore">Browse public journals</Link>
               </Button>
             </div>
-            
-            <div className="pt-6">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <MapPin className="h-4 w-4 text-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Location Tagging</span>
+
+            <div className="grid grid-cols-2 gap-3 pt-4 sm:grid-cols-4">
+              {[
+                { icon: MapPin, label: 'Places' },
+                { icon: BookOpen, label: 'Rich entries' },
+                { icon: Camera, label: 'Galleries' },
+                { icon: Globe, label: 'Live maps' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-card/60 px-2.5 py-2 backdrop-blur-sm">
+                  <span className="feature-icon-ring h-9 w-9 rounded-lg">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </span>
+                  <span className="text-sm font-medium">{label}</span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <BookOpen className="h-4 w-4 text-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Rich Text Editor</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <Camera className="h-4 w-4 text-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Photo Galleries</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <Globe className="h-4 w-4 text-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Interactive Maps</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-          
-          <div className="hidden lg:grid grid-cols-2 gap-4">
-            <div className="col-span-2 overflow-hidden rounded-xl shadow-lg transition-transform duration-300 hover:rotate-0 group">
+
+          <div className="hidden lg:grid grid-cols-2 gap-3">
+            <div className="col-span-2 overflow-hidden rounded-2xl border border-border/60 shadow-lg card-lift">
               <img
                 src="https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=70&w=900&auto=format&fit=crop"
                 alt="Travel journal entry"

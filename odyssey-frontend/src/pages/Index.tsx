@@ -1,7 +1,6 @@
 
 import { useJournal } from '@/contexts/JournalContext';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import PageShell from '@/components/layout/PageShell';
 import Hero from '@/components/home/Hero';
 import Features from '@/components/home/Features';
 import FeaturedJournals from '@/components/home/FeaturedJournals';
@@ -12,9 +11,7 @@ const HomePage = () => {
   const { isLoading } = useJournal();
     
   return (
-    <>
-      <Navbar />
-      <main>
+    <PageShell hero>
         <Hero />
         
         {isLoading ? (
@@ -49,9 +46,7 @@ const HomePage = () => {
         <Features />
         <MapPreview />
         <CallToAction />
-      </main>
-      <Footer />
-    </>
+    </PageShell>
   );
 };
 
