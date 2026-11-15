@@ -1,7 +1,13 @@
-
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+
+const PLACES = [
+  { x: 120, y: 150, label: 'Lisbon', d: '0s' },
+  { x: 300, y: 95, label: 'Reykjavík', d: '0.4s' },
+  { x: 470, y: 190, label: 'Petra', d: '0.8s' },
+  { x: 640, y: 130, label: 'Kyoto', d: '1.2s' },
+];
 
 export default function MapPreview() {
   return (
@@ -9,37 +15,57 @@ export default function MapPreview() {
       <div className="container">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1">
-            <div className="relative rounded-xl overflow-hidden h-[400px] shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?q=70&w=1200&auto=format&fit=crop" 
-                alt="World map with travel markers" 
-                width={1200}
-                height={800}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              
-              {/* Simulated map markers */}
-              <div className="absolute top-1/4 left-1/4 w-4 h-4 rounded-full bg-primary shadow-lg animate-pulse"></div>
-              <div className="absolute top-1/3 left-1/2 w-4 h-4 rounded-full bg-primary shadow-lg animate-pulse"></div>
-              <div className="absolute top-2/3 left-3/4 w-4 h-4 rounded-full bg-primary shadow-lg animate-pulse"></div>
-              <div className="absolute top-1/2 left-1/3 w-4 h-4 rounded-full bg-primary shadow-lg animate-pulse"></div>
+            {/* Crafted map card: graticule, one route drawing itself, pinned places */}
+            <div className="relative rounded-xl overflow-hidden h-[400px] border border-border bg-card shadow-sm">
+              <svg viewBox="0 0 800 300" className="h-full w-full" role="img" aria-label="A travel route crossing a map, with four pinned places">
+                <g stroke="hsl(var(--border))" strokeWidth="1">
+                  {Array.from({ length: 15 }, (_, i) => (
+                    <line key={`v${i}`} x1={(i + 1) * 50} y1="0" x2={(i + 1) * 50} y2="300" />
+                  ))}
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <line key={`h${i}`} x1="0" y1={(i + 1) * 50} x2="800" y2={(i + 1) * 50} />
+                  ))}
+                </g>
+                <path
+                  d="M 120 150 C 200 220, 260 40, 300 95 S 400 260, 470 190 S 590 60, 640 130"
+                  fill="none"
+                  stroke="hsl(var(--accent))"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray="7 6"
+                  className="animate-route-dash"
+                />
+                {PLACES.map((place) => (
+                  <g key={place.label} className="animate-pin-drop" style={{ animationDelay: place.d }}>
+                    <circle cx={place.x} cy={place.y} r="7" fill="hsl(var(--accent))" />
+                    <circle cx={place.x} cy={place.y} r="2.5" fill="hsl(var(--card))" />
+                    <text
+                      x={place.x}
+                      y={place.y - 14}
+                      textAnchor="middle"
+                      className="fill-muted-foreground"
+                      fontSize="12"
+                      fontFamily="ui-monospace, monospace"
+                    >
+                      {place.label}
+                    </text>
+                  </g>
+                ))}
+              </svg>
             </div>
           </div>
-          
+
           <div className="order-1 md:order-2">
-            <h2 className="text-3xl font-bold mb-4">Interactive Travel Map</h2>
+            <h2 className="text-3xl font-semibold mb-4">Your travels on one map</h2>
             <p className="text-lg text-muted-foreground mb-6">
-              Visualize your travels on an interactive world map. Each journal entry is pinned to its location, creating a beautiful visual representation of your adventures around the globe.
+              Every journal entry is pinned to where it happened. Open the map and follow the route you actually took.
             </p>
             <p className="text-muted-foreground mb-6">
-              Click on any marker to quickly access your journal entry for that location. Filter by date, country, or trip to focus on specific journeys.
+              Click a marker to open the entry for that place, or filter by country and date to focus on one journey.
             </p>
             <Button asChild>
               <Link to="/map" className="flex items-center">
-                Explore the Map <ArrowRight className="ml-2 h-5 w-5" />
+                Open the map <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
           </div>

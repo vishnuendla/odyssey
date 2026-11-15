@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { aiApi } from '@/services/api';
 import type { AiStatus, AskAnswer } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { BookOpen, Loader2, Sparkles } from 'lucide-react';
+import { BookOpen, Loader2 } from 'lucide-react';
 
 const SUGGESTIONS = [
   'Where did I eat the best meal?',
@@ -80,16 +80,11 @@ const Ask = () => {
       <Navbar />
       <div className="container mx-auto py-8 px-4">
         <div className="mx-auto max-w-3xl">
-          <div className="mb-8 flex items-center gap-3">
-            <div className="rounded-full bg-primary/10 p-2" aria-hidden="true">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Ask your journal</h1>
-              <p className="text-sm text-muted-foreground">
-                Semantic answers from your own entries, with citations back to the words you wrote.
-              </p>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-semibold">Ask your journal</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Semantic answers from your own entries, with citations back to the words you wrote.
+            </p>
           </div>
 
           {status && !status.configured && (
