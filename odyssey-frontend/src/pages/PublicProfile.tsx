@@ -86,7 +86,7 @@ const PublicProfile = () => {
         <Navbar />
         <div className="container max-w-5xl mx-auto py-24 px-4 text-center">
           <UserIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h1 className="text-2xl font-bold mb-2">Traveler not found</h1>
+          <h1 className="text-2xl font-semibold mb-2">Traveler not found</h1>
           <p className="text-muted-foreground mb-6">
             This profile may have been removed.
           </p>
@@ -112,7 +112,7 @@ const PublicProfile = () => {
             </Avatar>
 
             <div className="flex-1">
-              <h1 className="text-3xl font-bold">{profile.name}</h1>
+              <h1 className="text-3xl font-semibold">{profile.name}</h1>
 
               <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:justify-start">
                 {profile.location && (
@@ -154,7 +154,7 @@ const PublicProfile = () => {
           </CardContent>
         </Card>
 
-        <h2 className="text-2xl font-bold mb-4">Public Journals</h2>
+        <h2 className="text-2xl font-semibold mb-4">Public Journals</h2>
         <JournalList
           journals={journals}
           showCreateButton={false}

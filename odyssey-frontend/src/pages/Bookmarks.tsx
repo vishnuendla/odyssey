@@ -62,7 +62,7 @@ const BookmarksPage = () => {
       <Navbar />
       <main className="container py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Saved Journals</h1>
+          <h1 className="text-3xl font-semibold mb-2">Saved Journals</h1>
           <p className="text-muted-foreground">
             Journals you bookmarked to read again.
           </p>

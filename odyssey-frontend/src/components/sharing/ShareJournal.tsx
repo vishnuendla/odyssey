@@ -36,7 +36,7 @@ const ShareJournal: React.FC<ShareJournalProps> = ({ journalId, title }) => {
       .then(() => {
         setCopied(true);
         toast({
-          description: "Link copied to clipboard!",
+          description: 'Link copied to clipboard',
         });
         setTimeout(() => setCopied(false), 2000);
       })
@@ -70,7 +70,7 @@ const ShareJournal: React.FC<ShareJournalProps> = ({ journalId, title }) => {
     {
       name: "Email",
       icon: <Mail className="h-4 w-4 mr-2" />,
-      url: `mailto:?subject=${encodedTitle}&body=${encodeURIComponent(`Hey! Check out this travel journal I found: ${journalUrl}\n\nLet me know what you think!`)}`,
+      url: `mailto:?subject=${encodedTitle}&body=${encodeURIComponent(`I found this travel journal: ${journalUrl}\n\nLet me know what you think.`)}`,
       color: "bg-gray-500 hover:bg-gray-500/80"
     }
   ];

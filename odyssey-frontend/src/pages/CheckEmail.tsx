@@ -28,7 +28,7 @@ const CheckEmail = () => {
             <MailCheck className="h-7 w-7 text-primary" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-bold">Check your inbox</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold">Check your inbox</h1>
             <p className="text-muted-foreground">
               {isVerification
                 ? 'We sent you a verification link.'

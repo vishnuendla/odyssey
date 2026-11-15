@@ -15,7 +15,7 @@ const About = () => {
             <div className="flex justify-center mb-6">
               <Globe className="h-16 w-16 text-primary" />
             </div>
-            <h1 className="text-4xl font-bold mb-4">About Odyssey</h1>
+            <h1 className="text-4xl font-semibold mb-4">About Odyssey</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Your journey deserves to be remembered. We help travelers create beautiful, 
               shareable stories of their adventures around the world.
