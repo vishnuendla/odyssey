@@ -29,7 +29,7 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 - **Accounts** — email/password registration with server-side validation, email verification, password reset, and session management. Access tokens live in short-lived HttpOnly cookies; rotating refresh tokens can be reviewed and revoked from the Security page.
 - **Operations** — Docker images for the API and web app, a Compose stack with MySQL, Actuator health probes, and backup/restore guides.
 - **Dark mode and responsive layout** - usable from a phone to a desktop.
-- **Editorial design** - a warm paper-and-teal palette, serif display headings, a masonry photo wall on Explore, an animated route teaser in the hero, page transitions and card hover lift, all without extra runtime dependencies.
+- **Editorial design** - a warm paper-and-teal palette with serif display headings, a quiet chrome around two rich moments (the hero collage with its animated route teaser and the Explore masonry photo wall), rubber-stamp primary actions, a morphing navigation burger and a route-line signature that appears in the loader, empty states and section dividers. Runs on tokens and hand-written CSS from the [unslop](https://github.com/heydamir/unslop) method, with control patterns adapted from [Uiverse galaxy](https://github.com/uiverse-io/galaxy) - no extra runtime dependencies.
 - **Reading mode** - journal pages render on a relaxed typographic scale with reading time and a scroll progress bar.
 - **Installable app** - a web app manifest and service worker let browsers install Odyssey to a home screen and serve the shell offline; API traffic is never cached.
 - **Accessible by default** — keyboard-operable journal cards and map markers, labelled pagination, lazy-loaded gallery images and a feed that loads authors and places without per-entry queries.
@@ -55,6 +55,10 @@ A full-stack travel journaling platform for documenting, sharing and reliving tr
 | Profile | Mobile |
 | --- | --- |
 | ![Profile](docs/screenshots/11-profile.png) | ![Mobile home](docs/screenshots/12-mobile-home.png) |
+
+| Ask your journal | Dark mode |
+| --- | --- |
+| ![Ask](docs/screenshots/09-ask.png) | ![Dark home](docs/screenshots/13-dark-home.png) |
 
 ## Tech stack
 
