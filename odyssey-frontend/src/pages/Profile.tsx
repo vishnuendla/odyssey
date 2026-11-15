@@ -5,8 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AccountLayout from '@/components/layout/AccountLayout';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -19,8 +18,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, Settings, MapPin, Mail, Calendar, Check, X, BookOpen, Globe, Camera as CameraIcon, FileText, Route, Tag } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Camera, MapPin, Mail, Calendar, Check, X, BookOpen, Globe, Camera as CameraIcon, FileText, Route, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { authApi, journalApi, statsApi } from '@/services/api';
 import type { UserStats } from '@/types';
@@ -146,106 +145,159 @@ const Profile = () => {
 
   if (isLoading || !user) {
     return (
-      <div className="min-h-screen bg-background flex justify-center items-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-24 w-24 bg-muted rounded-full mb-4"></div>
-          <div className="h-6 w-48 bg-muted rounded mb-2"></div>
-          <div className="h-4 w-64 bg-muted rounded"></div>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="route-loader" aria-hidden="true" />
       </div>
     );
   }
-  
+
+  const watchedName = form.watch('name') || user.name;
+  const watchedLocation = form.watch('location');
+  const watchedBio = form.watch('bio');
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container max-w-4xl mx-auto py-8 px-4">
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold">My Profile</h1>
-            <p className="text-muted-foreground">Update your personal information</p>
+    <AccountLayout
+      title="My profile"
+      description="Your public identity, travel stats, and how other travellers see you on Odyssey."
+    >
+        <section
+          aria-label="Profile header"
+          className="surface-panel overflow-hidden p-0"
+        >
+          <div className="profile-cover" />
+          <div className="px-4 pb-5 sm:px-6">
+            <Avatar className="-mt-10 h-20 w-20 border-4 border-background shadow-md sm:-mt-12 sm:h-24 sm:w-24">
+              <AvatarImage
+                src={previewUrl || user.avatar}
+                alt={user.name}
+              />
+              <AvatarFallback className="bg-primary/10 text-3xl">
+                {user.name?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="mt-3">
+              <h2 className="text-2xl font-semibold tracking-tight">{watchedName}</h2>
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                {watchedLocation && (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4" aria-hidden="true" />
+                    {watchedLocation}
+                  </span>
+                )}
+                <span className="flex items-center gap-1.5">
+                  <Mail className="h-4 w-4" aria-hidden="true" />
+                  {user.email}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4" aria-hidden="true" />
+                  Joined {new Date(user.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+
+              {watchedBio && (
+                <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
+                  {watchedBio}
+                </p>
+              )}
+
+              <p className="mt-3 text-sm text-muted-foreground">
+                {JournalsCount === 0 && <span>No journals created</span>}
+                {JournalsCount === 1 && <span>{JournalsCount} journal created</span>}
+                {JournalsCount > 1 && <span>{JournalsCount} journals created</span>}
+              </p>
+            </div>
           </div>
-          <Button 
-            variant="outline" 
-            className="mt-4 md:mt-0 flex items-center"
-            onClick={() => navigate('/settings')}
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Go to Settings
-          </Button>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>Profile Preview</CardTitle>
-              <CardDescription>How others see your profile</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center text-center">
-              <Avatar className="w-32 h-32 border-4 border-background shadow-lg mb-4">
-                <AvatarImage 
-                  src={previewUrl || user?.avatar} 
-                  alt={user?.name} 
-                />
-                <AvatarFallback className="text-4xl bg-primary/10">{user?.name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              
-              <h2 className="text-2xl font-semibold mt-2">{form.watch('name') || user.name}</h2>
-              
-              {form.watch('location') && (
-                <div className="flex items-center mt-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span>{form.watch('location')}</span>
+        {stats && (
+          <section className="mt-8">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold tracking-tight">Travel stats</h2>
+              <p className="text-sm text-muted-foreground">
+                Everything you have written, mapped and photographed
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+              {[
+                { icon: BookOpen, label: 'Journals', value: stats.journals.toLocaleString() },
+                { icon: Globe, label: 'Countries', value: stats.countries.toLocaleString() },
+                { icon: MapPin, label: 'Cities', value: stats.cities.toLocaleString() },
+                { icon: CameraIcon, label: 'Photos', value: stats.photos.toLocaleString() },
+                { icon: FileText, label: 'Words', value: stats.words.toLocaleString() },
+                { icon: Route, label: 'Km travelled', value: stats.kilometres.toLocaleString(undefined, { maximumFractionDigits: 1 }) },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="stat-tile">
+                  <span className="stat-tile-value">{value}</span>
+                  <span className="stat-tile-label flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                    {label}
+                  </span>
                 </div>
-              )}
-
-              <div className="flex items-center mt-2 text-muted-foreground">
-                <Mail className="h-4 w-4 mr-1" />
-                <span>{user.email}</span>
+              ))}
+            </div>
+            {stats.topTags.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Tag className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                {stats.topTags.map(({ tag, count }) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-border px-3 py-0.5 text-xs text-muted-foreground"
+                  >
+                    {tag} · {count}
+                  </span>
+                ))}
               </div>
-              
-              <div className="flex items-center mt-2 text-muted-foreground">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
-              </div>
+            )}
+          </section>
+        )}
 
-              {form.watch('bio') && (
-                <div className="mt-4 text-sm">
-                  <p className="whitespace-pre-wrap">{form.watch('bio')}</p>
-                </div>
-              )}
-              
-              <div className="mt-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2 justify-center">
-                  {JournalsCount === 0 && <span>No journals created</span>}
-                  {JournalsCount === 1 && <span>{JournalsCount} journal created</span>}
-                  {JournalsCount > 1 && <span>{JournalsCount} journals created</span>}
-                </div>  </div>
-            </CardContent>
-          </Card>
-
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Edit Profile</CardTitle>
-              <CardDescription>Update your personal details and profile picture</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <section className="mt-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold tracking-tight">Edit Profile</h2>
+            <p className="text-sm text-muted-foreground">
+              Update your personal details and profile picture
+            </p>
+          </div>
+          <Card>
+            <CardContent className="p-5">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Location</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="City, Country"
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="avatar"
@@ -253,18 +305,18 @@ const Profile = () => {
                       <FormItem>
                         <FormLabel>Avatar URL</FormLabel>
                         <FormControl>
-                          <div className="flex items-center space-x-2">
-                            <Input 
-                              placeholder="https://example.com/avatar.jpg" 
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="https://example.com/avatar.jpg"
                               {...field}
-                              value={field.value || ''} 
+                              value={field.value || ''}
                               onChange={(e) => {
                                 field.onChange(e);
                                 handleAvatarChange(e);
                               }}
                             />
-                            <div className="flex-shrink-0">
-                              <Avatar className="w-10 h-10">
+                            <div className="shrink-0">
+                              <Avatar className="h-10 w-10">
                                 <AvatarImage src={previewUrl || user.avatar} />
                                 <AvatarFallback>
                                   <Camera className="h-4 w-4" />
@@ -285,11 +337,11 @@ const Profile = () => {
                       <FormItem>
                         <FormLabel>Bio</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Tell us about yourself" 
-                            className="resize-none" 
+                          <Textarea
+                            placeholder="Tell us about yourself"
+                            className="resize-none"
                             rows={3}
-                            {...field} 
+                            {...field}
                             value={field.value || ''}
                           />
                         </FormControl>
@@ -303,28 +355,10 @@ const Profile = () => {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="City, Country" 
-                            {...field} 
-                            value={field.value || ''} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                  <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={() => {
                         form.reset({
                           name: user.name,
@@ -338,7 +372,7 @@ const Profile = () => {
                       <X className="mr-2 h-4 w-4" />
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       type="submit"
                       disabled={isSubmitting || !form.formState.isDirty}
                     >
@@ -350,50 +384,8 @@ const Profile = () => {
               </Form>
             </CardContent>
           </Card>
-        </div>
-
-        {stats && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Travel stats</CardTitle>
-              <CardDescription>Everything you have written, mapped and photographed</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {[
-                  { icon: BookOpen, label: 'Journals', value: stats.journals.toLocaleString() },
-                  { icon: Globe, label: 'Countries', value: stats.countries.toLocaleString() },
-                  { icon: MapPin, label: 'Cities', value: stats.cities.toLocaleString() },
-                  { icon: CameraIcon, label: 'Photos', value: stats.photos.toLocaleString() },
-                  { icon: FileText, label: 'Words', value: stats.words.toLocaleString() },
-                  { icon: Route, label: 'Km travelled', value: stats.kilometres.toLocaleString(undefined, { maximumFractionDigits: 1 }) },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="rounded-md border border-border p-3 text-center">
-                    <Icon className="mx-auto h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                    <div className="mt-1 text-xl font-semibold">{value}</div>
-                    <div className="text-xs text-muted-foreground">{label}</div>
-                  </div>
-                ))}
-              </div>
-              {stats.topTags.length > 0 && (
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <Tag className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {stats.topTags.map(({ tag, count }) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-border px-3 py-0.5 text-xs text-muted-foreground"
-                    >
-                      {tag} · {count}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-      <Footer />
-    </div>
+        </section>
+    </AccountLayout>
   );
 };
 

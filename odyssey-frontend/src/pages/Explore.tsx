@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AppPage from '@/components/layout/AppPage';
 import JournalList from '@/components/journals/JournalList';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -152,54 +151,49 @@ const ExplorePage = () => {
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="container py-6 sm:py-12 px-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold mb-2">Explore journals</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Travel stories from around the world
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 mb-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search journals..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 text-sm sm:text-base"
-              />
+      <AppPage
+        eyebrow="Explore"
+        title="Discover travel stories"
+        description="Photo-led journals from everywhere — filter by place, tag, or what’s trending."
+      >
+        <div className="sticky top-[4.5rem] z-30 mb-6 rounded-2xl border border-border/70 bg-card/90 p-3 shadow-sm backdrop-blur-md">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search journals..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 text-sm sm:text-base"
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {locations.map((country) => (
-                  <SelectItem key={country} value={country}>
-                    {country}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="oldest">Oldest First</SelectItem>
-                <SelectItem value="popular">Most Popular</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-2 lg:w-auto">
+              <Select value={locationFilter} onValueChange={setLocationFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  {locations.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="popular">Most Popular</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -214,7 +208,7 @@ const ExplorePage = () => {
                 className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                   tagFilter === tag
                     ? 'border-primary bg-primary text-primary-foreground'
-                    : 'bg-background hover:bg-accent'
+                    : 'bg-card hover:bg-accent'
                 }`}
               >
                 #{tag}
@@ -230,14 +224,13 @@ const ExplorePage = () => {
         )}
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="rounded-lg overflow-hidden border">
-                <Skeleton className="h-48 w-full" />
-                <div className="p-4">
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-full mb-1" />
-                  <Skeleton className="h-4 w-full mb-1" />
+              <div key={i} className="overflow-hidden rounded-xl border bg-card">
+                <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                <div className="space-y-3 p-5">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-2/3" />
                 </div>
               </div>
@@ -283,9 +276,7 @@ const ExplorePage = () => {
             )}
           </>
         )}
-      </main>
-      <Footer />
-    </>
+      </AppPage>
   );
 };
 

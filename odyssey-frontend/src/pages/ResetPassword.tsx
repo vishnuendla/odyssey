@@ -79,19 +79,25 @@ const ResetPassword = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="space-y-2 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              {succeeded ? <CheckCircle2 className="h-6 w-6 text-green-600" /> : <KeyRound className="h-6 w-6 text-primary" />}
+        <div className="w-full max-w-md space-y-8">
+          <div className="space-y-3 text-center">
+            <div
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
+                succeeded ? 'bg-green-500/15' : 'bg-secondary'
+              }`}
+            >
+              {succeeded ? <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" /> : <KeyRound className="h-6 w-6 text-primary" />}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-semibold">
-              {succeeded ? 'Password updated' : 'Choose a new password'}
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              {succeeded
-                ? 'Your password has been changed and all other sessions were signed out.'
-                : 'Pick a strong password you do not use anywhere else.'}
-            </p>
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                {succeeded ? 'Password updated' : 'Choose a new password'}
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                {succeeded
+                  ? 'Your password has been changed and all other sessions were signed out.'
+                  : 'Pick a strong password you do not use anywhere else.'}
+              </p>
+            </div>
           </div>
 
           {succeeded ? (
@@ -114,7 +120,7 @@ const ResetPassword = () => {
               )}
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
                   <FormField
                     control={form.control}
                     name="password"
@@ -179,8 +185,8 @@ const ResetPassword = () => {
                 </form>
               </Form>
 
-              <div className="text-center text-sm">
-                <Link to="/login" className="text-primary hover:underline">
+              <div className="text-center text-sm text-muted-foreground">
+                <Link to="/login" className="font-medium text-primary hover:underline">
                   Back to sign in
                 </Link>
               </div>

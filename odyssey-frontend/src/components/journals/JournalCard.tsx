@@ -73,16 +73,16 @@ const JournalCard = memo(({
   };
 
   return (
-    <Link to={`/journals/${journal.id}`} className="block">
-      <div className="group relative bg-card rounded-lg overflow-hidden border transition-[transform,box-shadow,border-color] duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/40 h-full">
-        <div className={`relative overflow-hidden ${masonry ? 'max-h-[420px]' : 'aspect-[16/9]'}`}>
+    <Link to={`/journals/${journal.id}`} className="block h-full">
+      <article className="card-lift group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card">
+        <div className={`relative overflow-hidden ${masonry ? 'max-h-[420px]' : ''}`}>
           <OptimizedImage
             src={coverImage}
             alt={journal.title}
-            aspectRatio={masonry ? 'auto' : 'video'}
+            aspectRatio={masonry ? 'auto' : 'landscape'}
             className={`object-cover w-full ${masonry ? 'h-auto' : 'h-full'}`}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
           <Button
             type="button"
             variant="secondary"
@@ -90,7 +90,7 @@ const JournalCard = memo(({
             onClick={handleBookmark}
             disabled={savingBookmark}
             aria-label={bookmarked ? 'Remove bookmark' : 'Save journal'}
-            className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full shadow opacity-90 transition-opacity group-hover:opacity-100"
+            className="absolute right-3 top-3 z-10 h-8 w-8 rounded-full border bg-background/90 shadow-sm backdrop-blur-sm transition-opacity group-hover:bg-background"
           >
             <Bookmark className={`h-4 w-4 ${bookmarked ? 'fill-current text-primary' : ''}`} />
           </Button>
@@ -102,41 +102,45 @@ const JournalCard = memo(({
           )}
         </div>
 
-        <div className="p-4">
-          <div className="flex items-center mb-3">
-            <div className="flex items-center space-x-2">
-              {userAvatar ? (
-                <img
-                  src={userAvatar}
-                  alt={userName}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-8 h-8 rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">
-                    {getInitials(userName)}
-                  </span>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-medium">By: {userName}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(journal.createdAt), { addSuffix: true })}
-                </p>
+        <div className="flex flex-1 flex-col p-5">
+          <div className="mb-3 flex items-center gap-2">
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt={userName}
+                loading="lazy"
+                decoding="async"
+                className="h-8 w-8 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary">
+                <span className="text-xs font-semibold text-secondary-foreground">
+                  {getInitials(userName)}
+                </span>
               </div>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">By: {userName}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(journal.createdAt), { addSuffix: true })}
+              </p>
             </div>
           </div>
 
-          <h3 className="font-display text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">{journal.title}</h3>
+          <h3 className="font-display text-lg font-semibold tracking-tight line-clamp-2 transition-colors group-hover:text-primary">
+            {journal.title}
+          </h3>
+
+          <p className="mt-1.5 text-sm leading-6 text-muted-foreground line-clamp-1">
+            {journal.content}
+          </p>
 
           {journal.tags && journal.tags.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {journal.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                  className="rounded-full border border-transparent bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground"
                 >
                   #{tag}
                 </span>
@@ -144,30 +148,26 @@ const JournalCard = memo(({
             </div>
           )}
 
-          <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
-            {journal.content}
-          </p>
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground space-y-2 sm:space-y-0">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <Heart className="h-4 w-4 mr-1" />
-                <span>{reactionCount}</span>
-              </div>
-              <div className="flex items-center">
-                <MessageCircle className="h-4 w-4 mr-1" />
-                <span>{commentCount}</span>
-              </div>
+          <div className="mt-auto flex flex-col pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5">
+                <Heart className="h-4 w-4" />
+                {reactionCount}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <MessageCircle className="h-4 w-4" />
+                {commentCount}
+              </span>
             </div>
             {journal.location && !masonry && (
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span className="truncate">{journal.location.name}</span>
-              </div>
+              <span className="mt-2 flex items-center gap-1.5 sm:mt-0">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">{journal.location.name}</span>
+              </span>
             )}
           </div>
         </div>
-      </div>
+      </article>
     </Link>
   );
 });

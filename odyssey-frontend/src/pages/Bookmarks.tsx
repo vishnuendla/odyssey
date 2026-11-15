@@ -60,22 +60,25 @@ const BookmarksPage = () => {
   return (
     <>
       <Navbar />
-      <main className="container py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold mb-2">Saved Journals</h1>
-          <p className="text-muted-foreground">
-            Journals you bookmarked to read again.
-          </p>
+      <main className="mx-auto w-full max-w-6xl px-4 py-12">
+        <div className="page-head">
+          <div className="page-head-body">
+            <span className="eyebrow">Saved</span>
+            <h1 className="text-3xl font-semibold tracking-tight">Saved Journals</h1>
+            <p className="text-muted-foreground">
+              Journals you bookmarked to read again.
+            </p>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-lg overflow-hidden border">
-                <Skeleton className="h-48 w-full" />
-                <div className="p-4">
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-full mb-1" />
+              <div key={i} className="overflow-hidden rounded-xl border bg-card">
+                <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                <div className="space-y-3 p-5">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-2/3" />
                 </div>
               </div>
