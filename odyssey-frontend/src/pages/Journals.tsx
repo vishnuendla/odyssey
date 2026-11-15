@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useJournal } from '@/contexts/JournalContext';
 import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AppPage from '@/components/layout/AppPage';
 import JournalList from '@/components/journals/JournalList';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Sparkles } from 'lucide-react';
@@ -50,19 +49,16 @@ const JournalsPage = () => {
   });
 
   return (
-    <>
-      <Navbar />
-      <main className="container py-12">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold mb-2">My Travel Journals</h1>
-            <p className="text-muted-foreground">
-              {userJournals.length > 0 
-                ? `You have ${userJournals.length} journal ${userJournals.length === 1 ? 'entry' : 'entries'}`
-                : 'Start documenting your travel experiences'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 mt-4 md:mt-0">
+      <AppPage
+        eyebrow="Your library"
+        title="My travel journals"
+        description={
+          userJournals.length > 0
+            ? `${userJournals.length} ${userJournals.length === 1 ? 'entry' : 'entries'} — drafts and published trips in one calm workspace.`
+            : 'Start documenting where you went and how it felt.'
+        }
+        actions={
+          <>
             <Button variant="outline" asChild>
               <Link to="/ask">
                 <Sparkles className="h-4 w-4 mr-2" /> Ask your journal
@@ -70,12 +66,12 @@ const JournalsPage = () => {
             </Button>
             <Button asChild>
               <Link to="/create">
-                <PlusCircle className="h-4 w-4 mr-2" /> New Journal
+                <PlusCircle className="h-4 w-4 mr-2" /> New journal
               </Link>
             </Button>
-          </div>
-        </div>
-
+          </>
+        }
+      >
         <div className="mb-6 flex flex-wrap gap-2">
           <Button
             variant={filter === 'all' ? 'default' : 'outline'}
@@ -101,14 +97,13 @@ const JournalsPage = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-lg overflow-hidden border">
-                <Skeleton className="h-48 w-full" />
-                <div className="p-4">
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-full mb-1" />
-                  <Skeleton className="h-4 w-full mb-1" />
+              <div key={i} className="overflow-hidden rounded-xl border bg-card">
+                <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                <div className="space-y-3 p-5">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-2/3" />
                 </div>
               </div>
@@ -139,9 +134,7 @@ const JournalsPage = () => {
             </Button>
           </div>
         )}
-      </main>
-      <Footer />
-    </>
+      </AppPage>
   );
 };
 

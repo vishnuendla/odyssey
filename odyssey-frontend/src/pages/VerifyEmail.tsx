@@ -48,15 +48,19 @@ const VerifyEmail = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            {status === 'loading' && <Loader2 className="h-7 w-7 animate-spin text-primary" />}
-            {status === 'success' && <CheckCircle2 className="h-7 w-7 text-green-600" />}
-            {status === 'error' && <XCircle className="h-7 w-7 text-destructive" />}
+        <div className="w-full max-w-md space-y-8 text-center">
+          <div
+            className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
+              status === 'success' ? 'bg-green-500/15' : 'bg-muted'
+            }`}
+          >
+            {status === 'loading' && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+            {status === 'success' && <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />}
+            {status === 'error' && <XCircle className="h-6 w-6 text-destructive" />}
           </div>
 
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-semibold">
+          <div className="space-y-3">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
               {status === 'loading' && 'Verifying your email'}
               {status === 'success' && 'Email verified'}
               {status === 'error' && 'Verification problem'}
@@ -70,9 +74,9 @@ const VerifyEmail = () => {
             )}
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {status === 'success' && (
-              <Button asChild>
+              <Button asChild className="h-11">
                 <Link to={isAuthenticated ? '/journals' : '/login'}>
                   {isAuthenticated ? 'Continue to your journals' : 'Sign in'}
                 </Link>
@@ -80,12 +84,12 @@ const VerifyEmail = () => {
             )}
             {status === 'error' && (
               <>
-                <Button asChild>
+                <Button asChild className="h-11">
                   <Link to={isAuthenticated ? '/settings' : '/login'}>
                     {isAuthenticated ? 'Resend from settings' : 'Sign in'}
                   </Link>
                 </Button>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" asChild className="h-11">
                   <Link to="/">Go home</Link>
                 </Button>
               </>

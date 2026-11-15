@@ -22,12 +22,18 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				/* Editorial serif for display headings; system stacks only, no webfont. */
+				sans: [
+					'"DM Sans"',
+					'system-ui',
+					'-apple-system',
+					'BlinkMacSystemFont',
+					'"Segoe UI"',
+					'Roboto',
+					'sans-serif',
+				],
 				display: [
+					'"Fraunces"',
 					'"Iowan Old Style"',
-					'"Palatino Linotype"',
-					'Palatino',
-					'Charter',
 					'Georgia',
 					'serif',
 				],

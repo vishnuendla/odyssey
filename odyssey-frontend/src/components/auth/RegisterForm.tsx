@@ -92,9 +92,9 @@ export default function RegisterForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Create an account</h1>
+    <div className="mx-auto w-full max-w-md space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Create an account</h1>
         <p className="text-sm sm:text-base text-muted-foreground">Enter your details to get started with Odyssey</p>
       </div>
 
@@ -173,17 +173,23 @@ export default function RegisterForm() {
                     </button>
                   </div>
                 </FormControl>
-                <div className="mt-2 space-y-1">
+                <div className="mt-3 space-y-1.5">
                   {passwordChecks.map((criterion) => {
                     const met = criterion.regex.test(password);
                     return (
-                      <div key={criterion.label} className="flex items-center text-xs sm:text-sm">
-                        {met ? (
-                          <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-2 flex-shrink-0" />
-                        ) : (
-                          <X className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground mr-2 flex-shrink-0" />
-                        )}
-                        <span className={met ? 'text-green-500' : 'text-muted-foreground'}>
+                      <div key={criterion.label} className="flex items-center gap-2 text-xs sm:text-sm">
+                        <span
+                          className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full ${
+                            met ? 'bg-green-500/15' : 'bg-muted'
+                          }`}
+                        >
+                          {met ? (
+                            <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </span>
+                        <span className={met ? 'text-foreground' : 'text-muted-foreground'}>
                           {criterion.label}
                         </span>
                       </div>
@@ -246,7 +252,7 @@ export default function RegisterForm() {
             )}
           />
 
-          <Button type="submit" className="w-full h-11 text-base" disabled={isLoading}>
+          <Button type="submit" className="w-full h-11" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
@@ -259,9 +265,9 @@ export default function RegisterForm() {
         </form>
       </Form>
 
-      <div className="text-center text-sm">
+      <div className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link to="/login" className="text-primary hover:underline">
+        <Link to="/login" className="font-medium text-primary hover:underline">
           Sign in
         </Link>
       </div>
