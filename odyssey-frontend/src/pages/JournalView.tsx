@@ -33,7 +33,6 @@ import {
   MessageCircle,
   ThumbsUp,
   Trash,
-  User as UserIcon,
   Loader2,
   CornerDownRight,
 } from 'lucide-react';

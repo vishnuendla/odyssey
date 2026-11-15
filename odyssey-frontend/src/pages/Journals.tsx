@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useJournal } from '@/contexts/JournalContext';
 import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+import AppPage from '@/components/layout/AppPage';
 import JournalList from '@/components/journals/JournalList';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Sparkles } from 'lucide-react';
@@ -50,20 +49,16 @@ const JournalsPage = () => {
   });
 
   return (
-    <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-6xl px-4 py-12">
-        <div className="page-head">
-          <div className="page-head-body">
-            <span className="eyebrow">Your journals</span>
-            <h1 className="text-3xl font-semibold tracking-tight">My Travel Journals</h1>
-            <p className="text-muted-foreground">
-              {userJournals.length > 0 
-                ? `You have ${userJournals.length} journal ${userJournals.length === 1 ? 'entry' : 'entries'}`
-                : 'Start documenting your travel experiences'}
-            </p>
-          </div>
-          <div className="page-head-actions">
+      <AppPage
+        eyebrow="Your library"
+        title="My travel journals"
+        description={
+          userJournals.length > 0
+            ? `${userJournals.length} ${userJournals.length === 1 ? 'entry' : 'entries'} — drafts and published trips in one calm workspace.`
+            : 'Start documenting where you went and how it felt.'
+        }
+        actions={
+          <>
             <Button variant="outline" asChild>
               <Link to="/ask">
                 <Sparkles className="h-4 w-4 mr-2" /> Ask your journal
@@ -71,12 +66,12 @@ const JournalsPage = () => {
             </Button>
             <Button asChild>
               <Link to="/create">
-                <PlusCircle className="h-4 w-4 mr-2" /> New Journal
+                <PlusCircle className="h-4 w-4 mr-2" /> New journal
               </Link>
             </Button>
-          </div>
-        </div>
-
+          </>
+        }
+      >
         <div className="mb-6 flex flex-wrap gap-2">
           <Button
             variant={filter === 'all' ? 'default' : 'outline'}
@@ -139,9 +134,7 @@ const JournalsPage = () => {
             </Button>
           </div>
         )}
-      </main>
-      <Footer />
-    </>
+      </AppPage>
   );
 };
 
