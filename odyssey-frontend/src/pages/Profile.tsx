@@ -162,7 +162,7 @@ const Profile = () => {
       <div className="container max-w-4xl mx-auto py-8 px-4">
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">My Profile</h1>
+            <h1 className="text-3xl font-semibold">My Profile</h1>
             <p className="text-muted-foreground">Update your personal information</p>
           </div>
           <Button 
@@ -190,7 +190,7 @@ const Profile = () => {
                 <AvatarFallback className="text-4xl bg-primary/10">{user?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
               
-              <h2 className="text-2xl font-bold mt-2">{form.watch('name') || user.name}</h2>
+              <h2 className="text-2xl font-semibold mt-2">{form.watch('name') || user.name}</h2>
               
               {form.watch('location') && (
                 <div className="flex items-center mt-2 text-muted-foreground">

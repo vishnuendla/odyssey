@@ -56,7 +56,7 @@ const VerifyEmail = () => {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-bold">
+            <h1 className="text-2xl sm:text-3xl font-semibold">
               {status === 'loading' && 'Verifying your email'}
               {status === 'success' && 'Email verified'}
               {status === 'error' && 'Verification problem'}

@@ -48,7 +48,7 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
       {Object.entries(journalsByMonthYear).map(([monthYear, monthJournals]) => (
         <div key={monthYear} className="relative">
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 mb-4 border-b">
-            <h3 className="text-xl font-bold text-primary">{monthYear}</h3>
+            <h3 className="text-xl font-semibold text-primary">{monthYear}</h3>
           </div>
           
           <div className="space-y-8 relative">
@@ -75,7 +75,7 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                     {/* Date column */}
                     <div className={`w-1/2 ${isEven ? 'pr-12 text-right' : 'pl-12'}`}>
                       <div className={`inline-block ${isEven ? 'mr-4' : 'ml-4'}`}>
-                        <div className="text-4xl font-bold text-primary">{formattedDate}</div>
+                        <div className="text-4xl font-semibold text-primary">{formattedDate}</div>
                         <div className="text-sm text-muted-foreground">{formattedDay}</div>
                         <div className="text-xs flex items-center mt-1 text-muted-foreground">
                           <Clock className="h-3 w-3 mr-1" />
@@ -91,7 +91,7 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                         tabIndex={0}
                         aria-label={`Open journal: ${journal.title}`}
                         onKeyDown={(event) => handleJournalKeyDown(event, journal.id)}
-                        className="overflow-hidden hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] hover:translate-y-[-2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="overflow-hidden hover:shadow-md transition-[box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => handleJournalClick(journal.id)}
                       >
                         {journal.images && journal.images.length > 0 && (
@@ -103,7 +103,7 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                               height={400}
                               loading="lazy"
                               decoding="async"
-                              className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                              className="w-full h-full object-cover"
                             />
                           </div>
                         )}
@@ -142,7 +142,7 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                     <div className="ml-12 pl-4">
                       {/* Date section */}
                       <div className="mb-3">
-                        <div className="text-2xl font-bold text-primary">{formattedDate}</div>
+                        <div className="text-2xl font-semibold text-primary">{formattedDate}</div>
                         <div className="text-xs text-muted-foreground">{formattedDay}</div>
                         <div className="text-xs flex items-center mt-1 text-muted-foreground">
                           <Clock className="h-3 w-3 mr-1" />
@@ -156,7 +156,7 @@ const Timeline: React.FC<TimelineProps> = ({ journals }) => {
                         tabIndex={0}
                         aria-label={`Open journal: ${journal.title}`}
                         onKeyDown={(event) => handleJournalKeyDown(event, journal.id)}
-                        className="overflow-hidden hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="overflow-hidden hover:shadow-md transition-[box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => handleJournalClick(journal.id)}
                       >
                         {journal.images && journal.images.length > 0 && (

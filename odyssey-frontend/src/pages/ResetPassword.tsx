@@ -84,7 +84,7 @@ const ResetPassword = () => {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               {succeeded ? <CheckCircle2 className="h-6 w-6 text-green-600" /> : <KeyRound className="h-6 w-6 text-primary" />}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold">
+            <h1 className="text-2xl sm:text-3xl font-semibold">
               {succeeded ? 'Password updated' : 'Choose a new password'}
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">

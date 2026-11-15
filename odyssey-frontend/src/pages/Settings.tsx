@@ -73,7 +73,7 @@ const Settings = () => {
       <div className="container max-w-4xl mx-auto py-8 px-4">
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Settings</h1>
+            <h1 className="text-3xl font-semibold">Settings</h1>
             <p className="text-muted-foreground">Manage your account preferences</p>
           </div>
           <Button
@@ -104,7 +104,7 @@ const Settings = () => {
                     <Button
                       key={option.value}
                       variant={theme === option.value ? 'default' : 'outline'}
-                      className={`p-4 flex flex-col items-center justify-center h-auto gap-2 transition-all ${
+                      className={`p-4 flex flex-col items-center justify-center h-auto gap-2 transition-[border-color] ${
                         theme === option.value ? 'border-2 border-primary' : ''
                       }`}
                       onClick={() => setTheme(option.value)}
@@ -259,7 +259,7 @@ const Settings = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="delete-confirmation">
-                          Type <span className="font-mono font-bold">DELETE</span> to confirm
+                          Type <span className="font-mono font-semibold">DELETE</span> to confirm
                         </Label>
                         <Input
                           id="delete-confirmation"

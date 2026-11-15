@@ -17,7 +17,7 @@ const PrivacyPolicy = () => {
             <div className="flex justify-center mb-4">
               <Shield className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
+            <h1 className="text-3xl font-semibold mb-2">Privacy Policy</h1>
             <p className="text-muted-foreground">Last updated: {lastUpdated}</p>
           </div>
 

@@ -20,7 +20,7 @@ const CreateJournalPage = () => {
     <>
       <Navbar />
       <main className="container py-12 max-w-3xl">
-        <h1 className="text-3xl font-bold mb-6">Create New Journal</h1>
+        <h1 className="text-3xl font-semibold mb-6">Create New Journal</h1>
         <CreateJournalForm />
       </main>
       <Footer />

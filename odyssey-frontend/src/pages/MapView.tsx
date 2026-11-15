@@ -90,7 +90,7 @@ const MapViewPage = () => {
       <Navbar />
       <main className="container py-6 sm:py-12 px-4">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Travel Map</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold mb-2">Travel Map</h1>
           <p className="text-muted-foreground max-w-3xl text-sm sm:text-base">
             Explore travel journals visually through our interactive map. Click on markers to view journal details.
           </p>
@@ -131,7 +131,7 @@ const MapViewPage = () => {
                 <Card className="bg-card/95 shadow-lg backdrop-blur-sm">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-bold text-base sm:text-lg line-clamp-1">{selectedJournal.title}</h3>
+                      <h3 className="font-semibold text-base sm:text-lg line-clamp-1">{selectedJournal.title}</h3>
                       <div className="flex space-x-1">
                         <Button size="icon" variant="ghost" onClick={selectPrevJournal} className="h-8 w-8">
                           <ChevronLeft className="h-4 w-4" />
@@ -182,7 +182,7 @@ const MapViewPage = () => {
                 <Card className="bg-card/95 shadow-lg backdrop-blur-sm">
                   <CardContent className="p-3 sm:p-4">
                     <div className="mb-4">
-                      <h3 className="font-bold text-base sm:text-lg mb-2">Journals</h3>
+                      <h3 className="font-semibold text-base sm:text-lg mb-2">Journals</h3>
                       {filteredJournals.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                           No journals with a location yet. Publish a journal with a place to see it here.
