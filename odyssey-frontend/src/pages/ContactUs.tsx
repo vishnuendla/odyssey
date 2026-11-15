@@ -66,10 +66,10 @@ const ContactUs = () => {
             <div className="flex justify-center mb-4">
               <MessageSquare className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold mb-4">Contact Us</h1>
+            <h1 className="text-3xl font-semibold mb-4">Contact Us</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Have a question, suggestion, or need help? We'd love to hear from you! 
-              Get in touch and we'll respond as soon as possible.
+              Have a question, suggestion, or need help? Write to us and
+              we will respond as soon as possible.
             </p>
           </div>
 

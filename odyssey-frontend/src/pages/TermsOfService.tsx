@@ -17,7 +17,7 @@ const TermsOfService = () => {
             <div className="flex justify-center mb-4">
               <Scale className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Terms of Service</h1>
+            <h1 className="text-3xl font-semibold mb-2">Terms of Service</h1>
             <p className="text-muted-foreground">Last updated: {lastUpdated}</p>
           </div>
 

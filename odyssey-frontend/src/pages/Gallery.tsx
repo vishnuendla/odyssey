@@ -46,7 +46,7 @@ const GalleryPage = () => {
       <Navbar />
       <main className="container py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Travel Gallery</h1>
+          <h1 className="text-3xl font-semibold mb-2">Travel Gallery</h1>
           <p className="text-muted-foreground">
             {items.length > 0
               ? `${items.length} photos from ${journalCount} public ${journalCount === 1 ? 'journal' : 'journals'}`
@@ -75,7 +75,7 @@ const GalleryPage = () => {
                 <OptimizedImage
                   src={image}
                   alt={journal.title}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-80 transition-opacity group-hover:opacity-100" />
                 <div className="absolute inset-x-0 bottom-0 p-3 text-white">

@@ -40,7 +40,7 @@ const TimelinePage = () => {
       <main className="container py-12 px-4">
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Your Travel Timeline</h1>
+            <h1 className="text-3xl font-semibold mb-2">Your Travel Timeline</h1>
             <p className="text-muted-foreground max-w-2xl">
               A chronological journey through all the places you've visited and documented.
             </p>

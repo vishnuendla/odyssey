@@ -119,6 +119,78 @@ img {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Every heading inherits the editorial display serif centrally. */
+  h1, h2, h3, h4 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+  }
+}
+
+@layer components {
+  /* Rubber-stamp primary action: ink border, solid offset shadow that seats on
+     press. Adapted from Uiverse.io galaxy (0xnihilism), re-inked in tokens. */
+  .btn-stamp {
+    @apply relative border-2 border-foreground bg-primary text-primary-foreground;
+    box-shadow: 4px 4px 0 0 hsl(var(--foreground));
+    transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
+  }
+  .btn-stamp:hover {
+    @apply bg-primary/90;
+  }
+  .btn-stamp:active {
+    transform: translate(3px, 3px);
+    box-shadow: 1px 1px 0 0 hsl(var(--foreground));
+  }
+  .btn-stamp:active:focus-visible {
+    transform: translate(3px, 3px);
+  }
+
+  /* Morphing hamburger for the mobile nav. Adapted from Uiverse.io galaxy
+     (Cevorob); three ink bars fold into an X. */
+  .nav-burger {
+    @apply relative block h-8 w-8 shrink-0 cursor-pointer;
+  }
+  .nav-burger input {
+    @apply absolute h-0 w-0 opacity-0;
+  }
+  .nav-burger span {
+    @apply absolute left-0 block h-[2px] w-full rounded-full bg-foreground;
+    transition: transform 0.25s ease-in-out, opacity 0.25s ease-in-out, top 0.25s ease-in-out;
+  }
+  .nav-burger span:nth-of-type(1) { top: 6px; }
+  .nav-burger span:nth-of-type(2) { top: 15px; }
+  .nav-burger span:nth-of-type(3) { top: 24px; }
+  .nav-burger input:checked ~ span:nth-of-type(1) {
+    top: 14px;
+    transform: rotate(45deg);
+  }
+  .nav-burger input:checked ~ span:nth-of-type(2) {
+    opacity: 0;
+  }
+  .nav-burger input:checked ~ span:nth-of-type(3) {
+    top: 14px;
+    transform: rotate(-45deg);
+  }
+
+  /* Route loader: a dashed orbit drawing around a pin — the Odyssey signature
+     standing in for the generic spinner. */
+  .route-loader {
+    @apply relative inline-block h-8 w-8;
+    animation: route-loader-spin 1.6s linear infinite;
+  }
+  .route-loader::before {
+    content: "";
+    @apply absolute inset-0 rounded-full border-2 border-dashed border-primary;
+  }
+  .route-loader::after {
+    content: "";
+    @apply absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent;
+  }
+  @keyframes route-loader-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .route-loader { animation: none; }
+  }
 }
 
 @layer utilities {
@@ -136,5 +208,18 @@ img {
   
   .gradient-mask {
     mask-image: linear-gradient(to top, transparent, black 50%);
+  }
+
+  /* Dashed route underline for quiet links — the signature detail. */
+  .link-route {
+    text-decoration: none;
+    transition: color 0.15s ease-out;
+  }
+  .link-route:hover {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-decoration-color: hsl(var(--accent));
+    text-underline-offset: 4px;
   }
 }

@@ -13,20 +13,20 @@ export default function Hero() {
       <div className="container relative z-10 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight">
+            <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-tight">
               Document Your Journey, <span className="text-primary">Share Your Adventures</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl">
-              Create beautiful travel journals with interactive maps, rich media galleries, and immersive storytelling.
+              Write trip journals with photos, tagged places and maps, then share the story when you are ready.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" asChild>
+              <Button size="lg" className="btn-stamp" asChild>
                 <Link to={isAuthenticated ? "/create" : "/register"}>
-                  {isAuthenticated ? "Start Journaling" : "Create an Account"}
+                  {isAuthenticated ? "Start journaling" : "Create an account"}
                 </Link>
               </Button>
               <Button variant="outline" size="lg" asChild>
-                <Link to="/explore">Explore Journals</Link>
+                <Link to="/explore">Explore journals</Link>
               </Button>
             </div>
             
@@ -69,7 +69,7 @@ export default function Hero() {
                 height={600}
                 loading="eager"
                 decoding="async"
-                className="h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="h-56 w-full object-cover"
               />
             </div>
             <div className="overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:rotate-0 hover:-translate-y-1 group -rotate-2">
@@ -80,12 +80,11 @@ export default function Hero() {
                 height={450}
                 loading="lazy"
                 decoding="async"
-                className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="h-44 w-full object-cover"
               />
             </div>
             {/* Animated route teaser: a dashed journey path drawing itself between pins. */}
-            <div className="relative h-44 w-full rounded-xl bg-primary shadow-lg transition-all duration-300 hover:rotate-0 hover:-translate-y-1 group rotate-2 overflow-hidden">
-              <svg viewBox="0 0 200 120" className="h-full w-full" role="img" aria-label="A route drawn between three places on a map">
+            <div className="relative h-44 w-full rounded-xl bg-primary shadow-lg transition-all duration-300 hover:rotate-0 hover:-translate-y-1 group rotate-2 overflow-hidden">              <svg viewBox="0 0 200 120" className="h-full w-full" role="img" aria-label="A route drawn between three places on a map">
                 <g stroke="currentColor" strokeWidth="0.5" opacity="0.25">
                   <line x1="0" y1="20" x2="200" y2="20" />
                   <line x1="0" y1="50" x2="200" y2="50" />

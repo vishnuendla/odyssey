@@ -52,7 +52,7 @@ const NotificationsPage = () => {
       <main className="container max-w-3xl py-12 px-4">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Notifications</h1>
+            <h1 className="text-3xl font-semibold">Notifications</h1>
             <p className="text-muted-foreground">Follows, reactions, comments and saved journals.</p>
           </div>
           <Button variant="outline" size="sm" onClick={markAll} disabled={items.every((item) => item.read)}>

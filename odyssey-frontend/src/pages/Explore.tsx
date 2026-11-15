@@ -157,9 +157,9 @@ const ExplorePage = () => {
       <main className="container py-6 sm:py-12 px-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Explore Journals</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold mb-2">Explore journals</h1>
             <p className="text-muted-foreground text-sm sm:text-base">
-              Discover travel stories from around the world
+              Travel stories from around the world
             </p>
           </div>
         </div>

@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(loggedInUser);
       setIsAuthenticated(true);
       toast({
-        description: `Welcome back, ${loggedInUser.name}!`,
+        description: `Welcome back, ${loggedInUser.name}`,
       });
     } finally {
       setIsLoading(false);

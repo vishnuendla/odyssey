@@ -55,7 +55,7 @@ const JournalsPage = () => {
       <main className="container py-12">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">My Travel Journals</h1>
+            <h1 className="text-3xl font-semibold mb-2">My Travel Journals</h1>
             <p className="text-muted-foreground">
               {userJournals.length > 0 
                 ? `You have ${userJournals.length} journal ${userJournals.length === 1 ? 'entry' : 'entries'}`
@@ -125,7 +125,7 @@ const JournalsPage = () => {
                   ? 'You have no drafts. Private journals appear here.'
                   : filter === 'published'
                     ? 'You have no published journals yet.'
-                    : "You haven't created any journals yet. Click 'New Journal' to get started!"
+                    : 'You have not created any journals yet. Choose New Journal to get started'
               }
               userMap={userMap}
             />
