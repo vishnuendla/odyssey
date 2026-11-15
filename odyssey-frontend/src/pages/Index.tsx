@@ -19,23 +19,23 @@ const HomePage = () => {
         
         {isLoading ? (
           <section className="py-12">
-            <div className="container">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-                <div>
-                  <Skeleton className="h-10 w-64 mb-2" />
+            <div className="mx-auto w-full max-w-6xl px-4">
+              <div className="page-head">
+                <div className="page-head-body">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-64" />
                   <Skeleton className="h-5 w-96" />
                 </div>
-                <Skeleton className="h-10 w-32 mt-4 md:mt-0" />
+                <Skeleton className="h-10 w-32" />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="rounded-lg overflow-hidden border">
-                    <Skeleton className="h-48 w-full" />
-                    <div className="p-4">
-                      <Skeleton className="h-6 w-3/4 mb-2" />
-                      <Skeleton className="h-4 w-full mb-1" />
-                      <Skeleton className="h-4 w-full mb-1" />
+                  <div key={i} className="overflow-hidden rounded-xl border bg-card">
+                    <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                    <div className="space-y-3 p-5">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
                       <Skeleton className="h-4 w-2/3" />
                     </div>
                   </div>

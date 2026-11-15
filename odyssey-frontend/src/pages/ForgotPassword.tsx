@@ -64,15 +64,17 @@ const ForgotPassword = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="space-y-2 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <div className="w-full max-w-md space-y-8">
+          <div className="space-y-3 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary">
               <Mail className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-semibold">Reset your password</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Enter the email address for your account and we'll send you a reset link.
-            </p>
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Reset your password</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Enter the email address for your account and we'll send you a reset link.
+              </p>
+            </div>
           </div>
 
           {formError && (
@@ -82,7 +84,7 @@ const ForgotPassword = () => {
           )}
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
               <FormField
                 control={form.control}
                 name="email"
@@ -116,9 +118,9 @@ const ForgotPassword = () => {
             </form>
           </Form>
 
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-muted-foreground">
             Remembered your password?{' '}
-            <Link to="/login" className="text-primary hover:underline">
+            <Link to="/login" className="font-medium text-primary hover:underline">
               Back to sign in
             </Link>
           </div>

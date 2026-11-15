@@ -57,12 +57,8 @@ const Settings = () => {
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-12 bg-muted rounded-full mb-4"></div>
-          <div className="h-4 w-32 bg-muted rounded mb-2"></div>
-          <div className="h-4 w-24 bg-muted rounded"></div>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="route-loader" aria-hidden="true" />
       </div>
     );
   }
@@ -70,20 +66,19 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container max-w-4xl mx-auto py-8 px-4">
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold">Settings</h1>
+      <div className="mx-auto w-full max-w-4xl px-4 py-8">
+        <div className="page-head">
+          <div className="page-head-body">
+            <span className="eyebrow">Account</span>
+            <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
             <p className="text-muted-foreground">Manage your account preferences</p>
           </div>
-          <Button
-            variant="outline"
-            className="mt-4 md:mt-0 flex items-center"
-            onClick={() => navigate('/profile')}
-          >
-            <UserRound className="mr-2 h-4 w-4" />
-            View Profile
-          </Button>
+          <div className="page-head-actions">
+            <Button variant="outline" onClick={() => navigate('/profile')}>
+              <UserRound className="mr-2 h-4 w-4" />
+              View Profile
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="appearance" className="space-y-6">
@@ -98,24 +93,30 @@ const Settings = () => {
                 <CardTitle>Theme</CardTitle>
                 <CardDescription>Customize how Odyssey looks on your device.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 max-w-sm">
-                  {themeOptions.map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={theme === option.value ? 'default' : 'outline'}
-                      className={`p-4 flex flex-col items-center justify-center h-auto gap-2 transition-[border-color] ${
-                        theme === option.value ? 'border-2 border-primary' : ''
-                      }`}
-                      onClick={() => setTheme(option.value)}
-                    >
-                      <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center">
+              <CardContent className="p-5 pt-0">
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span className="settings-row-title">Colour mode</span>
+                    <span className="settings-row-description">
+                      Choose the appearance Odyssey uses in this browser.
+                    </span>
+                  </div>
+                  <div className="settings-row-control" role="group" aria-label="Theme">
+                    {themeOptions.map((option) => (
+                      <Button
+                        key={option.value}
+                        variant={theme === option.value ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTheme(option.value)}
+                        aria-pressed={theme === option.value}
+                        className="gap-2"
+                      >
                         {option.icon}
-                      </div>
-                      <span>{option.label}</span>
-                      {theme === option.value && <Check className="h-4 w-4 text-primary" />}
-                    </Button>
-                  ))}
+                        <span>{option.label}</span>
+                        {theme === option.value && <Check className="h-4 w-4" />}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -137,31 +138,43 @@ const Settings = () => {
                 <CardTitle>Account Information</CardTitle>
                 <CardDescription>View and manage your basic account details.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-sm text-muted-foreground">Name</Label>
-                    <div className="font-medium">{user.name}</div>
+              <CardContent className="p-5 pt-0">
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span className="settings-row-title">Name</span>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm text-muted-foreground">Email</Label>
-                    <div className="font-medium break-all flex items-center gap-2">
-                      {user.email}
-                      {user.emailVerified ? (
-                        <Badge variant="secondary">Verified</Badge>
-                      ) : (
-                        <Badge variant="destructive">Unverified</Badge>
-                      )}
-                    </div>
+                  <div className="settings-row-control">
+                    <span className="text-sm font-medium">{user.name}</span>
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-sm text-muted-foreground">Member Since</Label>
-                    <div className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</div>
+                </div>
+
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span className="settings-row-title">Email</span>
+                  </div>
+                  <div className="settings-row-control">
+                    <span className="break-all text-sm font-medium">{user.email}</span>
+                    {user.emailVerified ? (
+                      <Badge variant="secondary">Verified</Badge>
+                    ) : (
+                      <Badge variant="destructive">Unverified</Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span className="settings-row-title">Member Since</span>
+                  </div>
+                  <div className="settings-row-control">
+                    <span className="text-sm font-medium">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
 
                 {!user.emailVerified && (
-                  <Alert>
+                  <Alert className="mt-4">
                     <MailWarning className="h-4 w-4" />
                     <AlertDescription>
                       Your email is not verified. Publishing and commenting are locked until you confirm
@@ -183,120 +196,129 @@ const Settings = () => {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Security</CardTitle>
-                <CardDescription>
-                  Change your password and review the devices signed in to your account.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" asChild>
-                  <Link to="/security">
-                    <Shield className="mr-2 h-4 w-4" />
-                    Open security settings
-                  </Link>
-                </Button>
+              <CardContent className="p-5">
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span className="settings-row-title">Security</span>
+                    <span className="settings-row-description">
+                      Change your password and review the devices signed in to your account.
+                    </span>
+                  </div>
+                  <div className="settings-row-control">
+                    <Button variant="outline" asChild size="sm">
+                      <Link to="/security">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Open security settings
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="border-destructive/20">
-              <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                <CardDescription>Irreversible account actions.</CardDescription>
+            <Card className="border-destructive/30">
+              <CardHeader className="flex-row items-center gap-3 space-y-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                  <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                  <CardDescription>Irreversible account actions.</CardDescription>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-md border p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-semibold flex items-center">
-                        <LogOut className="h-4 w-4 mr-2" /> Logout
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Sign out from your current session
-                      </p>
-                    </div>
-                    <Button variant="outline" onClick={() => void logout()}>
+              <CardContent className="p-5 pt-0">
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span className="settings-row-title flex items-center gap-2">
+                      <LogOut className="h-4 w-4" aria-hidden="true" /> Logout
+                    </span>
+                    <span className="settings-row-description">
+                      Sign out from your current session
+                    </span>
+                  </div>
+                  <div className="settings-row-control">
+                    <Button variant="outline" size="sm" onClick={() => void logout()}>
                       Logout
                     </Button>
                   </div>
                 </div>
 
-                <div className="rounded-md border border-destructive/40 p-4 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="font-semibold text-destructive flex items-center">
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete Account
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Permanently remove your account, journals, comments, and reactions.
-                      </p>
-                    </div>
-                    {!showDelete && (
-                      <Button variant="destructive" onClick={() => setShowDelete(true)}>
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span className="settings-row-title flex items-center gap-2 text-destructive">
+                      <Trash2 className="h-4 w-4" aria-hidden="true" /> Delete Account
+                    </span>
+                    <span className="settings-row-description">
+                      Permanently remove your account, journals, comments, and reactions.
+                    </span>
+                  </div>
+                  {!showDelete && (
+                    <div className="settings-row-control">
+                      <Button variant="destructive" size="sm" onClick={() => setShowDelete(true)}>
                         Delete Account
                       </Button>
-                    )}
-                  </div>
-
-                  {showDelete && (
-                    <form onSubmit={handleDeleteAccount} className="space-y-3 border-t pt-4">
-                      {deleteError && (
-                        <Alert variant="destructive">
-                          <AlertDescription>{deleteError}</AlertDescription>
-                        </Alert>
-                      )}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="delete-password">Confirm your password</Label>
-                        <Input
-                          id="delete-password"
-                          type="password"
-                          autoComplete="current-password"
-                          value={deletePassword}
-                          onChange={(event) => setDeletePassword(event.target.value)}
-                          disabled={isDeleting}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="delete-confirmation">
-                          Type <span className="font-mono font-semibold">DELETE</span> to confirm
-                        </Label>
-                        <Input
-                          id="delete-confirmation"
-                          value={deleteConfirmation}
-                          onChange={(event) => setDeleteConfirmation(event.target.value)}
-                          placeholder="DELETE"
-                          disabled={isDeleting}
-                          required
-                        />
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button type="submit" variant="destructive" disabled={isDeleting}>
-                          {isDeleting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
-                            </>
-                          ) : (
-                            'Permanently delete account'
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={isDeleting}
-                          onClick={() => {
-                            setShowDelete(false);
-                            setDeletePassword('');
-                            setDeleteConfirmation('');
-                            setDeleteError(null);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
+                    </div>
                   )}
                 </div>
+
+                {showDelete && (
+                  <form onSubmit={handleDeleteAccount} className="space-y-3 border-t pt-4">
+                    {deleteError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{deleteError}</AlertDescription>
+                      </Alert>
+                    )}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="delete-password">Confirm your password</Label>
+                      <Input
+                        id="delete-password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={deletePassword}
+                        onChange={(event) => setDeletePassword(event.target.value)}
+                        disabled={isDeleting}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="delete-confirmation">
+                        Type <span className="font-mono font-semibold">DELETE</span> to confirm
+                      </Label>
+                      <Input
+                        id="delete-confirmation"
+                        value={deleteConfirmation}
+                        onChange={(event) => setDeleteConfirmation(event.target.value)}
+                        placeholder="DELETE"
+                        disabled={isDeleting}
+                        required
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button type="submit" variant="destructive" disabled={isDeleting}>
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                          </>
+                        ) : (
+                          'Permanently delete account'
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isDeleting}
+                        onClick={() => {
+                          setShowDelete(false);
+                          setDeletePassword('');
+                          setDeleteConfirmation('');
+                          setDeleteError(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

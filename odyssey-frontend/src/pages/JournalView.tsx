@@ -277,12 +277,12 @@ const JournalView = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto py-8 px-4">
-          <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="h-8 w-8 animate-spin mr-2" />
-            <p>Loading journal...</p>
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center gap-3 min-h-[50vh]">
+            <div className="route-loader" aria-hidden="true" />
+            <p className="text-sm text-muted-foreground">Loading journal...</p>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -291,15 +291,20 @@ const JournalView = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto py-8 px-4">
-          <div className="flex flex-col justify-center items-center min-h-[50vh]">
-            <h1 className="text-2xl font-semibold mb-4">Journal not found</h1>
-            <p className="mb-6">{error || 'This journal may have been removed or is private.'}</p>
-            <Button asChild>
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center py-12 min-h-[50vh] text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight">Journal not found</h1>
+            <p className="mt-1 mb-6 text-sm text-muted-foreground max-w-md">
+              {error || 'This journal may have been removed or is private.'}
+            </p>
+            <Button asChild size="sm">
               <Link to="/journals">Back to Journals</Link>
             </Button>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -311,44 +316,44 @@ const JournalView = () => {
   // ~200 words per minute is the usual guide for prose.
   const wordCount = journal.content.trim().split(/\s+/).filter(Boolean).length;
   const readingMinutes = Math.max(1, Math.round(wordCount / 200));
+  const authorName = author?.name || journal.userName || 'Anonymous';
+
   const commentCard = (item: Comment, isReply = false) => (
-    <Card key={item.id} className={isReply ? 'ml-8 border-l-2' : ''}>
-      <CardHeader className="py-3">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={item.userAvatar} alt={item.userName || 'User'} />
-            <AvatarFallback>{item.userName?.charAt(0) || 'U'}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <CardTitle className="text-sm font-medium">
-              <Link to={`/users/${item.userId}`} className="hover:text-primary">
-                {item.userName || 'Anonymous'}
-              </Link>
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {new Date(item.createdAt).toLocaleDateString()}
-            </CardDescription>
-          </div>
-          {isAuthenticated && !isReply && (
-            <Button variant="ghost" size="sm" onClick={() => {
-              setReplyTo(replyTo?.id === item.id ? null : item);
-              setReplyText('');
-            }}>
-              <CornerDownRight className="mr-1 h-3 w-3" /> Reply
-            </Button>
-          )}
-          {(user?.id === item.userId || canModerate) && (
-            <Button variant="ghost" size="icon" onClick={() => handleDeleteComment(item.id)} aria-label="Delete comment">
-              <Trash className="h-4 w-4" />
-            </Button>
-          )}
-          {!isOwner && user?.id !== item.userId && (
-            <ReportDialog targetType="COMMENT" targetId={item.id} label="" />
-          )}
+    <Card key={item.id} className={isReply ? 'ml-4 sm:ml-8 border-l-2 rounded-l-none' : ''}>
+      <CardHeader className="flex-row items-center gap-3 space-y-0 py-3">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={item.userAvatar} alt={item.userName || 'User'} />
+          <AvatarFallback>{item.userName?.charAt(0) || 'U'}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <CardTitle className="text-sm font-medium">
+            <Link to={`/users/${item.userId}`} className="hover:text-primary">
+              {item.userName || 'Anonymous'}
+            </Link>
+          </CardTitle>
+          <CardDescription className="text-xs">
+            {new Date(item.createdAt).toLocaleDateString()}
+          </CardDescription>
         </div>
+        {isAuthenticated && !isReply && (
+          <Button variant="ghost" size="sm" onClick={() => {
+            setReplyTo(replyTo?.id === item.id ? null : item);
+            setReplyText('');
+          }}>
+            <CornerDownRight className="mr-1 h-3 w-3" /> Reply
+          </Button>
+        )}
+        {(user?.id === item.userId || canModerate) && (
+          <Button variant="ghost" size="icon" onClick={() => handleDeleteComment(item.id)} aria-label="Delete comment">
+            <Trash className="h-4 w-4" />
+          </Button>
+        )}
+        {!isOwner && user?.id !== item.userId && (
+          <ReportDialog targetType="COMMENT" targetId={item.id} label="" />
+        )}
       </CardHeader>
-      <CardContent className="py-2">
-        <p className="whitespace-pre-wrap">{item.content}</p>
+      <CardContent className="pt-0">
+        <p className="whitespace-pre-wrap text-sm leading-relaxed">{item.content}</p>
       </CardContent>
       {replyTo?.id === item.id && (
         <CardContent className="space-y-2 pt-0">
@@ -379,210 +384,238 @@ const JournalView = () => {
         style={{ width: `${readingProgress}%` }}
       />
       <Navbar />
-      <div className="container mx-auto py-8 px-4">
-        <div className="max-w-4xl mx-auto" id="journal-article">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
-            <h1 className="font-display text-3xl md:text-4xl font-semibold">{journal.title}</h1>
-            <div className="flex flex-wrap items-center gap-2">
-              {isOwner && (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/journal/edit/${journal.id}`}>
-                      <Edit className="h-4 w-4 mr-2" /> Edit
-                    </Link>
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={handleDeleteJournal}>
-                    <Trash className="h-4 w-4 mr-2" /> Delete
-                  </Button>
-                </div>
-              )}
-              {isAuthenticated && journal.isPublic && (
-                <Button variant="outline" size="sm" onClick={handleToggleBookmark}>
-                  <Bookmark className={`h-4 w-4 mr-2 ${journal.bookmarked ? 'fill-current' : ''}`} />
-                  {journal.bookmarked ? 'Saved' : 'Save'}
-                </Button>
-              )}
-              {!isOwner && (
-                <ReportDialog targetType="JOURNAL" targetId={journal.id} />
-              )}
-              <ShareJournal journalId={journal.id} title={journal.title} />
-            </div>
-          </div>
+      <main className="container mx-auto px-4 py-8 sm:py-12">
+        <div className="mx-auto max-w-3xl">
+          <article id="journal-article" className="select-allow">
+            <header>
+              <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight text-balance">
+                {journal.title}
+              </h1>
 
-          {journal.hidden && (
-            <div
-              role="status"
-              className="mb-6 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
-            >
-              This journal is hidden from public view after a moderation review. Only you and
-              moderators can see it.
-            </div>
-          )}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {isOwner && (
+                  <>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/journal/edit/${journal.id}`}>
+                        <Edit className="h-4 w-4 mr-2" /> Edit
+                      </Link>
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleDeleteJournal}>
+                      <Trash className="h-4 w-4 mr-2" /> Delete
+                    </Button>
+                  </>
+                )}
+                {isAuthenticated && journal.isPublic && (
+                  <Button variant="outline" size="sm" onClick={handleToggleBookmark}>
+                    <Bookmark className={`h-4 w-4 mr-2 ${journal.bookmarked ? 'fill-current' : ''}`} />
+                    {journal.bookmarked ? 'Saved' : 'Save'}
+                  </Button>
+                )}
+                {!isOwner && (
+                  <ReportDialog targetType="JOURNAL" targetId={journal.id} />
+                )}
+                <ShareJournal journalId={journal.id} title={journal.title} />
+              </div>
+            </header>
 
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-1" />
-              <span>{formattedDate}</span>
-            </div>
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1" />
-              <span>{formattedTime}</span>
-            </div>
-            <div className="flex items-center">
-              <BookOpen className="h-4 w-4 mr-1" />
-              <span>
-                {readingMinutes} min read · {wordCount.toLocaleString()} words
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <UserIcon className="h-4 w-4" />
-              <span>
-                By:{' '}
-                <Link to={`/users/${journal.userId}`} className="font-medium text-foreground hover:text-primary">
-                  {author?.name || journal.userName || 'Anonymous'}
-                </Link>
-              </span>
-              <FollowButton
-                userId={journal.userId}
-                initialFollowing={author?.following}
-                initialFollowers={author?.followersCount}
-              />
-            </div>
-            <div className="flex items-center">
-              <Globe className="h-4 w-4 mr-1" />
-              <span>{journal.hidden ? 'Under review' : journal.isPublic ? 'Public' : 'Private'}</span>
-            </div>
-            {journal.location && (
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span>{journal.location.name || `${journal.location.city || ''}, ${journal.location.country || ''}`}</span>
+            {journal.hidden && (
+              <div
+                role="status"
+                className="mt-6 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+              >
+                This journal is hidden from public view after a moderation review. Only you and
+                moderators can see it.
               </div>
             )}
-          </div>
 
-          {journal.tags && journal.tags.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {journal.tags.map((tag) => (
-                <Link
-                  key={tag}
-                  to={`/explore?tag=${encodeURIComponent(tag)}`}
-                  className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary hover:bg-primary/20"
-                >
-                  #{tag}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          <Card className="mb-8">
-            {journal.images && journal.images.length > 0 && (
-              <div className="w-full h-64 md:h-96 overflow-hidden">
-                <img
-                  src={journal.images[0]}
-                  alt={journal.title}
-                  loading="eager"
-                  decoding="async"
-                  className="w-full h-full object-cover"
+            {/* Author byline first, then the quiet reading facts. */}
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={author?.avatar} alt={authorName} />
+                  <AvatarFallback>{authorName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span>
+                  By:{' '}
+                  <Link to={`/users/${journal.userId}`} className="font-medium text-foreground hover:text-primary">
+                    {authorName}
+                  </Link>
+                </span>
+                <FollowButton
+                  userId={journal.userId}
+                  initialFollowing={author?.following}
+                  initialFollowers={author?.followersCount}
                 />
               </div>
-            )}
-            <CardContent className="pt-6">
-              <div className="prose prose-neutral dark:prose-invert max-w-none prose-lg prose-p:leading-8 prose-a:text-primary">
-                {journal.content.split('\n').map((paragraph, index) => (
-                  <p key={index} className="mb-4">{paragraph}</p>
-                ))}
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                <span>{formattedDate}</span>
               </div>
-
-              {journal.images && journal.images.length > 1 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-                  {journal.images.slice(1).map((image, index) => (
-                    <div key={index} className="aspect-square overflow-hidden rounded-md">
-                      <img
-                        src={image}
-                        alt={`${journal.title} - ${index + 2}`}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <div className="flex gap-4">
-                {isAuthenticated && (
-                  <Button variant="ghost" size="sm" onClick={() => handleAddReaction('like')} className="flex items-center gap-1">
-                    <ThumbsUp className="h-4 w-4" />
-                    <span>{journal.reactions.find((reaction) => reaction.type === 'like')?.count || 0}</span>
-                  </Button>
-                )}
-                {isAuthenticated && (
-                  <Button variant="ghost" size="sm" onClick={() => handleAddReaction('love')} className="flex items-center gap-1">
-                    <Heart className="h-4 w-4" />
-                    <span>{journal.reactions.find((reaction) => reaction.type === 'love')?.count || 0}</span>
-                  </Button>
-                )}
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MessageCircle className="h-4 w-4" /> {comments.length}
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4" />
+                <span>{formattedTime}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <BookOpen className="h-4 w-4" />
+                <span>
+                  {readingMinutes} min read · {wordCount.toLocaleString()} words
                 </span>
               </div>
-
+              <div className="flex items-center gap-1.5">
+                <Globe className="h-4 w-4" />
+                <span>{journal.hidden ? 'Under review' : journal.isPublic ? 'Public' : 'Private'}</span>
+              </div>
               {journal.location && (
-                <Button asChild variant="outline" size="sm">
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${journal.location.latitude},${journal.location.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <MapPin className="h-4 w-4 mr-1" /> View on Map
-                  </a>
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-
-          <h2 className="text-2xl font-semibold mb-4">Comments</h2>
-
-          {isAuthenticated ? (
-            <div className="mb-6">
-              <Textarea
-                placeholder="Write a comment..."
-                className="mb-2"
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-              />
-              <Button onClick={() => handleAddComment()} disabled={!comment.trim() || submitting}>
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Posting...
-                  </>
-                ) : 'Post Comment'}
-              </Button>
-            </div>
-          ) : (
-            <Card className="mb-6">
-              <CardContent className="py-4">
-                <p>Please <Link to="/login" className="text-primary">log in</Link> to leave a comment.</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {topLevel.length > 0 ? (
-            <div className="space-y-4">
-              {topLevel.map((item) => (
-                <div key={item.id} className="space-y-3">
-                  {commentCard(item)}
-                  {(repliesByParent[item.id] ?? []).map((reply) => commentCard(reply, true))}
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4" />
+                  <span>{journal.location.name || `${journal.location.city || ''}, ${journal.location.country || ''}`}</span>
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <p className="text-muted-foreground">No comments yet.</p>
-          )}
+
+            {journal.tags && journal.tags.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {journal.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    to={`/explore?tag=${encodeURIComponent(tag)}`}
+                    className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <Card className="mt-8 overflow-hidden">
+              {journal.images && journal.images.length > 0 && (
+                <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden border-b bg-secondary">
+                  <img
+                    src={journal.images[0]}
+                    alt={journal.title}
+                    loading="eager"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <CardContent className="p-5 sm:p-8">
+                <div className="prose prose-neutral dark:prose-invert max-w-none prose-lg prose-p:leading-8 prose-a:text-primary">
+                  {journal.content.split('\n').map((paragraph, index) => (
+                    <p key={index} className="mb-4">{paragraph}</p>
+                  ))}
+                </div>
+
+                {journal.images && journal.images.length > 1 && (
+                  <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                    {journal.images.slice(1).map((image, index) => (
+                      <div key={index} className="aspect-square overflow-hidden rounded-xl border bg-secondary">
+                        <img
+                          src={image}
+                          alt={`${journal.title} - ${index + 2}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="justify-between gap-4 border-t bg-secondary/40 px-5 py-4 sm:px-8">
+                <div className="flex gap-1">
+                  {isAuthenticated && (
+                    <Button variant="ghost" size="sm" onClick={() => handleAddReaction('like')} className="flex items-center gap-1.5">
+                      <ThumbsUp className="h-4 w-4" />
+                      <span>{journal.reactions.find((reaction) => reaction.type === 'like')?.count || 0}</span>
+                    </Button>
+                  )}
+                  {isAuthenticated && (
+                    <Button variant="ghost" size="sm" onClick={() => handleAddReaction('love')} className="flex items-center gap-1.5">
+                      <Heart className="h-4 w-4" />
+                      <span>{journal.reactions.find((reaction) => reaction.type === 'love')?.count || 0}</span>
+                    </Button>
+                  )}
+                  <span className="flex items-center gap-1.5 px-2 text-sm text-muted-foreground">
+                    <MessageCircle className="h-4 w-4" /> {comments.length}
+                  </span>
+                </div>
+
+                {journal.location && (
+                  <Button asChild variant="outline" size="sm">
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${journal.location.latitude},${journal.location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MapPin className="h-4 w-4 mr-1.5" /> View on Map
+                    </a>
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          </article>
+
+          <section className="mt-12">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold tracking-tight">Comments</h2>
+              <p className="text-sm text-muted-foreground">{comments.length} so far</p>
+            </div>
+
+            {isAuthenticated ? (
+              <Card className="mb-6">
+                <CardContent className="p-4">
+                  <Textarea
+                    placeholder="Write a comment..."
+                    className="mb-3"
+                    value={comment}
+                    onChange={(event) => setComment(event.target.value)}
+                  />
+                  <div className="flex justify-end">
+                    <Button onClick={() => handleAddComment()} disabled={!comment.trim() || submitting}>
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Posting...
+                        </>
+                      ) : 'Post Comment'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="mb-6">
+                <CardContent className="flex items-center gap-3 py-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm">
+                    Please <Link to="/login" className="text-primary font-medium">log in</Link> to leave a comment.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {topLevel.length > 0 ? (
+              <div className="space-y-4">
+                {topLevel.map((item) => (
+                  <div key={item.id} className="space-y-3">
+                    {commentCard(item)}
+                    {(repliesByParent[item.id] ?? []).map((reply) => commentCard(reply, true))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-12 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">No comments yet.</p>
+              </div>
+            )}
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

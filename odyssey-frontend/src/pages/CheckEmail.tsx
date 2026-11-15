@@ -23,29 +23,31 @@ const CheckEmail = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <MailCheck className="h-7 w-7 text-primary" />
+        <div className="w-full max-w-md space-y-8 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary">
+            <MailCheck className="h-6 w-6 text-primary" />
           </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-semibold">Check your inbox</h1>
+          <div className="space-y-3">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Check your inbox</h1>
             <p className="text-muted-foreground">
               {isVerification
                 ? 'We sent you a verification link.'
                 : 'If an account exists for that address, we sent a password reset link.'}
             </p>
             {email && (
-              <p className="font-medium break-all">{email}</p>
+              <p className="mx-auto inline-block max-w-full break-all rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                {email}
+              </p>
             )}
             <p className="text-sm text-muted-foreground">
               {state.message ?? 'The link expires soon, so use it as soon as you can. Check your spam folder if it does not arrive.'}
             </p>
           </div>
-          <div className="flex flex-col gap-2">
-            <Button asChild>
+          <div className="flex flex-col gap-3">
+            <Button asChild className="h-11">
               <Link to="/login">Back to sign in</Link>
             </Button>
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" asChild className="h-11">
               <Link to="/forgot-password">Use a different email</Link>
             </Button>
           </div>
