@@ -1,19 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/services/api';
-import { MailWarning, CheckCircle2, Loader2 } from 'lucide-react';
+import { MailWarning, CheckCircle2, Loader2, X } from 'lucide-react';
+
+const DISMISS_KEY = 'odyssey-verify-banner-dismissed';
 
 const EmailVerificationBanner = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
 
-  if (!isAuthenticated || !user || user.emailVerified !== false) {
+  useEffect(() => {
+    if (!user?.id) {
+      setDismissed(false);
+      return;
+    }
+    try {
+      const stored = localStorage.getItem(DISMISS_KEY);
+      setDismissed(stored === user.id);
+    } catch {
+      setDismissed(false);
+    }
+  }, [user?.id]);
+
+  if (!isAuthenticated || !user || user.emailVerified !== false || dismissed) {
     return null;
   }
+
+  const dismiss = () => {
+    try {
+      localStorage.setItem(DISMISS_KEY, user.id);
+    } catch {
+      /* ignore */
+    }
+    setDismissed(true);
+  };
 
   const resend = async () => {
     setError(null);
@@ -63,6 +88,28 @@ const EmailVerificationBanner = () => {
           </Button>
           <Button asChild size="sm" variant="ghost" className="h-7">
             <Link to="/settings">Settings</Link>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={() => void refreshUser().catch(() => undefined)}
+            aria-label="Refresh verification status"
+            title="Refresh verification status"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={dismiss}
+            aria-label="Dismiss verification reminder"
+            title="Dismiss until next sign-in"
+          >
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
