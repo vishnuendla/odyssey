@@ -1,5 +1,6 @@
 package com.odyssey.security;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -38,6 +39,34 @@ public class StableCsrfTokenRepository implements CsrfTokenRepository {
 
     @Override
     public CsrfToken loadToken(HttpServletRequest request) {
+        String header = request.getHeader("X-XSRF-TOKEN");
+        if (header != null && !header.isBlank()) {
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (Cookie cookie : cookies) {
+                    if ("XSRF-TOKEN".equals(cookie.getName()) && header.equals(cookie.getValue())) {
+                        return new StaticCsrfToken(header);
+                    }
+                }
+            }
+        }
         return delegate.loadToken(request);
+    }
+
+    private record StaticCsrfToken(String value) implements CsrfToken {
+        @Override
+        public String getHeaderName() {
+            return "X-XSRF-TOKEN";
+        }
+
+        @Override
+        public String getParameterName() {
+            return "_csrf";
+        }
+
+        @Override
+        public String getToken() {
+            return value;
+        }
     }
 }

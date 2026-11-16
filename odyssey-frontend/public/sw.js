@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the cached shell changes so old caches are
  * dropped on the next activation.
  */
-const CACHE_VERSION = 'odyssey-v1';
+const CACHE_VERSION = 'odyssey-v2';
 const SHELL = [
   '/',
   '/index.html',
