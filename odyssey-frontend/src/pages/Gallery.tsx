@@ -14,22 +14,25 @@ interface GalleryItem {
   image: string;
 }
 
+// Stale-while-revalidate cache: returning to the gallery renders instantly
+// instead of flashing the skeleton grid on every tab switch.
+let cachedGalleryItems: GalleryItem[] | null = null;
+
 const GalleryPage = () => {
-  const [items, setItems] = useState<GalleryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState<GalleryItem[]>(cachedGalleryItems ?? []);
+  const [isLoading, setIsLoading] = useState(cachedGalleryItems === null);
 
   useEffect(() => {
     const fetchGallery = async () => {
-      setIsLoading(true);
       try {
         const journals = await journalApi.searchPublicJournals({ size: 100 });
         const flattened = journals.flatMap((journal) =>
           (journal.images ?? []).map((image) => ({ journal, image }))
         );
+        cachedGalleryItems = flattened;
         setItems(flattened);
       } catch (error) {
         console.error('Failed to fetch gallery:', error);
-        setItems([]);
       } finally {
         setIsLoading(false);
       }
