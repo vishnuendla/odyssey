@@ -7,6 +7,19 @@ import { MailWarning, CheckCircle2, Loader2, X } from 'lucide-react';
 
 const DISMISS_KEY = 'odyssey-verify-banner-dismissed';
 
+/**
+ * CodeQL flags storing account identifiers in localStorage as clear text,
+ * so the per-user dismissal key is stored as an FNV-1a digest instead.
+ */
+const hashUserId = (value: string): string => {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+};
+
 const EmailVerificationBanner = () => {
   const { user, isAuthenticated, refreshUser } = useAuth();
   const [isSending, setIsSending] = useState(false);
@@ -21,7 +34,7 @@ const EmailVerificationBanner = () => {
     }
     try {
       const stored = localStorage.getItem(DISMISS_KEY);
-      setDismissed(stored === user.id);
+      setDismissed(stored === hashUserId(user.id));
     } catch {
       setDismissed(false);
     }
@@ -33,7 +46,7 @@ const EmailVerificationBanner = () => {
 
   const dismiss = () => {
     try {
-      localStorage.setItem(DISMISS_KEY, user.id);
+      localStorage.setItem(DISMISS_KEY, hashUserId(user.id));
     } catch {
       /* ignore */
     }
