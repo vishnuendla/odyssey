@@ -78,15 +78,16 @@ const Ask = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto py-8 px-4">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-8">
-            <h1 className="text-3xl font-semibold">Ask your journal</h1>
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:py-12">
+        <div className="page-head mb-8">
+          <div className="page-head-body">
+            <span className="eyebrow">Ask your journal</span>
+            <h1 className="text-3xl font-semibold tracking-tight">Ask your journal</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Semantic answers from your own entries, with citations back to the words you wrote.
             </p>
           </div>
-
+        </div>
           {status && !status.configured && (
             <Card className="mb-6">
               <CardContent className="p-6 text-sm text-muted-foreground">
@@ -180,7 +181,6 @@ const Ask = () => {
               Your journals are indexed automatically as you write; private entries stay private.
             </div>
           )}
-        </div>
       </div>
       <Footer />
     </div>

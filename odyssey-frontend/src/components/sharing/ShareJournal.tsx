@@ -53,25 +53,25 @@ const ShareJournal: React.FC<ShareJournalProps> = ({ journalId, title }) => {
       name: "Facebook",
       icon: <Facebook className="h-4 w-4 mr-2" />,
       url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-      color: "bg-[#3b5998] hover:bg-[#3b5998]/80"
+      color: "text-white bg-[#3b5998] hover:bg-[#3b5998]/80"
     },
     {
       name: "Twitter",
       icon: <Twitter className="h-4 w-4 mr-2" />,
       url: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodeURIComponent(`📍 Travel Journal: ${title}\n🗺️ Explore this story now!`)}`,
-      color: "bg-[#1DA1F2] hover:bg-[#1DA1F2]/80"
+      color: "text-white bg-[#1DA1F2] hover:bg-[#1DA1F2]/80"
     },
     {
       name: "WhatsApp",
       icon: <MessageSquare className="h-4 w-4 mr-2" />,
       url: `https://api.whatsapp.com/send?text=${encodeURIComponent(`📌 *${title}*\n🌍 A travel experience worth checking:\n${journalUrl}`)}`,
-      color: "bg-[#25D366] hover:bg-[#25D366]/80"
+      color: "text-white bg-[#25D366] hover:bg-[#25D366]/80"
     },
     {
       name: "Email",
       icon: <Mail className="h-4 w-4 mr-2" />,
       url: `mailto:?subject=${encodedTitle}&body=${encodeURIComponent(`I found this travel journal: ${journalUrl}\n\nLet me know what you think.`)}`,
-      color: "bg-gray-500 hover:bg-gray-500/80"
+      color: "bg-secondary text-secondary-foreground hover:bg-secondary/80"
     }
   ];
   
@@ -110,7 +110,7 @@ const ShareJournal: React.FC<ShareJournalProps> = ({ journalId, title }) => {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${link.color} text-white flex items-center justify-center p-2 rounded-md text-sm`}
+                className={`${link.color} flex items-center justify-center p-2 rounded-lg text-sm font-medium`}
               >
                 {link.icon}
                 {link.name}

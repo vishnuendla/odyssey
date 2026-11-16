@@ -60,31 +60,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [clearSession, refreshUser]);
 
   const login = async (email: string, password: string, rememberMe = false) => {
-    setIsLoading(true);
-    try {
-      const loggedInUser = await authApi.login(email, password, rememberMe);
-      setUser(loggedInUser);
-      setIsAuthenticated(true);
-      toast({
-        description: `Welcome back, ${loggedInUser.name}`,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Do not toggle session bootstrap loading here — ProtectedRoute would replace
+    // the login form with a full-screen spinner and hide inline errors.
+    const loggedInUser = await authApi.login(email, password, rememberMe);
+    setUser(loggedInUser);
+    setIsAuthenticated(true);
+    toast({
+      description: `Welcome back, ${loggedInUser.name}`,
+    });
   };
 
   const register = async (name: string, email: string, password: string, acceptTerms = true) => {
-    setIsLoading(true);
-    try {
-      const newUser = await authApi.register(name, email, password, acceptTerms);
-      setUser(newUser);
-      setIsAuthenticated(true);
-      toast({
-        description: `Welcome to Odyssey, ${newUser.name}!`,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    const newUser = await authApi.register(name, email, password, acceptTerms);
+    setUser(newUser);
+    setIsAuthenticated(true);
+    toast({
+      title: 'Account created',
+      description: `Welcome to Odyssey, ${newUser.name}!`,
+    });
   };
 
   const logout = async () => {

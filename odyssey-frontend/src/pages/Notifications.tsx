@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, CheckCheck, Loader2, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -49,31 +49,35 @@ const NotificationsPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container max-w-3xl py-12 px-4">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold">Notifications</h1>
+      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:py-12">
+        <div className="page-head mb-8">
+          <div className="page-head-body">
+            <span className="eyebrow">Activity</span>
+            <h1 className="text-3xl font-semibold tracking-tight">Notifications</h1>
             <p className="text-muted-foreground">Follows, reactions, comments and saved journals.</p>
           </div>
-          <Button variant="outline" size="sm" onClick={markAll} disabled={items.every((item) => item.read)}>
-            <CheckCheck className="mr-2 h-4 w-4" /> Mark all read
-          </Button>
+          <div className="page-head-actions">
+            <Button variant="outline" size="sm" onClick={markAll} disabled={items.every((item) => item.read)}>
+              <CheckCheck className="mr-2 h-4 w-4" /> Mark all read
+            </Button>
+          </div>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="flex flex-col items-center gap-3 py-16">
+            <div className="route-loader" />
+            <p className="text-sm text-muted-foreground">Loading notifications...</p>
           </div>
         ) : items.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center py-16 text-center">
-              <Bell className="mb-4 h-10 w-10 text-muted-foreground" />
-              <p className="font-medium">Nothing here yet</p>
-              <p className="text-sm text-muted-foreground">
-                When someone follows you or interacts with your journals, it shows up here.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center py-16 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+              <Bell className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="font-medium">Nothing here yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              When someone follows you or interacts with your journals, it shows up here.
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
             {items.map((item) => {
@@ -81,20 +85,20 @@ const NotificationsPage = () => {
               return (
                 <Card key={item.id} className={item.read ? '' : 'border-primary/40 bg-primary/5'}>
                   <CardContent className="flex items-start gap-4 py-4">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Link to={href} onClick={() => !item.read && markRead(item.id)} className="font-medium hover:text-primary">
                         {item.message || 'New activity'}
                       </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
                         {item.type.toLowerCase()} · {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                       </p>
                     </div>
                     {!item.read && (
-                      <Button variant="ghost" size="sm" onClick={() => markRead(item.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => markRead(item.id)} className="shrink-0">
                         Read
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" onClick={() => remove(item.id)} aria-label="Delete notification">
+                    <Button variant="ghost" size="icon" onClick={() => remove(item.id)} aria-label="Delete notification" className="shrink-0">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </CardContent>

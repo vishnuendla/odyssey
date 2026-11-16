@@ -23,7 +23,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, MapPin, X, ImagePlus } from 'lucide-react';
 import { Icons } from '@/components/shared/Icons';
@@ -433,11 +432,12 @@ const JournalEdit = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto py-8 px-4">
-          <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader2 className="h-8 w-8 animate-spin" />
+        <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:py-12">
+          <div className="flex flex-col items-center justify-center gap-3 min-h-[50vh]">
+            <div className="route-loader" />
+            <p className="text-sm text-muted-foreground">Loading your journal...</p>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -445,12 +445,20 @@ const JournalEdit = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto py-8 px-4">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:py-12">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-semibold mb-8">Edit Journal</h1>
+          <div className="page-head mb-8">
+            <div className="page-head-body">
+              <span className="eyebrow">Your journal</span>
+              <h1 className="text-3xl font-semibold tracking-tight">Edit Journal</h1>
+              <p className="text-muted-foreground">
+                Refine the story, update the place, or swap in new photos.
+              </p>
+            </div>
+          </div>
 
           {draftRestoredAt && (
-            <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-4 py-2 mb-6 text-sm">
+            <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-sm">
               <span className="text-muted-foreground">
                 Unsaved draft restored — last saved {draftAgeLabel(draftRestoredAt)}.
               </span>
@@ -471,11 +479,9 @@ const JournalEdit = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Journal Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <section className="space-y-4">
+                <h2 className="eyebrow">The entry</h2>
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -584,15 +590,13 @@ const JournalEdit = () => {
                       </FormItem>
                     )}
                   />
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Location</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h2 className="eyebrow">Place</h2>
+              <div className="space-y-4">
+                <div className="grid gap-3">
                     <div className="relative">
                       <Input
                         placeholder="Enter a location..."
@@ -619,12 +623,15 @@ const JournalEdit = () => {
 
                     {locationSuggestions.length > 0 && (
                       <div className="relative">
-                        <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg">
+                        <div
+                          className="absolute z-50 w-full mt-1 rounded-xl border bg-popover p-2 max-h-[220px] overflow-auto"
+                          style={{ boxShadow: 'var(--shadow-pop)' }}
+                        >
                           {locationSuggestions.map((loc, index) => (
                             <button
                               key={index}
                               type="button"
-                              className="w-full px-4 py-2 text-left hover:bg-accent"
+                              className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-secondary"
                               onClick={() => handleLocationSelect(loc)}
                             >
                               {loc.name}
@@ -635,10 +642,10 @@ const JournalEdit = () => {
                     )}
 
                     {form.watch('location') && (
-                      <div className="flex items-center justify-between p-3 border rounded-md bg-accent/50">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{form.watch('location.name')}</span>
+                      <div className="flex items-center justify-between gap-2 rounded-lg border bg-secondary/60 px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <MapPin className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="truncate text-sm">{form.watch('location.name')}</span>
                         </div>
                         <Button
                           type="button"
@@ -654,15 +661,12 @@ const JournalEdit = () => {
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+              </div>
+              </section>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle>Images</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <section className="space-y-4">
+                <h2 className="eyebrow">Gallery</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {/* Display existing images */}
                     {existingImages.map((image, index) => (
                       <div key={`existing-${index}`} className="relative aspect-square group">
@@ -671,7 +675,7 @@ const JournalEdit = () => {
                           alt={`Existing ${index + 1}`}
                           loading="lazy"
                           decoding="async"
-                          className="w-full h-full object-cover rounded-md"
+                          className="w-full h-full object-cover rounded-lg"
                         />
                         <Button
                           type="button"
@@ -689,7 +693,7 @@ const JournalEdit = () => {
                         </Button>
                       </div>
                     ))}
-                    
+
                     {/* Display newly uploaded images */}
                     {uploadedImages.map((image, index) => (
                       <div key={`new-${index}`} className="relative aspect-square group">
@@ -698,7 +702,7 @@ const JournalEdit = () => {
                           alt={`Upload ${index + 1}`}
                           loading="lazy"
                           decoding="async"
-                          className="w-full h-full object-cover rounded-md"
+                          className="w-full h-full object-cover rounded-lg"
                         />
                         <Button
                           type="button"
@@ -712,9 +716,9 @@ const JournalEdit = () => {
                         </Button>
                       </div>
                     ))}
-                    
+
                     {existingImages.length + uploadedFiles.length < MAX_FILES_PER_UPLOAD && (
-                      <label className="aspect-square border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors">
+                      <label className="aspect-square rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-secondary/50 transition-colors">
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/gif,image/webp"
@@ -725,7 +729,7 @@ const JournalEdit = () => {
                         />
                         <div className="text-center p-4">
                           <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Add Images</span>
+                          <span className="text-sm font-medium">Add images</span>
                           <span className="mt-1 block text-xs text-muted-foreground">
                             {MAX_FILES_PER_UPLOAD - existingImages.length - uploadedFiles.length} left
                           </span>
@@ -733,30 +737,38 @@ const JournalEdit = () => {
                       </label>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-              
-              <div className="flex justify-end space-x-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => navigate(`/journals/${id}`)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    'Update Journal'
-                  )}
-                </Button>
+              </section>
+
+              <div
+                className="sticky bottom-4 z-10 rounded-xl border bg-card/95 p-3 backdrop-blur-sm"
+                style={{ boxShadow: 'var(--shadow-pop)' }}
+              >
+                <div className="flex items-center justify-between gap-4 px-2">
+                  <p className="text-sm text-muted-foreground">Draft saves automatically</p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate(`/journals/${id}`)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                      className="min-w-[10rem]"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        'Update Journal'
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </form>
           </Form>

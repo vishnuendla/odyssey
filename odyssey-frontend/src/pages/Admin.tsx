@@ -139,14 +139,15 @@ const AdminPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container max-w-5xl py-10 px-4">
-        <div className="mb-8 flex flex-col gap-2">
-          <h1 className="flex items-center gap-2 text-3xl font-semibold">
-            <ShieldCheck className="h-7 w-7" /> Moderation
-          </h1>
-          <p className="text-muted-foreground">
-            Review reported journals and comments, then hide or dismiss them.
-          </p>
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
+        <div className="page-head mb-8">
+          <div className="page-head-body">
+            <span className="eyebrow">Admin</span>
+            <h1 className="text-3xl font-semibold tracking-tight">Moderation</h1>
+            <p className="text-muted-foreground">
+              Review reported journals and comments, then hide or dismiss them.
+            </p>
+          </div>
         </div>
 
         <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -156,12 +157,10 @@ const AdminPage = () => {
             { label: 'Public journals', value: stats?.publicJournals },
             { label: 'Open reports', value: stats?.openReports },
           ].map((item) => (
-            <Card key={item.label}>
-              <CardContent className="py-4">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{item.value ?? '—'}</p>
-              </CardContent>
-            </Card>
+            <div key={item.label} className="stat-tile">
+              <span className="stat-tile-label">{item.label}</span>
+              <span className="stat-tile-value tabular-nums">{item.value ?? '—'}</span>
+            </div>
           ))}
         </div>
 

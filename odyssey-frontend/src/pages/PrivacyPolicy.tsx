@@ -10,15 +10,20 @@ const PrivacyPolicy = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <Shield className="h-12 w-12 text-primary" />
+          <div className="page-head mb-10">
+            <div className="page-head-body">
+              <span className="eyebrow">Legal</span>
+              <h1 className="text-3xl font-semibold tracking-tight">Privacy Policy</h1>
+              <p className="text-muted-foreground">Last updated: {lastUpdated}</p>
             </div>
-            <h1 className="text-3xl font-semibold mb-2">Privacy Policy</h1>
-            <p className="text-muted-foreground">Last updated: {lastUpdated}</p>
+            <div className="page-head-actions hidden sm:flex">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border bg-card" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <Shield className="h-5 w-5 text-primary" />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-6">
