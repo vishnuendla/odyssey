@@ -59,18 +59,23 @@ const ContactUs = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
-            <div className="flex justify-center mb-4">
-              <MessageSquare className="h-12 w-12 text-primary" />
+          <div className="page-head mb-12">
+            <div className="page-head-body">
+              <span className="eyebrow">Contact</span>
+              <h1 className="text-3xl font-semibold tracking-tight">Contact Us</h1>
+              <p className="text-muted-foreground max-w-2xl">
+                Have a question, suggestion, or need help? Write to us and
+                we will respond as soon as possible.
+              </p>
             </div>
-            <h1 className="text-3xl font-semibold mb-4">Contact Us</h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Have a question, suggestion, or need help? Write to us and
-              we will respond as soon as possible.
-            </p>
+            <div className="page-head-actions hidden sm:flex">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border bg-card" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <MessageSquare className="h-6 w-6 text-primary" />
+              </div>
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12">
