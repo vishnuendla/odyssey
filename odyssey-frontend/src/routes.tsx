@@ -39,26 +39,16 @@ const RouteFallback = () => (
   </div>
 );
 
-/**
- * Fades each page in as it mounts and scrolls back to the top, so navigation
- * feels deliberate instead of an instant hard cut.
- */
-const PageFade = ({ children }: { children: React.ReactNode }) => {
-  const { pathname } = useLocation();
+export const AppRoutes = () => {
+  const location = useLocation();
+
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [pathname]);
-  return (
-    <div key={pathname} className="animate-fade-in">
-      {children}
-    </div>
-  );
-};
+  }, [location.pathname]);
 
-export const AppRoutes = () => (
-  <Suspense fallback={<RouteFallback />}>
-    <PageFade>
-      <Routes>
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <Routes location={location} key={location.pathname}>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<ProtectedRoute requireAuth={false}><Login /></ProtectedRoute>} />
       <Route path="/register" element={<ProtectedRoute requireAuth={false}><Register /></ProtectedRoute>} />
@@ -88,8 +78,8 @@ export const AppRoutes = () => (
       <Route path="/contact" element={<ContactUs />} />
       <Route path="*" element={<NotFound />} />
       </Routes>
-    </PageFade>
-  </Suspense>
-);
+    </Suspense>
+  );
+};
 
 export default AppRoutes;

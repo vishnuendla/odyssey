@@ -224,7 +224,7 @@ const ExplorePage = () => {
         )}
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true" aria-label="Loading journals">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="overflow-hidden rounded-xl border bg-card">
                 <Skeleton className="aspect-[4/3] w-full rounded-none" />
