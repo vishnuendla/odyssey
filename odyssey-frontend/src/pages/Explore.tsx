@@ -22,6 +22,16 @@ type SortOption = 'recent' | 'oldest' | 'popular';
 
 const PAGE_SIZE = 12;
 
+type ExplorePageResult = {
+  content: JournalEntry[];
+  totalElements: number;
+  totalPages: number;
+};
+
+// Stale-while-revalidate cache so returning to Explore renders instantly
+// instead of flashing skeletons on every tab switch.
+const pageCache = new Map<string, ExplorePageResult>();
+
 const ExplorePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,7 +82,35 @@ const ExplorePage = () => {
     let cancelled = false;
 
     const fetchJournals = async () => {
-      setIsLoading(true);
+      const cacheKey = JSON.stringify({
+        q: debouncedSearch.trim() || undefined,
+        tag: tagFilter || undefined,
+        location: locationFilter === 'all' ? undefined : locationFilter,
+        sort: sortBy === 'popular' ? 'recent' : sortBy,
+        page,
+      });
+
+      const applyResult = (content: JournalEntry[], total: number, pages: number) => {
+        let entries = content;
+        if (sortBy === 'popular') {
+          const countReactions = (journal: JournalEntry) =>
+            journal.reactions?.reduce((acc, reaction) => acc + reaction.count, 0) ?? 0;
+          entries = [...entries].sort((a, b) => countReactions(b) - countReactions(a));
+        }
+        setJournals(entries);
+        setTotalElements(total);
+        setTotalPages(pages);
+      };
+
+      // Render the cached result immediately; refresh in the background.
+      const cached = pageCache.get(cacheKey);
+      if (cached) {
+        applyResult(cached.content, cached.totalElements, cached.totalPages);
+        setIsLoading(false);
+      } else {
+        setIsLoading(true);
+      }
+
       try {
         const result = await journalApi.searchPublicJournalsPage({
           q: debouncedSearch.trim() || undefined,
@@ -85,16 +123,12 @@ const ExplorePage = () => {
 
         if (cancelled) return;
 
-        let entries = result.content;
-        if (sortBy === 'popular') {
-          const countReactions = (journal: JournalEntry) =>
-            journal.reactions?.reduce((acc, reaction) => acc + reaction.count, 0) ?? 0;
-          entries = [...entries].sort((a, b) => countReactions(b) - countReactions(a));
-        }
-
-        setJournals(entries);
-        setTotalElements(result.totalElements);
-        setTotalPages(result.totalPages);
+        pageCache.set(cacheKey, {
+          content: result.content,
+          totalElements: result.totalElements,
+          totalPages: result.totalPages,
+        });
+        applyResult(result.content, result.totalElements, result.totalPages);
       } catch (error) {
         console.error('Error fetching journals:', error);
         if (!cancelled) {

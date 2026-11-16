@@ -24,18 +24,23 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Stale-while-revalidate cache: returning to the map renders the pins
+// instantly instead of flashing a skeleton on every tab switch.
+let cachedPublicJournals: JournalEntry[] | null = null;
+
 const MapViewPage = () => {
   const { journals, isLoading: ownLoading } = useJournal();
   const { isAuthenticated, user } = useAuth();
   const [includePrivate, setIncludePrivate] = useState(false);
   const [selectedJournal, setSelectedJournal] = useState<JournalEntry | null>(null);
-  const [publicJournals, setPublicJournals] = useState<JournalEntry[]>([]);
-  const [publicLoading, setPublicLoading] = useState(true);
+  const [publicJournals, setPublicJournals] = useState<JournalEntry[]>(cachedPublicJournals ?? []);
+  const [publicLoading, setPublicLoading] = useState(cachedPublicJournals === null);
 
   useEffect(() => {
     let cancelled = false;
     journalApi.getPublicJournals()
       .then((list) => {
+        cachedPublicJournals = list;
         if (!cancelled) setPublicJournals(list);
       })
       .catch((error) => console.error('Failed to load public journals for the map', error))
