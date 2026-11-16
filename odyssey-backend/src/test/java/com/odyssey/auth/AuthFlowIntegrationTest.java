@@ -85,6 +85,44 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    void csrfAcceptsHeaderMatchingAnyShadowedCookie() throws Exception {
+        // Browsers can keep a stale XSRF-TOKEN cookie pinned to a deeper path;
+        // it is invisible to page JavaScript yet still sent with every request
+        // and sorts ahead of the visible one. Validation must still succeed
+        // when the header matches any sent cookie, and stay rejected otherwise.
+        Csrf csrf = csrf();
+        Cookie staleShadow = new Cookie("XSRF-TOKEN", "stale-shadowed-value");
+
+        String body = objectMapper.writeValueAsString(Map.of(
+                "name", "Grace Hopper",
+                "email", "grace@example.com",
+                "password", "Str0ng!Pass",
+                "acceptTerms", true
+        ));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .cookie(staleShadow, csrf.cookie())
+                        .header("X-XSRF-TOKEN", "does-not-match")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+
+        String valid = objectMapper.writeValueAsString(Map.of(
+                "name", "Marie Curie",
+                "email", "marie@example.com",
+                "password", "Str0ng!Pass",
+                "acceptTerms", true
+        ));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .cookie(staleShadow, csrf.cookie())
+                        .header("X-XSRF-TOKEN", csrf.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(valid))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void validationErrorsUseStandardEnvelope() throws Exception {
         Csrf csrf = csrf();
         String body = objectMapper.writeValueAsString(Map.of(
