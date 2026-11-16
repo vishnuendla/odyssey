@@ -8,18 +8,23 @@ const About = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
         <div className="max-w-4xl mx-auto">
           {/* Hero Section */}
-          <div className="text-center mb-12">
-            <div className="flex justify-center mb-6">
-              <Globe className="h-16 w-16 text-primary" />
+          <div className="page-head mb-12">
+            <div className="page-head-body">
+              <span className="eyebrow">About</span>
+              <h1 className="text-4xl font-semibold tracking-tight">About Odyssey</h1>
+              <p className="text-lg text-muted-foreground max-w-2xl">
+                Your journey deserves to be remembered. We help travelers create beautiful, 
+                shareable stories of their adventures around the world.
+              </p>
             </div>
-            <h1 className="text-4xl font-semibold mb-4">About Odyssey</h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Your journey deserves to be remembered. We help travelers create beautiful, 
-              shareable stories of their adventures around the world.
-            </p>
+            <div className="page-head-actions hidden sm:flex">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border bg-card" style={{ boxShadow: 'var(--shadow-card)' }}>
+                <Globe className="h-6 w-6 text-primary" />
+              </div>
+            </div>
           </div>
 
           {/* Mission Section */}

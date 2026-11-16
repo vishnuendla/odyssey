@@ -327,8 +327,8 @@ const CreateJournalForm = () => {
 
   return (
     <div className="w-full">
-      <div className="w-full">
-        <div className="flex items-center mb-6">
+      <div className="w-full max-w-3xl mx-auto">
+        <div className="mb-6 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back
@@ -336,7 +336,7 @@ const CreateJournalForm = () => {
         </div>
 
         {draftRestoredAt && (
-          <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-4 py-2 mb-4 text-sm">
+          <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-sm">
             <span className="text-muted-foreground">
               Draft restored — last saved {draftAgeLabel(draftRestoredAt)}.
             </span>
@@ -354,7 +354,9 @@ const CreateJournalForm = () => {
         )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <section className="space-y-6">
+              <h2 className="eyebrow">The entry</h2>
             <FormField
               control={form.control}
               name="title"
@@ -362,7 +364,7 @@ const CreateJournalForm = () => {
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter journal title" {...field} />
+                    <Input placeholder="Enter journal title" className="h-11" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -378,7 +380,7 @@ const CreateJournalForm = () => {
                   <FormControl>
                     <Textarea
                       placeholder="Write your journal entry..."
-                      className="min-h-[200px]"
+                      className="min-h-[240px]"
                       {...field}
                     />
                   </FormControl>
@@ -386,73 +388,10 @@ const CreateJournalForm = () => {
                 </FormItem>
               )}
             />
+            </section>
 
-            <FormItem>
-              <FormLabel>Tags</FormLabel>
-              <div className="flex gap-2">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  placeholder="Add a tag and press Enter"
-                  maxLength={30}
-                  disabled={isSubmitting || tags.length >= MAX_TAGS}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addTag}
-                  disabled={isSubmitting || !tagInput.trim() || tags.length >= MAX_TAGS}
-                >
-                  Add
-                </Button>
-              </div>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary"
-                    >
-                      #{tag}
-                      <button
-                        type="button"
-                        onClick={() => setTags((prev) => prev.filter((value) => value !== tag))}
-                        className="rounded-full hover:bg-primary/20"
-                        aria-label={`Remove ${tag} tag`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <FormDescription>
-                Add up to {MAX_TAGS} tags so other travelers can discover your journal.
-              </FormDescription>
-            </FormItem>
-
-            <FormField
-              control={form.control}
-              name="isPublic"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Public Journal</FormLabel>
-                    <FormDescription>
-                      Make this journal visible to other users
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
+            <section className="space-y-4">
+              <h2 className="eyebrow">Place</h2>
             <FormField
               control={form.control}
               name="location"
@@ -478,14 +417,14 @@ const CreateJournalForm = () => {
                     </div>
 
                     {locationQuery && !selectedLocation && locationQuery.length >= MIN_SEARCH_LENGTH && (
-                      <Card className="absolute z-50 top-[100%] left-0 w-full mt-1 max-h-[200px] overflow-auto shadow-lg border rounded-md bg-background">
+                      <Card className="absolute z-50 top-[100%] left-0 w-full mt-1 max-h-[220px] overflow-auto bg-popover" style={{ boxShadow: 'var(--shadow-pop)' }}>
                         <CardContent className="p-2">
                           {locationSuggestions.length > 0 ? (
                             <ul className="space-y-1">
                               {locationSuggestions.map((loc, index) => (
                                 <li
                                   key={index}
-                                  className="p-2 hover:bg-accent rounded-md cursor-pointer"
+                                  className="rounded-md p-2 hover:bg-secondary cursor-pointer text-sm"
                                   onClick={() => handleLocationSelect(loc)}
                                 >
                                   {loc.name}
@@ -493,11 +432,11 @@ const CreateJournalForm = () => {
                               ))}
                             </ul>
                           ) : isSearchingLocation ? (
-                            <div className="p-2 text-muted-foreground">
+                            <div className="p-2 text-sm text-muted-foreground">
                               Searching...
                             </div>
                           ) : (
-                            <div className="p-2 text-muted-foreground">
+                            <div className="p-2 text-sm text-muted-foreground">
                               No locations found
                             </div>
                           )}
@@ -506,10 +445,10 @@ const CreateJournalForm = () => {
                     )}
 
                     {selectedLocation && (
-                      <div className="flex items-center justify-between p-3 border rounded-md bg-accent/50">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{selectedLocation.name}</span>
+                      <div className="flex items-center justify-between gap-2 rounded-lg border bg-secondary/60 px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <MapPin className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="truncate text-sm">{selectedLocation.name}</span>
                         </div>
                         <Button
                           type="button"
@@ -530,7 +469,10 @@ const CreateJournalForm = () => {
                 </FormItem>
               )}
             />
+            </section>
 
+            <section className="space-y-4">
+              <h2 className="eyebrow">Gallery & tags</h2>
             <FormItem className="space-y-3">
               <FormLabel>Images</FormLabel>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -580,16 +522,94 @@ const CreateJournalForm = () => {
               </FormDescription>
             </FormItem>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Journal...
-                </>
-              ) : (
-                'Create Journal'
+            <FormItem className="space-y-3">
+              <FormLabel>Tags</FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder="Add a tag and press Enter"
+                  maxLength={30}
+                  disabled={isSubmitting || tags.length >= MAX_TAGS}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addTag}
+                  disabled={isSubmitting || !tagInput.trim() || tags.length >= MAX_TAGS}
+                >
+                  Add
+                </Button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary"
+                    >
+                      #{tag}
+                      <button
+                        type="button"
+                        onClick={() => setTags((prev) => prev.filter((value) => value !== tag))}
+                        className="rounded-full hover:bg-primary/20"
+                        aria-label={`Remove ${tag} tag`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
               )}
-            </Button>
+              <FormDescription>
+                Add up to {MAX_TAGS} tags so other travelers can discover your journal.
+              </FormDescription>
+            </FormItem>
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="eyebrow">Publishing</h2>
+            <FormField
+              control={form.control}
+              name="isPublic"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-xl border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Public Journal</FormLabel>
+                    <FormDescription>
+                      Make this journal visible to other users
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            </section>
+
+            <div className="sticky bottom-4 z-10 rounded-xl border bg-card/95 p-3 backdrop-blur-sm" style={{ boxShadow: 'var(--shadow-pop)' }}>
+              <div className="flex items-center justify-between gap-4 px-2">
+                <p className="text-sm text-muted-foreground">
+                  {uploadedFiles.length > 0 && `${uploadedFiles.length} image${uploadedFiles.length === 1 ? '' : 's'} · `}
+                  Draft saves automatically
+                </p>
+                <Button type="submit" disabled={isSubmitting} className="min-w-[10rem]">
+                  {isSubmitting ? (
+                    <>
+                      <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Journal...
+                    </>
+                  ) : (
+                    'Create Journal'
+                  )}
+                </Button>
+              </div>
+            </div>
           </form>
         </Form>
       </div>
