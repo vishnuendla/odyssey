@@ -67,6 +67,22 @@ function readCsrfCookie(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+/**
+ * Drops every local copy of the CSRF token — module cache and cookie — so the
+ * next fetch starts clean. Used when the server rejects a mutation with 403:
+ * a token that no longer validates can only be fixed by issuing a fresh one.
+ */
+function clearCsrfState(): void {
+  csrfToken = null;
+  if (typeof document === 'undefined') {
+    return;
+  }
+  // The cookie is not HttpOnly, so it can be expired from JS for both the
+  // root path and any legacy deeper paths an older build may have set.
+  document.cookie = 'XSRF-TOKEN=; Max-Age=0; path=/';
+  document.cookie = 'XSRF-TOKEN=; Max-Age=0; path=/api';
+}
+
 async function csrfHeader(): Promise<Record<string, string>> {
   const cookieToken = readCsrfCookie();
   if (cookieToken) {
@@ -138,7 +154,7 @@ function fallbackMessage(status: number): string {
     case 401:
       return 'Authentication required. Please log in.';
     case 403:
-      return 'You do not have permission to perform this action.';
+      return 'This action was blocked (often a stale session). Refresh the page and try again.';
     case 404:
       return 'The requested resource was not found.';
     case 413:
@@ -178,15 +194,30 @@ async function apiRequest<T>(path: string, options: RequestInit = {}, retry = tr
     headers.set('Content-Type', 'application/json');
   }
 
+  let sentCsrfValue: string | null = null;
   if (isMutation(method)) {
     const tokenHeaders = await csrfHeader();
     Object.entries(tokenHeaders).forEach(([name, value]) => headers.set(name, value));
+    sentCsrfValue = tokenHeaders['X-XSRF-TOKEN'] ?? Object.values(tokenHeaders)[0] ?? null;
   }
 
   let response = await performFetch(path, { ...options, headers });
 
   if (response.status === 401 && retry && !NO_REFRESH_PATHS.includes(path)) {
     if (await attemptRefresh()) {
+      response = await performFetch(path, { ...options, headers });
+    }
+  }
+
+  // A 403 on a mutation usually means the CSRF cookie in this browser no
+  // longer validates (stale across rebuilds or cleared server state). Issue
+  // a fresh token and try once more — but only when the token actually
+  // changed, so genuine permission failures are not retried blindly.
+  if (response.status === 403 && retry && isMutation(method)) {
+    clearCsrfState();
+    const token = await loadCsrfToken();
+    if (token.token !== sentCsrfValue) {
+      headers.set(token.headerName, token.token);
       response = await performFetch(path, { ...options, headers });
     }
   }
