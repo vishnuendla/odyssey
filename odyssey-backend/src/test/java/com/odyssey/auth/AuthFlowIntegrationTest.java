@@ -105,7 +105,9 @@ class AuthFlowIntegrationTest {
                         .header("X-XSRF-TOKEN", "does-not-match")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("csrf_invalid"))
+                .andExpect(jsonPath("$.message").isNotEmpty());
 
         String valid = objectMapper.writeValueAsString(Map.of(
                 "name", "Marie Curie",
