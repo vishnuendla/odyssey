@@ -12,9 +12,9 @@ import Footer from '@/components/layout/Footer';
 import InteractiveMap from '@/components/map/InteractiveMap';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { journalApi } from '@/services/api';
+import { readListCache, writeListCache } from '@/lib/listCache';
 
 // Fix Leaflet marker icons (Next.js workaround)
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
@@ -26,7 +26,8 @@ L.Icon.Default.mergeOptions({
 
 // Stale-while-revalidate cache: returning to the map renders the pins
 // instantly instead of flashing a skeleton on every tab switch.
-let cachedPublicJournals: JournalEntry[] | null = null;
+const MAP_CACHE = 'map:public-journals';
+const cachedPublicJournals = readListCache<JournalEntry[]>(MAP_CACHE);
 
 const MapViewPage = () => {
   const { journals, isLoading: ownLoading } = useJournal();
@@ -40,8 +41,8 @@ const MapViewPage = () => {
     let cancelled = false;
     journalApi.getPublicJournals()
       .then((list) => {
-        cachedPublicJournals = list;
         if (!cancelled) setPublicJournals(list);
+        writeListCache(MAP_CACHE, list);
       })
       .catch((error) => console.error('Failed to load public journals for the map', error))
       .finally(() => {
@@ -93,7 +94,7 @@ const MapViewPage = () => {
   return (
     <>
       <Navbar />
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <div className="page-head mb-6 sm:mb-8">
           <div className="page-head-body">
             <span className="eyebrow">Atlas</span>
@@ -123,7 +124,7 @@ const MapViewPage = () => {
             <div className="w-full rounded-xl overflow-hidden border" style={{ boxShadow: 'var(--shadow-card)' }}>
               <div className="aspect-[3/2] sm:aspect-[2/1] overflow-hidden relative">
                 {isLoading ? (
-                  <Skeleton className="w-full h-full" />
+                  <div className="h-full w-full bg-muted" aria-hidden="true" />
                 ) : (
                   <InteractiveMap 
                     journals={filteredJournals} 

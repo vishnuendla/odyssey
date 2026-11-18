@@ -5,9 +5,10 @@ import JournalList from '@/components/journals/JournalList';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { journalApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
+import ContentLoader from '@/components/shared/ContentLoader';
+import { readListCache, writeListCache } from '@/lib/listCache';
 import { JournalEntry, User } from '@/types';
 
 import {
@@ -28,9 +29,30 @@ type ExplorePageResult = {
   totalPages: number;
 };
 
+type ExploreQuery = {
+  q?: string;
+  tag?: string;
+  location?: string;
+  sort: SortOption;
+  page: number;
+};
+
+const EXPLORE_CACHE = 'explore:page';
+const EXPLORE_TAGS = 'explore:tags';
+const EXPLORE_LOCATIONS = 'explore:locations';
+
 // Stale-while-revalidate cache so returning to Explore renders instantly
-// instead of flashing skeletons on every tab switch.
+// instead of flashing placeholder cards on every tab switch.
 const pageCache = new Map<string, ExplorePageResult>();
+
+const cacheKeyFor = (query: ExploreQuery) =>
+  JSON.stringify({
+    q: query.q,
+    tag: query.tag,
+    location: query.location,
+    sort: query.sort === 'popular' ? 'recent' : query.sort,
+    page: query.page,
+  });
 
 const ExplorePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,12 +62,33 @@ const ExplorePage = () => {
   const [tagFilter, setTagFilter] = useState(searchParams.get('tag') || '');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [page, setPage] = useState(0);
-  const [journals, setJournals] = useState<JournalEntry[]>([]);
-  const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [popularTags, setPopularTags] = useState<string[]>([]);
-  const [locationOptions, setLocationOptions] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Hydrate the very first paint from the cached page matching the filters
+  // this mount starts with. Reading the cache in an effect (as before) left
+  // one frame of placeholder cards on every revisit.
+  const [initialResult] = useState<ExplorePageResult | null>(() => {
+    const key = cacheKeyFor({
+      tag: searchParams.get('tag') || undefined,
+      sort: 'recent',
+      page: 0,
+    });
+    const cached = pageCache.get(key) ?? readListCache<ExplorePageResult>(`${EXPLORE_CACHE}:${key}`);
+    if (cached) {
+      pageCache.set(key, cached);
+    }
+    return cached;
+  });
+
+  const [journals, setJournals] = useState<JournalEntry[]>(initialResult?.content ?? []);
+  const [totalElements, setTotalElements] = useState(initialResult?.totalElements ?? 0);
+  const [totalPages, setTotalPages] = useState(initialResult?.totalPages ?? 0);
+  const [popularTags, setPopularTags] = useState<string[]>(
+    () => readListCache<string[]>(EXPLORE_TAGS) ?? []
+  );
+  const [locationOptions, setLocationOptions] = useState<string[]>(
+    () => readListCache<string[]>(EXPLORE_LOCATIONS) ?? []
+  );
+  const [isLoading, setIsLoading] = useState(initialResult === null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -56,7 +99,10 @@ const ExplorePage = () => {
   useEffect(() => {
     journalApi
       .getPopularTags()
-      .then(setPopularTags)
+      .then((tags) => {
+        setPopularTags(tags);
+        writeListCache(EXPLORE_TAGS, tags);
+      })
       .catch((error) => console.error('Error fetching tags:', error));
   }, []);
 
@@ -69,6 +115,7 @@ const ExplorePage = () => {
           new Set(data.map((journal) => journal.location?.name).filter(Boolean))
         ).sort() as string[];
         setLocationOptions(names);
+        writeListCache(EXPLORE_LOCATIONS, names);
       })
       .catch((error) => console.error('Error fetching locations:', error));
   }, []);
@@ -82,11 +129,11 @@ const ExplorePage = () => {
     let cancelled = false;
 
     const fetchJournals = async () => {
-      const cacheKey = JSON.stringify({
+      const cacheKey = cacheKeyFor({
         q: debouncedSearch.trim() || undefined,
         tag: tagFilter || undefined,
         location: locationFilter === 'all' ? undefined : locationFilter,
-        sort: sortBy === 'popular' ? 'recent' : sortBy,
+        sort: sortBy,
         page,
       });
 
@@ -103,8 +150,10 @@ const ExplorePage = () => {
       };
 
       // Render the cached result immediately; refresh in the background.
-      const cached = pageCache.get(cacheKey);
+      const cached =
+        pageCache.get(cacheKey) ?? readListCache<ExplorePageResult>(`${EXPLORE_CACHE}:${cacheKey}`);
       if (cached) {
+        pageCache.set(cacheKey, cached);
         applyResult(cached.content, cached.totalElements, cached.totalPages);
         setIsLoading(false);
       } else {
@@ -123,12 +172,14 @@ const ExplorePage = () => {
 
         if (cancelled) return;
 
-        pageCache.set(cacheKey, {
+        const payload: ExplorePageResult = {
           content: result.content,
           totalElements: result.totalElements,
           totalPages: result.totalPages,
-        });
-        applyResult(result.content, result.totalElements, result.totalPages);
+        };
+        pageCache.set(cacheKey, payload);
+        writeListCache(`${EXPLORE_CACHE}:${cacheKey}`, payload);
+        applyResult(payload.content, payload.totalElements, payload.totalPages);
       } catch (error) {
         console.error('Error fetching journals:', error);
         if (!cancelled) {
@@ -258,18 +309,7 @@ const ExplorePage = () => {
         )}
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true" aria-label="Loading journals">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="overflow-hidden rounded-xl border bg-card">
-                <Skeleton className="aspect-[4/3] w-full rounded-none" />
-                <div className="space-y-3 p-5">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ContentLoader label="Loading journals…" />
         ) : (
           <>
             <div className="text-sm text-muted-foreground mb-4">

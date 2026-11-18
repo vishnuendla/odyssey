@@ -6,7 +6,7 @@ import AppPage from '@/components/layout/AppPage';
 import JournalList from '@/components/journals/JournalList';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Sparkles } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import ContentLoader from '@/components/shared/ContentLoader';
 import Onboarding from '@/components/onboarding/Onboarding';
 import { User } from '@/types';
 
@@ -97,18 +97,7 @@ const JournalsPage = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="overflow-hidden rounded-xl border bg-card">
-                <Skeleton className="aspect-[4/3] w-full rounded-none" />
-                <div className="space-y-3 p-5">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ContentLoader label="Loading your journals…" />
         ) : (
           <>
             {userJournals.length === 0 && <Onboarding hasJournals={false} />}
