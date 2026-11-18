@@ -23,11 +23,13 @@ export default function AppPage({
   description,
   actions,
   children,
-  width = 'default',
+  width = 'wide',
 }: AppPageProps) {
   return (
     <PageShell>
-      <div className={`mx-auto w-full ${widthClass[width]} px-4 py-8 sm:px-6 lg:py-12`}>
+      {/* Matches the navbar and footer columns (max-w-7xl + lg:px-8) so every
+          page's content lines up with the app chrome. */}
+      <div className={`mx-auto w-full ${widthClass[width]} px-4 py-8 sm:px-6 lg:px-8 lg:py-12`}>
         <PageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} />
         {children}
       </div>
