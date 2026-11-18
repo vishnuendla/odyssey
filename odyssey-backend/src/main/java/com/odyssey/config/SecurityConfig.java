@@ -1,5 +1,6 @@
 package com.odyssey.config;
 
+import com.odyssey.exception.ApiError;
 import com.odyssey.repository.UserRepository;
 import com.odyssey.security.CsrfCookieFilter;
 import com.odyssey.security.JwtAuthenticationFilter;
@@ -7,7 +8,11 @@ import com.odyssey.security.JwtTokenProvider;
 import com.odyssey.security.StableCsrfTokenRepository;
 import com.odyssey.security.UserDetailsServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,16 +28,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
-import java.util.Map;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
@@ -75,9 +81,17 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) ->
                                 writeError(response, HttpServletResponse.SC_UNAUTHORIZED,
                                         "Authentication required. Please log in."))
-                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            if (accessDeniedException instanceof CsrfException) {
+                                logCsrfRejection(request, accessDeniedException);
                                 writeError(response, HttpServletResponse.SC_FORBIDDEN,
-                                        "You do not have permission to perform this action.")))
+                                        "Your security token is no longer valid. Refresh the page and try again.",
+                                        "csrf_invalid");
+                            } else {
+                                writeError(response, HttpServletResponse.SC_FORBIDDEN,
+                                        "You do not have permission to perform this action.");
+                            }
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
@@ -123,10 +137,40 @@ public class SecurityConfig {
                 .build();
     }
 
+    /**
+     * Records why a mutation failed CSRF validation. The client retries once
+     * with a freshly issued token, so a repeat of this line in the logs means
+     * the browser never stored or sent the cookie (privacy extension, blocked
+     * site data, private window) or something rewrote the request on the way.
+     */
+    private void logCsrfRejection(HttpServletRequest request, RuntimeException exception) {
+        String header = request.getHeader("X-XSRF-TOKEN");
+        Cookie[] cookies = request.getCookies();
+        int tokenCookies = 0;
+        boolean matched = false;
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("XSRF-TOKEN".equals(cookie.getName())) {
+                    tokenCookies++;
+                    matched |= header != null && header.equals(cookie.getValue());
+                }
+            }
+        }
+        logger.warn("CSRF rejected {} {}: header={} xsrfCookies={} matched={} ({})",
+                request.getMethod(), request.getRequestURI(),
+                header == null || header.isBlank() ? "missing" : "present",
+                tokenCookies, matched, exception.getClass().getSimpleName());
+    }
+
     private void writeError(HttpServletResponse response, int status, String message) throws java.io.IOException {
+        writeError(response, status, message, null);
+    }
+
+    private void writeError(HttpServletResponse response, int status, String message, String code)
+            throws java.io.IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getWriter(), Map.of("message", message));
+        objectMapper.writeValue(response.getWriter(), new ApiError(message, null, code));
     }
 
     @Bean

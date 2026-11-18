@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icons } from '@/components/shared/Icons';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ApiError } from '@/services/api';
+import { ApiError, repairAndReload, resetBrowserSession } from '@/services/api';
 import { Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z.object({
@@ -62,6 +62,17 @@ export default function LoginForm() {
             form.setError(field, { message });
           }
         });
+        // The response did not come from the API (stale shell, proxy or
+        // extension). Rebuild the client once; the page reloads.
+        if (error.code === 'client_out_of_sync') {
+          if (await repairAndReload()) {
+            return;
+          }
+          setFormError(
+            'Odyssey could not confirm your session in this browser. A privacy extension or proxy may be blocking it — use "Reset this browser\'s session" below.'
+          );
+          return;
+        }
         setFormError(error.message);
       } else {
         setFormError('Login failed. Please try again.');
@@ -69,6 +80,12 @@ export default function LoginForm() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleResetSession() {
+    setIsLoading(true);
+    await resetBrowserSession();
+    window.location.reload();
   }
 
   return (
@@ -179,6 +196,17 @@ export default function LoginForm() {
         <Link to="/register" className="font-medium text-primary hover:underline">
           Sign up
         </Link>
+      </div>
+
+      <div className="text-center">
+        <button
+          type="button"
+          onClick={handleResetSession}
+          disabled={isLoading}
+          className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline disabled:opacity-60"
+        >
+          Having trouble signing in? Reset this browser&apos;s session
+        </button>
       </div>
     </div>
   );
