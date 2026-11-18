@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import JournalList from '@/components/journals/JournalList';
-import { Skeleton } from '@/components/ui/skeleton';
+import ContentLoader from '@/components/shared/ContentLoader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { journalApi } from '@/services/api';
@@ -60,7 +60,7 @@ const BookmarksPage = () => {
   return (
     <>
       <Navbar />
-      <main className="mx-auto w-full max-w-6xl px-4 py-12">
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <div className="page-head">
           <div className="page-head-body">
             <span className="eyebrow">Saved</span>
@@ -72,18 +72,7 @@ const BookmarksPage = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="overflow-hidden rounded-xl border bg-card">
-                <Skeleton className="aspect-[4/3] w-full rounded-none" />
-                <div className="space-y-3 p-5">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ContentLoader label="Loading your saved journals…" />
         ) : (
           <JournalList
             journals={journals}

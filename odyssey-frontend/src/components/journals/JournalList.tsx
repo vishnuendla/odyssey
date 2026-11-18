@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { journalApi } from '@/services/api';
 import { JournalEntry, User } from '@/types';
 import JournalCard from './JournalCard';
-import { Skeleton } from '@/components/ui/skeleton';
+import ContentLoader from '@/components/shared/ContentLoader';
 import { AlertCircle, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -22,41 +22,6 @@ interface JournalListProps {
   /** Masonry renders a photo wall with natural-height covers (Explore). */
   layout?: 'grid' | 'masonry';
 }
-
-const JournalListSkeleton = ({ layout = 'grid' }: { layout?: 'grid' | 'masonry' }) => {
-  if (layout === 'masonry') {
-    return (
-      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6">
-        {[200, 260, 180, 240, 210, 280].map((height, i) => (
-          <div key={i} className="mb-6 break-inside-avoid">
-            <Skeleton className="w-full rounded-xl" style={{ height }} />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="overflow-hidden rounded-xl border bg-card">
-          <Skeleton className="aspect-[4/3] w-full rounded-none" />
-          <div className="space-y-3 p-5">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <div className="space-y-1.5">
-                <Skeleton className="h-3.5 w-24" />
-                <Skeleton className="h-3 w-16" />
-              </div>
-            </div>
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-2/3" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 export default function JournalList({
   journals: propJournals,
@@ -136,7 +101,7 @@ export default function JournalList({
   };
 
   if (loading) {
-    return <JournalListSkeleton layout={layout} />;
+    return <ContentLoader label="Loading journals…" />;
   }
 
   if (error) {
