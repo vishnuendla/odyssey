@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { User } from '../types';
 import { useToast } from '@/hooks/use-toast';
 import { authApi } from '@/services/api';
+import { clearPerUserClientState } from '@/lib/clientStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -63,6 +64,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Do not toggle session bootstrap loading here — ProtectedRoute would replace
     // the login form with a full-screen spinner and hide inline errors.
     const loggedInUser = await authApi.login(email, password, rememberMe);
+    // A previous account may have left list snapshots or cached API responses
+    // in this tab; drop them before the new user's first render.
+    await clearPerUserClientState({ drafts: false });
     setUser(loggedInUser);
     setIsAuthenticated(true);
     toast({
@@ -72,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (name: string, email: string, password: string, acceptTerms = true) => {
     const newUser = await authApi.register(name, email, password, acceptTerms);
+    await clearPerUserClientState({ drafts: false });
     setUser(newUser);
     setIsAuthenticated(true);
     toast({
@@ -86,6 +91,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error logging out', error);
     } finally {
+      // Wipe anything URL-keyed or per-user before the guard re-renders, so a
+      // reload after logout cannot be answered from a stale cache.
+      await clearPerUserClientState();
       clearSession();
       toast({ description: 'You have been logged out' });
     }
@@ -93,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logoutAll = async () => {
     await authApi.logoutAll();
+    await clearPerUserClientState();
     clearSession();
     toast({ description: 'You have been signed out on all devices' });
   };

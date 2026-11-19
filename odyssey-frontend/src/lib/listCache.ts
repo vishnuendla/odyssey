@@ -46,3 +46,14 @@ function prune(): void {
     // Ignore: pruning is best effort.
   }
 }
+
+/** Drops every cached list snapshot for this tab (logout, account switch). */
+export function clearListCaches(): void {
+  try {
+    Object.keys(sessionStorage)
+      .filter((key) => key.startsWith(`${PREFIX}${SCHEMA}:`))
+      .forEach((key) => sessionStorage.removeItem(key));
+  } catch {
+    // Private windows can throw on storage access; nothing to clear then.
+  }
+}
