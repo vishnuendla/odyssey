@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // Pages are split per route so the first paint only ships the shell plus the
@@ -67,6 +67,7 @@ export const AppRoutes = () => {
       <Route path="/timeline" element={<ProtectedRoute><Timeline /></ProtectedRoute>} />
       <Route path="/create" element={<ProtectedRoute><CreateJournal /></ProtectedRoute>} />
       <Route path="/ask" element={<ProtectedRoute><Ask /></ProtectedRoute>} />
+      <Route path="/journals/new" element={<Navigate to="/create" replace />} />
       <Route path="/journals/:id" element={<JournalView />} />
       <Route path="/journal/edit/:id" element={<ProtectedRoute><JournalEdit /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
