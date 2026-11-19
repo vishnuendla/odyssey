@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION whenever the cached shell changes so old caches are
  * dropped on the next activation.
  */
-const CACHE_VERSION = 'odyssey-v2';
+const CACHE_VERSION = 'odyssey-v3';
 const SHELL = [
   '/',
   '/index.html',
@@ -40,7 +40,13 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  if (request.method !== 'GET' || url.origin !== self.location.origin) {
+  if (
+    request.method !== 'GET' ||
+    url.origin !== self.location.origin ||
+    // API responses are per-user and must never be cached: a URL-only cache
+    // key would replay another account's data and hide fresh writes.
+    url.pathname.startsWith('/api/')
+  ) {
     return; // API calls, uploads, cross-origin assets: never intercepted.
   }
 
