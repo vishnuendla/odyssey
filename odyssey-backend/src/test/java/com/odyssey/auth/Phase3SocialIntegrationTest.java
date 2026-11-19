@@ -369,6 +369,81 @@ class Phase3SocialIntegrationTest {
         assertThat(tags()).doesNotContain("cachetagunique");
     }
 
+    @Test
+    void unbookmarkingCannotDiscloseAPrivateJournal() throws Exception {
+        String authorEmail = "idor-author@example.com";
+        MvcResult author = register(authorEmail);
+        markVerified(authorEmail);
+        Cookie authorAccess = cookie(author, "odyssey-token");
+        String privateId = createJournal(author, "Zz Private Bookmark Journal",
+                "Zz secret bookmark content", false);
+
+        String readerEmail = "idor-reader@example.com";
+        MvcResult reader = register(readerEmail);
+        markVerified(readerEmail);
+        Cookie readerAccess = cookie(reader, "odyssey-token");
+
+        // Neither direction may confirm that the private journal exists.
+        Csrf csrfAdd = csrf();
+        mockMvc.perform(post("/api/journals/" + privateId + "/bookmark")
+                        .cookie(csrfAdd.cookie())
+                        .header("X-XSRF-TOKEN", csrfAdd.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isNotFound());
+
+        Csrf csrfRemove = csrf();
+        MvcResult removed = mockMvc.perform(delete("/api/journals/" + privateId + "/bookmark")
+                        .cookie(csrfRemove.cookie())
+                        .header("X-XSRF-TOKEN", csrfRemove.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isNotFound())
+                .andReturn();
+        assertThat(removed.getResponse().getContentAsString())
+                .doesNotContain("Zz Private Bookmark Journal")
+                .doesNotContain("Zz secret bookmark content");
+
+        // The normal public round trip still works.
+        String publicId = createJournal(author, "Zz Public Bookmark Journal",
+                "Public journal used for bookmark checks.", true);
+        Csrf csrfBookmark = csrf();
+        mockMvc.perform(post("/api/journals/" + publicId + "/bookmark")
+                        .cookie(csrfBookmark.cookie())
+                        .header("X-XSRF-TOKEN", csrfBookmark.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookmarked").value(true));
+
+        Csrf csrfUnbookmark = csrf();
+        mockMvc.perform(delete("/api/journals/" + publicId + "/bookmark")
+                        .cookie(csrfUnbookmark.cookie())
+                        .header("X-XSRF-TOKEN", csrfUnbookmark.token())
+                        .cookie(readerAccess))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookmarked").value(false));
+    }
+
+    @Test
+    void locationSearchOnlyReturnsVisiblePlaces() throws Exception {
+        String authorEmail = "loc-author@example.com";
+        MvcResult author = register(authorEmail);
+        markVerified(authorEmail);
+
+        createJournalWithLocation(author, "Zz Private Place Journal", false, "ZzSecretHarbour", 11.1, 22.2);
+        mockMvc.perform(get("/api/locations/search").param("q", "ZzSecretHarbour"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        createJournalWithLocation(author, "Zz Public Place Journal", true, "ZzPublicHarbour", 33.3, 44.4);
+        mockMvc.perform(get("/api/locations/search").param("q", "ZzPublicHarbour"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("ZzPublicHarbour"));
+
+        // A blank query must not dump the table.
+        mockMvc.perform(get("/api/locations/search").param("q", ""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     private List<String> tags() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/journals/tags"))
                 .andExpect(status().isOk())
@@ -417,6 +492,31 @@ class Phase3SocialIntegrationTest {
                                 "content", content,
                                 "isPublic", isPublic,
                                 "tags", tags))))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
+    }
+
+    private String createJournalWithLocation(MvcResult session, String title, boolean isPublic,
+                                             String place, double latitude, double longitude) throws Exception {
+        Cookie access = cookie(session, "odyssey-token");
+        Csrf csrf = csrf();
+        MvcResult created = mockMvc.perform(post("/api/journals")
+                        .cookie(csrf.cookie())
+                        .header("X-XSRF-TOKEN", csrf.token())
+                        .cookie(access)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", title,
+                                "content", "Location search regression check.",
+                                "isPublic", isPublic,
+                                "location", Map.of(
+                                        "name", place,
+                                        "country", "Testland",
+                                        "city", "Testville",
+                                        "latitude", latitude,
+                                        "longitude", longitude),
+                                "tags", List.of("LocationRegression")))))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
