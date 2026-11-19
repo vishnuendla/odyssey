@@ -57,6 +57,17 @@ export function hasDraft(key: string): boolean {
   return loadDraft(key) !== null;
 }
 
+/** Removes every autosaved draft. Used when the account changes. */
+export function clearAllDrafts(): void {
+  try {
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(PREFIX))
+      .forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // Storage disabled: nothing to clear.
+  }
+}
+
 /** Human short label like "just now", "5 min ago" or "2 h ago". */
 export function draftAgeLabel(savedAt: string, now: Date = new Date()): string {
   const saved = new Date(savedAt).getTime();
