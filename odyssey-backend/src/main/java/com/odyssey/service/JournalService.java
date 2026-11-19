@@ -367,6 +367,11 @@ public class JournalService {
         User user = requireUser(userEmail);
         Journal journal = journalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
+        // Same visibility rule as addBookmark and getJournalById: never return a
+        // journal the caller cannot see, even while un-bookmarking it.
+        if (!journal.isPublic() || journal.isHidden()) {
+            throw new ResourceNotFoundException("Journal not found");
+        }
 
         bookmarkRepository.findByUserIdAndJournalId(user.getId(), journal.getId())
                 .ifPresent(bookmarkRepository::delete);
