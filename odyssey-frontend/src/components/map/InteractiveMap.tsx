@@ -24,6 +24,9 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
   const [map, setMap] = useState<L.Map | null>(null);
   const [markers, setMarkers] = useState<L.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Animations queued by a pin click; cancelled when the selection changes or
+  // the map unmounts so flyTo() never runs against a disposed map.
+  const flyTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Initialize map
   useEffect(() => {
@@ -56,6 +59,7 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
     setMapLoaded(true);
 
     // Select a random journal by default if there are journals
+    let initialFlyTimer: ReturnType<typeof setTimeout> | undefined;
     if (journals.length > 0) {
       const randomIndex = Math.floor(Math.random() * journals.length);
       const randomJournal = journals[randomIndex];
@@ -65,7 +69,7 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
       // is a real coordinate, so test for presence instead of truthiness.
       const location = randomJournal.location;
       if (location) {
-        setTimeout(() => {
+        initialFlyTimer = setTimeout(() => {
           initialMap.flyTo(
             [location.latitude, location.longitude],
             12,
@@ -79,6 +83,9 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
     }
 
     return () => {
+      if (initialFlyTimer) {
+        clearTimeout(initialFlyTimer);
+      }
       initialMap.remove();
     };
   }, []);
@@ -109,7 +116,8 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
     );
 
     // After zooming out, move to new location while staying zoomed out
-    setTimeout(() => {
+    let innerTimer: ReturnType<typeof setTimeout> | undefined;
+    const outerTimer = setTimeout(() => {
       map.flyTo(
         [latitude, longitude],
         4, // Keep zoom level 4
@@ -120,7 +128,7 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
       );
 
       // Finally zoom in to the new location
-      setTimeout(() => {
+      innerTimer = setTimeout(() => {
         map.flyTo(
           [latitude, longitude],
           12,
@@ -131,6 +139,15 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
         );
       }, 500);
     }, 500);
+
+    // Cancel queued animations when another pin is selected or the map unmounts,
+    // otherwise the stale callbacks run flyTo() on a disposed map.
+    return () => {
+      clearTimeout(outerTimer);
+      if (innerTimer) {
+        clearTimeout(innerTimer);
+      }
+    };
   }, [selectedJournal, map, mapLoaded]);
 
   // Update markers when journals change
@@ -142,60 +159,67 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
     const newMarkers: L.Marker[] = [];
 
     journals.forEach(journal => {
-      if (journal.location?.latitude && journal.location?.longitude) {
-        const marker = L.marker([
-          journal.location.latitude,
-          journal.location.longitude
-        ]).addTo(map);
+      const location = journal.location;
+      if (!location) {
+        return;
+      }
+      const { latitude, longitude } = location;
+      // 0 is a valid coordinate (equator / Greenwich meridian).
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return;
+      }
 
-        marker.bindPopup(journal.title);
-        marker.on('click', () => {
-          onJournalSelect(journal);
-          const location = journal.location;
-          if (!location) {
-            return;
+      const marker = L.marker([latitude, longitude]).addTo(map);
+
+      marker.bindPopup(journal.title);
+      marker.on('click', () => {
+        onJournalSelect(journal);
+
+        // Get current center
+        const currentCenter = map.getCenter();
+
+        // First zoom out from current location
+        map.flyTo(
+          currentCenter,
+          4, // Zoom out to level 4
+          {
+            duration: 0.5,
+            easeLinearity: 0.25
           }
+        );
 
-          // Get current center
-          const currentCenter = map.getCenter();
+        // Replace any animation queued by the previous pin.
+        flyTimers.current.forEach(clearTimeout);
+        flyTimers.current = [];
 
-          // First zoom out from current location
+        // After zooming out, move to new location while staying zoomed out
+        const outer = setTimeout(() => {
           map.flyTo(
-            currentCenter,
-            4, // Zoom out to level 4
+            [latitude, longitude],
+            4, // Keep zoom level 4
             {
               duration: 0.5,
               easeLinearity: 0.25
             }
           );
 
-          // After zooming out, move to new location while staying zoomed out
-          setTimeout(() => {
+          // Finally zoom in to the new location
+          const inner = setTimeout(() => {
             map.flyTo(
-              [location.latitude, location.longitude],
-              4, // Keep zoom level 4
+              [latitude, longitude],
+              12,
               {
-                duration: 0.5,
+                duration: 1,
                 easeLinearity: 0.25
               }
             );
-
-            // Finally zoom in to the new location
-            setTimeout(() => {
-              map.flyTo(
-                [location.latitude, location.longitude],
-                12,
-                {
-                  duration: 1,
-                  easeLinearity: 0.25
-                }
-              );
-            }, 500);
           }, 500);
-        });
+          flyTimers.current.push(inner);
+        }, 500);
+        flyTimers.current.push(outer);
+      });
 
-        newMarkers.push(marker);
-      }
+      newMarkers.push(marker);
     });
 
     setMarkers(newMarkers);
@@ -205,6 +229,11 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
       const group = L.featureGroup(newMarkers);
       map.fitBounds(group.getBounds().pad(0.1));
     }
+
+    return () => {
+      flyTimers.current.forEach(clearTimeout);
+      flyTimers.current = [];
+    };
   }, [map, journals, mapLoaded, onJournalSelect]);
 
   const handleReset = () => {
@@ -243,6 +272,8 @@ export default function InteractiveMap({ journals, onJournalSelect, selectedJour
         size="icon"
         className="absolute bottom-4 right-4 z-[1000] bg-background/80 backdrop-blur-sm hover:bg-background"
         onClick={handleReset}
+        aria-label="Reset map view"
+        title="Reset map view"
       >
         <RefreshCcw className="h-4 w-4" />
       </Button>
