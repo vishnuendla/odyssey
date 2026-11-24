@@ -532,8 +532,8 @@ export const authApi = {
 
 // Journal API calls
 export const journalApi = {
-  getAllJournals: async (): Promise<JournalEntry[]> => {
-    return apiRequest<JournalEntry[]>('/journals');
+  getAllJournals: async (page = 0, size = 20): Promise<PageResponse<JournalEntry>> => {
+    return apiRequest<PageResponse<JournalEntry>>(`/journals?page=${page}&size=${size}`);
   },
 
   getPublicJournals: async (): Promise<JournalEntry[]> => {
@@ -650,11 +650,17 @@ export const socialApi = {
       body: JSON.stringify({ type: reactionType }),
     });
   },
+
+  removeReaction: async (journalId: string, reactionType: string): Promise<void> => {
+    await apiRequest<void>(`/journals/${journalId}/reactions/${encodeURIComponent(reactionType)}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 export const notificationApi = {
-  list: async (): Promise<NotificationItem[]> => {
-    return apiRequest<NotificationItem[]>('/notifications');
+  list: async (page = 0, size = 20): Promise<PageResponse<NotificationItem>> => {
+    return apiRequest<PageResponse<NotificationItem>>(`/notifications?page=${page}&size=${size}`);
   },
 
   unreadCount: async (): Promise<number> => {

@@ -28,14 +28,20 @@ import {
   Clock,
   Edit,
   Globe,
-  Heart,
   MapPin,
   MessageCircle,
-  ThumbsUp,
   Trash,
   Loader2,
   CornerDownRight,
 } from 'lucide-react';
+
+/** Every reaction the API accepts, with the glyph shown in the footer. */
+const REACTIONS = [
+  { type: 'like', emoji: '👍', label: 'Like' },
+  { type: 'love', emoji: '❤️', label: 'Love' },
+  { type: 'wow', emoji: '😮', label: 'Wow' },
+  { type: 'globe', emoji: '🌍', label: 'Globe' },
+] as const;
 
 const setMeta = (property: string, content: string, attr: 'name' | 'property' = 'property') => {
   let tag = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${property}"]`);
@@ -58,6 +64,7 @@ const JournalView = () => {
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [reacting, setReacting] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -200,14 +207,27 @@ const JournalView = () => {
     }
   };
 
-  const handleAddReaction = async (type: string) => {
-    if (!id || !isAuthenticated) return;
+  const handleToggleReaction = async (type: string) => {
+    if (!id || !journal) return;
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (reacting) return;
+    const active = journal.userReactions?.includes(type) ?? false;
+    setReacting(type);
     try {
-      await socialApi.addReaction(id, type);
+      if (active) {
+        await socialApi.removeReaction(id, type);
+      } else {
+        await socialApi.addReaction(id, type);
+      }
       await refreshJournal();
     } catch (reactionError) {
-      console.error('Failed to add reaction:', reactionError);
-      toast({ variant: 'destructive', description: 'Failed to add reaction.' });
+      console.error('Failed to update reaction:', reactionError);
+      toast({ variant: 'destructive', description: 'Failed to update reaction.' });
+    } finally {
+      setReacting(null);
     }
   };
 
@@ -522,19 +542,29 @@ const JournalView = () => {
                 )}
               </CardContent>
               <CardFooter className="justify-between gap-4 border-t bg-secondary/40 px-5 py-4 sm:px-8">
-                <div className="flex gap-1">
-                  {isAuthenticated && (
-                    <Button variant="ghost" size="sm" onClick={() => handleAddReaction('like')} className="flex items-center gap-1.5">
-                      <ThumbsUp className="h-4 w-4" />
-                      <span>{journal.reactions.find((reaction) => reaction.type === 'like')?.count || 0}</span>
-                    </Button>
-                  )}
-                  {isAuthenticated && (
-                    <Button variant="ghost" size="sm" onClick={() => handleAddReaction('love')} className="flex items-center gap-1.5">
-                      <Heart className="h-4 w-4" />
-                      <span>{journal.reactions.find((reaction) => reaction.type === 'love')?.count || 0}</span>
-                    </Button>
-                  )}
+                <div className="flex flex-wrap items-center gap-1">
+                  {REACTIONS.map((reaction) => {
+                    const count = journal.reactions.find((entry) => entry.type === reaction.type)?.count ?? 0;
+                    const active = journal.userReactions?.includes(reaction.type) ?? false;
+                    return (
+                      <Button
+                        key={reaction.type}
+                        variant={active ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="flex items-center gap-1.5"
+                        aria-pressed={active}
+                        aria-label={`${reaction.label}${count > 0 ? `, ${count}` : ''}`}
+                        title={active ? `Remove ${reaction.label.toLowerCase()}` : reaction.label}
+                        disabled={reacting === reaction.type}
+                        onClick={() => handleToggleReaction(reaction.type)}
+                      >
+                        <span aria-hidden="true" className="text-base leading-none">
+                          {reaction.emoji}
+                        </span>
+                        <span className="tabular-nums">{count}</span>
+                      </Button>
+                    );
+                  })}
                   <span className="flex items-center gap-1.5 px-2 text-sm text-muted-foreground">
                     <MessageCircle className="h-4 w-4" /> {comments.length}
                   </span>

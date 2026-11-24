@@ -4,6 +4,7 @@ package com.odyssey.controller;
 import com.odyssey.dto.ReactionDto;
 import com.odyssey.dto.ReactionSummaryDto;
 import com.odyssey.service.ReactionService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,7 +25,7 @@ public class ReactionController {
     @PostMapping
     public ResponseEntity<List<ReactionSummaryDto>> addReaction(
             @PathVariable String journalId,
-            @RequestBody ReactionDto reactionDto,
+            @Valid @RequestBody ReactionDto reactionDto,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(reactionService.addReaction(journalId, reactionDto, userDetails.getUsername()));
     }

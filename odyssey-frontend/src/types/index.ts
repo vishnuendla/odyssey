@@ -33,6 +33,8 @@ export interface JournalEntry {
     type: string;
     count: number;
   }>;
+  /** Reaction types the signed-in viewer already added (e.g. ["like"]). */
+  userReactions?: string[];
   comments?: Comment[];
 }
 

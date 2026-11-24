@@ -22,6 +22,8 @@ public class JournalDto {
     private boolean bookmarked;
     private List<CommentDto> comments = new ArrayList<>();
     private List<ReactionSummaryDto> reactions = new ArrayList<>();
+    /** Reaction types the requesting user already selected, e.g. ["like"]. */
+    private List<String> userReactions = new ArrayList<>();
 
     // Getters and setters
     public String getId() {
@@ -150,5 +152,13 @@ public class JournalDto {
 
     public void setReactions(List<ReactionSummaryDto> reactions) {
         this.reactions = reactions;
+    }
+
+    public List<String> getUserReactions() {
+        return userReactions;
+    }
+
+    public void setUserReactions(List<String> userReactions) {
+        this.userReactions = userReactions;
     }
 }

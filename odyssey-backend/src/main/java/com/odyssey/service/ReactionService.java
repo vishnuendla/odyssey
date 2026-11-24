@@ -55,6 +55,9 @@ public class ReactionService {
         }
         
         Reaction.ReactionType reactionType;
+        if (reactionDto.getType() == null || reactionDto.getType().isBlank()) {
+            throw new IllegalArgumentException("Reaction type is required");
+        }
         try {
             reactionType = Reaction.ReactionType.valueOf(reactionDto.getType().toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -91,7 +94,15 @@ public class ReactionService {
         
         User user = userRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        
+
+        if ((journal.isHidden() || !journal.isPublic())
+                && !journal.getUser().getId().equals(user.getId())
+                && !user.isAdmin()) {
+            // Same 404 as an invisible read, so reaction removal cannot confirm
+            // that a private journal id exists.
+            throw new ResourceNotFoundException("Journal not found");
+        }
+
         Reaction.ReactionType type;
         try {
             type = Reaction.ReactionType.valueOf(reactionType.toUpperCase());
