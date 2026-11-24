@@ -22,7 +22,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        return toUserDetails(user);
+    }
 
+    /**
+     * Builds the principal from an already-loaded user. The JWT filter has the
+     * entity in hand, so a second lookup by email only adds a query per request.
+     */
+    public static UserDetails toUserDetails(User user) {
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),

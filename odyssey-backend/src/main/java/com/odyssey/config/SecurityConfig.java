@@ -6,7 +6,6 @@ import com.odyssey.security.CsrfCookieFilter;
 import com.odyssey.security.JwtAuthenticationFilter;
 import com.odyssey.security.JwtTokenProvider;
 import com.odyssey.security.StableCsrfTokenRepository;
-import com.odyssey.security.UserDetailsServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,16 +41,13 @@ public class SecurityConfig {
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
-    private final UserDetailsServiceImpl userDetailsService;
     private final ObjectMapper objectMapper;
 
     public SecurityConfig(JwtTokenProvider tokenProvider,
                           UserRepository userRepository,
-                          UserDetailsServiceImpl userDetailsService,
                           ObjectMapper objectMapper) {
         this.tokenProvider = tokenProvider;
         this.userRepository = userRepository;
-        this.userDetailsService = userDetailsService;
         this.objectMapper = objectMapper;
     }
 
@@ -131,7 +127,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/journals/*").permitAll()
                         .requestMatchers("/api/journals/*/comments", "/api/journals/*/reactions/**").authenticated()
                         .anyRequest().authenticated())
-                .addFilterBefore(new JwtAuthenticationFilter(tokenProvider, userRepository, userDetailsService),
+                .addFilterBefore(new JwtAuthenticationFilter(tokenProvider, userRepository),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 .build();

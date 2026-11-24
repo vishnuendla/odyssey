@@ -11,7 +11,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -26,14 +25,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
-    private final UserDetailsService userDetailsService;
 
     public JwtAuthenticationFilter(JwtTokenProvider tokenProvider,
-                                   UserRepository userRepository,
-                                   UserDetailsService userDetailsService) {
+                                   UserRepository userRepository) {
         this.tokenProvider = tokenProvider;
         this.userRepository = userRepository;
-        this.userDetailsService = userDetailsService;
     }
 
     @Override
@@ -49,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userId != null) {
                 Optional<User> user = userRepository.findById(userId);
                 if (user.isPresent() && Integer.valueOf(user.get().getTokenVersion()).equals(claims.get("tv", Integer.class))) {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(user.get().getEmail());
+                    UserDetails userDetails = UserDetailsServiceImpl.toUserDetails(user.get());
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
