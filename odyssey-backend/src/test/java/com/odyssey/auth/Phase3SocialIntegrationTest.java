@@ -67,7 +67,9 @@ class Phase3SocialIntegrationTest {
 
         mockMvc.perform(get("/api/users/" + authorId + "/followers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(userId(followerEmail)));
+                .andExpect(jsonPath("$.content[0].id").value(userId(followerEmail)))
+                .andExpect(jsonPath("$.content[0].followingCount").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1));
 
         mockMvc.perform(get("/api/auth/users/" + authorId).cookie(followerAccess))
                 .andExpect(status().isOk())
@@ -77,8 +79,10 @@ class Phase3SocialIntegrationTest {
 
         mockMvc.perform(get("/api/notifications").cookie(authorAccess))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].type").value("FOLLOW"))
-                .andExpect(jsonPath("$[0].read").value(false));
+                .andExpect(jsonPath("$.content[0].type").value("FOLLOW"))
+                .andExpect(jsonPath("$.content[0].read").value(false))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.size").value(20));
 
         mockMvc.perform(get("/api/notifications/unread-count").cookie(authorAccess))
                 .andExpect(status().isOk())
@@ -133,8 +137,8 @@ class Phase3SocialIntegrationTest {
 
         mockMvc.perform(get("/api/notifications").cookie(authorAccess))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].type").value("COMMENT"))
-                .andExpect(jsonPath("$[0].journalId").value(journalId));
+                .andExpect(jsonPath("$.content[0].type").value("COMMENT"))
+                .andExpect(jsonPath("$.content[0].journalId").value(journalId));
 
         String secondEmail = "thread-second@example.com";
         MvcResult second = register(secondEmail);
@@ -146,8 +150,8 @@ class Phase3SocialIntegrationTest {
         // The parent commenter gets a REPLY and the journal author gets a COMMENT.
         mockMvc.perform(get("/api/notifications").cookie(readerAccess))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].type").value("REPLY"))
-                .andExpect(jsonPath("$[0].commentId").value(replyId));
+                .andExpect(jsonPath("$.content[0].type").value("REPLY"))
+                .andExpect(jsonPath("$.content[0].commentId").value(replyId));
 
         JsonNode journal = getJournal(journalId);
         assertThat(journal.get("comments")).hasSize(2);
@@ -257,7 +261,7 @@ class Phase3SocialIntegrationTest {
         // Hiding content tells the author why it disappeared.
         mockMvc.perform(get("/api/notifications").cookie(authorAccess))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].type").value("MODERATION"));
+                .andExpect(jsonPath("$.content[0].type").value("MODERATION"));
 
         // The author can still edit hidden content, but editing does not silently
         // undo a moderation decision.
@@ -492,7 +496,7 @@ class Phase3SocialIntegrationTest {
                                 "content", content,
                                 "isPublic", isPublic,
                                 "tags", tags))))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andReturn();
         return objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
     }
@@ -517,7 +521,7 @@ class Phase3SocialIntegrationTest {
                                         "latitude", latitude,
                                         "longitude", longitude),
                                 "tags", List.of("LocationRegression")))))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andReturn();
         return objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
     }
@@ -533,7 +537,7 @@ class Phase3SocialIntegrationTest {
         MvcResult result = mockMvc.perform(get("/api/notifications").cookie(access))
                 .andExpect(status().isOk())
                 .andReturn();
-        return objectMapper.readTree(result.getResponse().getContentAsString()).get(0).get("id").asText();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).get("content").get(0).get("id").asText();
     }
 
     private String firstReportId(Cookie access) throws Exception {

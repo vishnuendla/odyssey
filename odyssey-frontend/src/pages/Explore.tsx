@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AppPage from '@/components/layout/AppPage';
 import JournalList from '@/components/journals/JournalList';
@@ -50,7 +50,7 @@ const cacheKeyFor = (query: ExploreQuery) =>
     q: query.q,
     tag: query.tag,
     location: query.location,
-    sort: query.sort === 'popular' ? 'recent' : query.sort,
+    sort: query.sort,
     page: query.page,
   });
 
@@ -91,6 +91,17 @@ const ExplorePage = () => {
   const [isLoading, setIsLoading] = useState(initialResult === null);
   const { user } = useAuth();
 
+  // Filters are identified by their values so a change can reset the page
+  // before the request effect runs; otherwise the stale page number fires an
+  // extra request that is immediately discarded.
+  const filterKey = JSON.stringify({
+    q: debouncedSearch.trim(),
+    tag: tagFilter,
+    location: locationFilter,
+    sort: sortBy,
+  });
+  const appliedFilters = useRef(filterKey);
+
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timeout);
@@ -120,13 +131,20 @@ const ExplorePage = () => {
       .catch((error) => console.error('Error fetching locations:', error));
   }, []);
 
-  // Any change to the search criteria starts again from the first page.
-  useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch, tagFilter, locationFilter, sortBy]);
-
   useEffect(() => {
     let cancelled = false;
+
+    // A filter change invalidates the current page number. Reset it in this
+    // pass and skip the request rather than fetching the old page first.
+    if (appliedFilters.current !== filterKey) {
+      appliedFilters.current = filterKey;
+      if (page !== 0) {
+        setPage(0);
+        return () => {
+          cancelled = true;
+        };
+      }
+    }
 
     const fetchJournals = async () => {
       const cacheKey = cacheKeyFor({
@@ -138,13 +156,7 @@ const ExplorePage = () => {
       });
 
       const applyResult = (content: JournalEntry[], total: number, pages: number) => {
-        let entries = content;
-        if (sortBy === 'popular') {
-          const countReactions = (journal: JournalEntry) =>
-            journal.reactions?.reduce((acc, reaction) => acc + reaction.count, 0) ?? 0;
-          entries = [...entries].sort((a, b) => countReactions(b) - countReactions(a));
-        }
-        setJournals(entries);
+        setJournals(content);
         setTotalElements(total);
         setTotalPages(pages);
       };
@@ -165,7 +177,7 @@ const ExplorePage = () => {
           q: debouncedSearch.trim() || undefined,
           tag: tagFilter || undefined,
           location: locationFilter === 'all' ? undefined : locationFilter,
-          sort: sortBy === 'popular' ? 'recent' : sortBy,
+          sort: sortBy,
           page,
           size: PAGE_SIZE,
         });
@@ -196,7 +208,7 @@ const ExplorePage = () => {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, tagFilter, locationFilter, sortBy, page, user?.id]);
+  }, [filterKey, debouncedSearch, tagFilter, locationFilter, sortBy, page, user?.id]);
 
   const userMap = useMemo(() => {
     const map: Record<string, User> = {};

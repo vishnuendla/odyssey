@@ -7,6 +7,8 @@ import com.odyssey.exception.ResourceNotFoundException;
 import com.odyssey.exception.UnauthorizedException;
 import com.odyssey.repository.NotificationRepository;
 import com.odyssey.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,11 +65,10 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public List<NotificationDto> list(String email) {
+    public Page<NotificationDto> list(String email, Pageable pageable) {
         User user = requireUser(email);
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
-                .map(this::convertToDto)
-                .toList();
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable)
+                .map(this::convertToDto);
     }
 
     @Transactional(readOnly = true)

@@ -40,6 +40,20 @@ public interface JournalRepository extends JpaRepository<Journal, String> {
     long countByHiddenTrue();
 
     @EntityGraph(attributePaths = {"user", "location"})
+    @Query(value = """
+            select j from Journal j
+            where j.hidden = false
+              and (j.isPublic = true or j.user.id = :userId)
+            order by j.createdAt desc
+            """,
+            countQuery = """
+            select count(j) from Journal j
+            where j.hidden = false
+              and (j.isPublic = true or j.user.id = :userId)
+            """)
+    Page<Journal> findVisibleToUser(@Param("userId") String userId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"user", "location"})
     @Query("""
             select j from Journal j
             where j.hidden = false
@@ -47,6 +61,16 @@ public interface JournalRepository extends JpaRepository<Journal, String> {
             order by j.createdAt desc
             """)
     List<Journal> findVisibleToUser(@Param("userId") String userId);
+
+    /** Batched public-journal counts for a page of profile cards. */
+    @Query("""
+            select j.user.id, count(j) from Journal j
+            where j.user.id in :userIds
+              and j.isPublic = true
+              and j.hidden = false
+            group by j.user.id
+            """)
+    List<Object[]> countPublicJournalsByUserIds(@Param("userIds") Collection<String> userIds);
 
     @EntityGraph(attributePaths = {"user", "location"})
     @Query("""

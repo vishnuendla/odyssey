@@ -11,39 +11,67 @@ import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 const NotificationsPage = () => {
+  const PAGE_SIZE = 20;
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { toast } = useToast();
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (nextPage = 0) => {
+    const firstPage = nextPage === 0;
+    if (firstPage) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
-      setItems(await notificationApi.list());
+      const result = await notificationApi.list(nextPage, PAGE_SIZE);
+      setItems((current) => (firstPage ? result.content : [...current, ...result.content]));
+      setPage(result.number);
+      setHasMore(!result.last);
     } catch (error) {
       console.error('Failed to load notifications', error);
       toast({ variant: 'destructive', description: 'Could not load notifications.' });
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    load();
+    load(0);
   }, []);
 
   const markRead = async (id: string) => {
-    await notificationApi.markRead(id);
-    setItems((current) => current.map((item) => item.id === id ? { ...item, read: true } : item));
+    try {
+      await notificationApi.markRead(id);
+      setItems((current) => current.map((item) => item.id === id ? { ...item, read: true } : item));
+    } catch (error) {
+      console.error('Failed to mark notification read', error);
+      toast({ variant: 'destructive', description: 'Could not update that notification.' });
+    }
   };
 
   const markAll = async () => {
-    await notificationApi.markAllRead();
-    setItems((current) => current.map((item) => ({ ...item, read: true })));
+    try {
+      await notificationApi.markAllRead();
+      setItems((current) => current.map((item) => ({ ...item, read: true })));
+    } catch (error) {
+      console.error('Failed to mark notifications read', error);
+      toast({ variant: 'destructive', description: 'Could not mark all notifications read.' });
+    }
   };
 
   const remove = async (id: string) => {
-    await notificationApi.delete(id);
-    setItems((current) => current.filter((item) => item.id !== id));
+    try {
+      await notificationApi.delete(id);
+      setItems((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error('Failed to delete notification', error);
+      toast({ variant: 'destructive', description: 'Could not delete that notification.' });
+    }
   };
 
   return (
@@ -79,33 +107,42 @@ const NotificationsPage = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {items.map((item) => {
-              const href = item.journalId ? `/journals/${item.journalId}` : item.actorId ? `/users/${item.actorId}` : '#';
-              return (
-                <Card key={item.id} className={item.read ? '' : 'border-primary/40 bg-primary/5'}>
-                  <CardContent className="flex items-start gap-4 py-4">
-                    <div className="flex-1 min-w-0">
-                      <Link to={href} onClick={() => !item.read && markRead(item.id)} className="font-medium hover:text-primary">
-                        {item.message || 'New activity'}
-                      </Link>
-                      <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                        {item.type.toLowerCase()} · {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                    {!item.read && (
-                      <Button variant="ghost" size="sm" onClick={() => markRead(item.id)} className="shrink-0">
-                        Read
+          <>
+            <div className="space-y-3">
+              {items.map((item) => {
+                const href = item.journalId ? `/journals/${item.journalId}` : item.actorId ? `/users/${item.actorId}` : '#';
+                return (
+                  <Card key={item.id} className={item.read ? '' : 'border-primary/40 bg-primary/5'}>
+                    <CardContent className="flex items-start gap-4 py-4">
+                      <div className="flex-1 min-w-0">
+                        <Link to={href} onClick={() => !item.read && markRead(item.id)} className="font-medium hover:text-primary">
+                          {item.message || 'New activity'}
+                        </Link>
+                        <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                          {item.type.toLowerCase()} · {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+                      {!item.read && (
+                        <Button variant="ghost" size="sm" onClick={() => markRead(item.id)} className="shrink-0">
+                          Read
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => remove(item.id)} aria-label="Delete notification" className="shrink-0">
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => remove(item.id)} aria-label="Delete notification" className="shrink-0">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            {hasMore && (
+              <div className="mt-6 flex justify-center">
+                <Button variant="outline" onClick={() => load(page + 1)} disabled={loadingMore}>
+                  {loadingMore ? 'Loading...' : 'Load more'}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
       <Footer />

@@ -71,15 +71,13 @@ public class JournalService {
     }
 
     @Transactional(readOnly = true)
-    public List<JournalDto> getAllJournals(String userEmail) {
+    public Page<JournalDto> getAllJournals(String userEmail, Pageable pageable) {
         User viewer = requireUser(userEmail);
         Set<String> bookmarked = bookmarkRepository.findJournalIdsByUserId(viewer.getId());
-        List<Journal> journals = viewer.isAdmin()
-                ? journalRepository.findAll()
-                : journalRepository.findVisibleToUser(viewer.getId());
-        return journals.stream()
-                .map(journal -> convertToDto(journal, bookmarked))
-                .collect(Collectors.toList());
+        Page<Journal> journals = viewer.isAdmin()
+                ? journalRepository.findAll(pageable)
+                : journalRepository.findVisibleToUser(viewer.getId(), pageable);
+        return journals.map(journal -> convertToDto(journal, bookmarked, viewer.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -199,7 +197,7 @@ public class JournalService {
             throw new ResourceNotFoundException("Journal not found");
         }
 
-        return convertToDto(journal, bookmarkedJournalIds(userEmail));
+        return convertToDto(journal, bookmarkedJournalIds(userEmail), viewer == null ? null : viewer.getId());
     }
 
     @Transactional(readOnly = true)
@@ -418,6 +416,10 @@ public class JournalService {
     }
 
     private JournalDto convertToDto(Journal journal, Set<String> bookmarkedJournalIds) {
+        return convertToDto(journal, bookmarkedJournalIds, null);
+    }
+
+    private JournalDto convertToDto(Journal journal, Set<String> bookmarkedJournalIds, String viewerUserId) {
         JournalDto dto = new JournalDto();
         dto.setId(journal.getId());
         dto.setTitle(journal.getTitle());
@@ -473,6 +475,14 @@ public class JournalService {
             ));
         }
         dto.setReactions(reactionSummaries);
+
+        if (viewerUserId != null) {
+            dto.setUserReactions(journal.getReactions().stream()
+                    .filter(reaction -> reaction.getUser().getId().equals(viewerUserId))
+                    .map(reaction -> reaction.getType().toString().toLowerCase())
+                    .distinct()
+                    .collect(Collectors.toList()));
+        }
 
         return dto;
     }

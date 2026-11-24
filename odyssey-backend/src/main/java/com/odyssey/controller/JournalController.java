@@ -31,9 +31,14 @@ public class JournalController {
     }
 
     @GetMapping
-    public ResponseEntity<List<JournalDto>> getAllJournals(
+    public ResponseEntity<Page<JournalDto>> getAllJournals(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(journalService.getAllJournals(userDetails.getUsername()));
+        Pageable pageable = pageable(page, size, sortBy, sortDir);
+        return ResponseEntity.ok(journalService.getAllJournals(userDetails.getUsername(), pageable));
     }
 
     @GetMapping("/public")
@@ -94,7 +99,8 @@ public class JournalController {
     public ResponseEntity<JournalDto> createJournal(
             @Valid @RequestBody JournalRequest journalRequest,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(journalService.createJournal(journalRequest, userDetails.getUsername()));
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(journalService.createJournal(journalRequest, userDetails.getUsername()));
     }
 
     @GetMapping("/share/{id}")
@@ -117,7 +123,7 @@ public class JournalController {
             @PathVariable String id,
             @AuthenticationPrincipal UserDetails userDetails) {
         journalService.deleteJournal(id, userDetails.getUsername());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/bookmark")

@@ -21,11 +21,11 @@ export default function NotificationBell() {
     if (!isAuthenticated) return;
     setLoading(true);
     try {
-      const [list, count] = await Promise.all([
-        notificationApi.list(),
+      const [page, count] = await Promise.all([
+        notificationApi.list(0, 8),
         notificationApi.unreadCount(),
       ]);
-      setItems(list.slice(0, 8));
+      setItems(page.content);
       setUnread(count);
     } catch (error) {
       console.error('Failed to load notifications', error);

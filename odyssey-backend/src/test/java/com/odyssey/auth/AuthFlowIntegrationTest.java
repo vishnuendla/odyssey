@@ -447,7 +447,7 @@ class AuthFlowIntegrationTest {
                                 "content", content,
                                 "isPublic", true,
                                 "tags", tags))))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andReturn();
         return objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
     }
