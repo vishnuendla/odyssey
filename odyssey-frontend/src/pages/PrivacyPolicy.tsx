@@ -169,7 +169,7 @@ const PrivacyPolicy = () => {
                   </ul>
                   
                   <p className="text-muted-foreground text-sm mt-4">
-                    To exercise these rights, please contact us at privacy@odysseyjournal.com
+                    To exercise these rights, please contact us at vishnuendla@odyssey.com
                   </p>
                 </div>
               </CardContent>
