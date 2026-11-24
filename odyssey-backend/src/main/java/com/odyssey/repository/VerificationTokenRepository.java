@@ -27,4 +27,9 @@ public interface VerificationTokenRepository extends JpaRepository<VerificationT
     long countRecent(@Param("userId") String userId,
                      @Param("purpose") VerificationToken.Purpose purpose,
                      @Param("since") LocalDateTime since);
+
+    /** Housekeeping: rows whose useful life has ended. */
+    @Modifying
+    @Query("delete from VerificationToken t where t.expiresAt < :cutoff")
+    int purgeExpired(@Param("cutoff") LocalDateTime cutoff);
 }

@@ -20,6 +20,7 @@ import com.odyssey.repository.UserRepository;
 import com.odyssey.repository.VerificationTokenRepository;
 import com.odyssey.security.JwtTokenProvider;
 import com.odyssey.security.TokenHasher;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -334,6 +335,7 @@ public class AuthService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicTags", "userProfiles"}, allEntries = true)
     public UserDto updateProfile(String email, UpdateProfileRequest request) {
         User user = requireUser(email);
         if (request.getName() != null) {
@@ -343,7 +345,11 @@ public class AuthService {
             user.setName(request.getName().trim());
         }
         if (request.getAvatar() != null) {
-            user.setAvatar(emptyToNull(request.getAvatar()));
+            String avatar = emptyToNull(request.getAvatar());
+            if (avatar != null && !StorageService.isAllowedAvatarUrl(avatar)) {
+                throw new IllegalArgumentException("Enter an http(s) image URL or upload an image instead.");
+            }
+            user.setAvatar(avatar);
         }
         if (request.getBio() != null) {
             user.setBio(emptyToNull(request.getBio()));
@@ -356,6 +362,7 @@ public class AuthService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicTags", "userProfiles"}, allEntries = true)
     public void deleteAccount(String email, DeleteAccountRequest request, String ipAddress) {
         User user = requireUser(email);
         if (!"DELETE".equalsIgnoreCase(request.getConfirmation().trim())) {

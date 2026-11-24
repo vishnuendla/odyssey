@@ -25,4 +25,17 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
     @Modifying
     @Query("delete from RefreshToken t where t.user.id = :userId")
     int deleteAllForUser(@Param("userId") String userId);
+
+    /**
+     * Housekeeping: expired rows, plus revoked rows old enough that reuse
+     * detection no longer needs them.
+     */
+    @Modifying
+    @Query("""
+            delete from RefreshToken t
+            where t.expiresAt < :now
+               or (t.revokedAt is not null and t.revokedAt < :revokedCutoff)
+            """)
+    int purgeExpiredAndRevoked(@Param("now") LocalDateTime now,
+                               @Param("revokedCutoff") LocalDateTime revokedCutoff);
 }

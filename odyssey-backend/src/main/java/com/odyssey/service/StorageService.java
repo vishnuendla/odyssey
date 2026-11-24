@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -83,6 +84,28 @@ public class StorageService {
 
     public static boolean isAllowedImageUrl(String url) {
         return url != null && url.startsWith(FILE_URL_PREFIX);
+    }
+
+    /**
+     * Profile avatars may also point at an ordinary http(s) image, but never at
+     * {@code data:}, {@code javascript:} or other schemes.
+     */
+    public static boolean isAllowedAvatarUrl(String url) {
+        if (url == null) {
+            return true;
+        }
+        if (isAllowedImageUrl(url)) {
+            return true;
+        }
+        try {
+            URI uri = URI.create(url);
+            String scheme = uri.getScheme();
+            return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                    && uri.getHost() != null
+                    && !uri.getHost().isBlank();
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     private void validate(MultipartFile file) {

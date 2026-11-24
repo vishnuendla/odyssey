@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,6 +20,8 @@ public class RateLimitService {
 
     private static final long MAX_TRACKED_WINDOW_MS = 3_600_000L;
     private static final int CLEANUP_THRESHOLD = 500;
+    /** Per-email keys are attacker-controlled, so the map needs a hard ceiling. */
+    private static final int MAX_KEYS = 10_000;
 
     private final Map<String, Deque<Long>> hits = new ConcurrentHashMap<>();
     private final AtomicLong lastCleanup = new AtomicLong(System.currentTimeMillis());
@@ -50,6 +53,10 @@ public class RateLimitService {
     }
 
     private void maybeCleanup(long now) {
+        if (hits.size() > MAX_KEYS) {
+            evictOldest();
+            return;
+        }
         if (hits.size() < CLEANUP_THRESHOLD || now - lastCleanup.get() < 60_000L) {
             return;
         }
@@ -61,5 +68,31 @@ public class RateLimitService {
                 return timestamps.isEmpty() || timestamps.peekLast() < cutoff;
             }
         });
+    }
+
+    /**
+     * Drops the least recently used keys so the map never grows without bound.
+     * Evicts a batch below the ceiling so a flood of unique keys does not pay
+     * for a full sort on every single request.
+     */
+    private void evictOldest() {
+        int target = MAX_KEYS - Math.max(MAX_KEYS / 10, 100);
+        int excess = hits.size() - target;
+        if (excess <= 0) {
+            return;
+        }
+        hits.entrySet().stream()
+                .sorted(Comparator.comparingLong(entry -> lastHit(entry.getValue())))
+                .limit(excess)
+                .map(Map.Entry::getKey)
+                .toList()
+                .forEach(hits::remove);
+    }
+
+    private long lastHit(Deque<Long> timestamps) {
+        synchronized (timestamps) {
+            Long last = timestamps.peekLast();
+            return last == null ? Long.MIN_VALUE : last;
+        }
     }
 }
