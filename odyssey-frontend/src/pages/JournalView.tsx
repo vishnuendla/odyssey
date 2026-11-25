@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { JournalEntry, Comment, User } from '@/types';
@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import ShareJournal from '@/components/sharing/ShareJournal';
 import FollowButton from '@/components/social/FollowButton';
 import ReportDialog from '@/components/social/ReportDialog';
+import CommentThread from '@/components/comments/CommentThread';
 import { useJournal } from '@/contexts/JournalContext';
 
 import Navbar from '@/components/layout/Navbar';
@@ -14,12 +15,8 @@ import {
   Card,
   CardContent,
   CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Bookmark,
@@ -31,8 +28,6 @@ import {
   MapPin,
   MessageCircle,
   Trash,
-  Loader2,
-  CornerDownRight,
 } from 'lucide-react';
 
 /** Every reaction the API accepts, with the glyph shown in the footer. */
@@ -60,10 +55,6 @@ const JournalView = () => {
   const [author, setAuthor] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [comment, setComment] = useState('');
-  const [replyTo, setReplyTo] = useState<Comment | null>(null);
-  const [replyText, setReplyText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [reacting, setReacting] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -151,60 +142,30 @@ const JournalView = () => {
     };
   }, [journal]);
 
-  const comments = useMemo(() => journal?.comments ?? [], [journal]);
-
-  const { topLevel, repliesByParent } = useMemo(() => {
-    const top: Comment[] = [];
-    const replies: Record<string, Comment[]> = {};
-    for (const item of comments) {
-      if (!item.parentId) {
-        top.push(item);
-      } else {
-        replies[item.parentId] = [...(replies[item.parentId] ?? []), item];
-      }
-    }
-    return { topLevel: top, repliesByParent: replies };
-  }, [comments]);
-
   const refreshJournal = async () => {
     if (!id) return;
     const updated = await journalApi.getJournalById(id);
     setJournal(updated);
   };
 
-  const handleAddComment = async (parentId?: string) => {
-    const content = parentId ? replyText : comment;
-    if (!content.trim() || !id || !isAuthenticated) return;
-
-    setSubmitting(true);
-    try {
-      await socialApi.addComment(id, content, parentId);
-      await refreshJournal();
-      if (parentId) {
-        setReplyText('');
-        setReplyTo(null);
-      } else {
-        setComment('');
-      }
-      toast({ description: parentId ? 'Reply posted.' : 'Comment added.' });
-    } catch (addError) {
-      console.error('Failed to add comment:', addError);
-      toast({ variant: 'destructive', description: 'Failed to add comment.' });
-    } finally {
-      setSubmitting(false);
-    }
+  // Thread replies update in place instead of re-fetching the whole journal, so
+  // posting feels immediate and the reading position never jumps.
+  const handleCommentAdded = (created: Comment) => {
+    setJournal((previous) => previous
+      ? { ...previous, comments: [...(previous.comments ?? []), created] }
+      : previous);
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    if (!id || !window.confirm('Delete this comment and its replies?')) return;
-    try {
-      await socialApi.deleteComment(id, commentId);
-      await refreshJournal();
-      toast({ description: 'Comment deleted.' });
-    } catch (deleteError) {
-      console.error('Failed to delete comment:', deleteError);
-      toast({ variant: 'destructive', description: 'Failed to delete comment.' });
-    }
+  const handleCommentRemoved = (commentId: string) => {
+    setJournal((previous) => {
+      if (!previous) return previous;
+      const current = previous.comments ?? [];
+      const removed = new Set([
+        commentId,
+        ...current.filter((comment) => comment.parentId === commentId).map((comment) => comment.id),
+      ]);
+      return { ...previous, comments: current.filter((comment) => !removed.has(comment.id)) };
+    });
   };
 
   const handleToggleReaction = async (type: string) => {
@@ -329,71 +290,12 @@ const JournalView = () => {
   }
 
   const isOwner = user?.id === journal.userId;
-  const canModerate = isOwner || user?.role === 'ADMIN';
   const formattedDate = new Date(journal.createdAt).toLocaleDateString();
   const formattedTime = new Date(journal.createdAt).toLocaleTimeString();
   // ~200 words per minute is the usual guide for prose.
   const wordCount = journal.content.trim().split(/\s+/).filter(Boolean).length;
   const readingMinutes = Math.max(1, Math.round(wordCount / 200));
   const authorName = author?.name || journal.userName || 'Anonymous';
-
-  const commentCard = (item: Comment, isReply = false) => (
-    <Card key={item.id} className={isReply ? 'ml-4 sm:ml-8 border-l-2 rounded-l-none' : ''}>
-      <CardHeader className="flex-row items-center gap-3 space-y-0 py-3">
-        <Avatar className="h-8 w-8">
-          <AvatarImage src={item.userAvatar} alt={item.userName || 'User'} />
-          <AvatarFallback>{item.userName?.charAt(0) || 'U'}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <CardTitle className="text-sm font-medium">
-            <Link to={`/users/${item.userId}`} className="hover:text-primary">
-              {item.userName || 'Anonymous'}
-            </Link>
-          </CardTitle>
-          <CardDescription className="text-xs">
-            {new Date(item.createdAt).toLocaleDateString()}
-          </CardDescription>
-        </div>
-        {isAuthenticated && !isReply && (
-          <Button variant="ghost" size="sm" onClick={() => {
-            setReplyTo(replyTo?.id === item.id ? null : item);
-            setReplyText('');
-          }}>
-            <CornerDownRight className="mr-1 h-3 w-3" /> Reply
-          </Button>
-        )}
-        {(user?.id === item.userId || canModerate) && (
-          <Button variant="ghost" size="icon" onClick={() => handleDeleteComment(item.id)} aria-label="Delete comment">
-            <Trash className="h-4 w-4" />
-          </Button>
-        )}
-        {!isOwner && user?.id !== item.userId && (
-          <ReportDialog targetType="COMMENT" targetId={item.id} label="" />
-        )}
-      </CardHeader>
-      <CardContent className="pt-0">
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{item.content}</p>
-      </CardContent>
-      {replyTo?.id === item.id && (
-        <CardContent className="space-y-2 pt-0">
-          <Textarea
-            value={replyText}
-            onChange={(event) => setReplyText(event.target.value)}
-            placeholder={`Reply to ${item.userName || 'this comment'}...`}
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => handleAddComment(item.id)} disabled={!replyText.trim() || submitting}>
-              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Post reply
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setReplyTo(null); setReplyText(''); }}>
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      )}
-    </Card>
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -566,7 +468,7 @@ const JournalView = () => {
                     );
                   })}
                   <span className="flex items-center gap-1.5 px-2 text-sm text-muted-foreground">
-                    <MessageCircle className="h-4 w-4" /> {comments.length}
+                    <MessageCircle className="h-4 w-4" /> {journal.comments?.length ?? 0}
                   </span>
                 </div>
 
@@ -585,64 +487,15 @@ const JournalView = () => {
             </Card>
           </article>
 
-          <section className="mt-12">
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold tracking-tight">Comments</h2>
-              <p className="text-sm text-muted-foreground">{comments.length} so far</p>
-            </div>
-
-            {isAuthenticated ? (
-              <Card className="mb-6">
-                <CardContent className="p-4">
-                  <Textarea
-                    placeholder="Write a comment..."
-                    className="mb-3"
-                    value={comment}
-                    onChange={(event) => setComment(event.target.value)}
-                  />
-                  <div className="flex justify-end">
-                    <Button onClick={() => handleAddComment()} disabled={!comment.trim() || submitting}>
-                      {submitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Posting...
-                        </>
-                      ) : 'Post Comment'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="mb-6">
-                <CardContent className="flex items-center gap-3 py-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm">
-                    Please <Link to="/login" className="text-primary font-medium">log in</Link> to leave a comment.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {topLevel.length > 0 ? (
-              <div className="space-y-4">
-                {topLevel.map((item) => (
-                  <div key={item.id} className="space-y-3">
-                    {commentCard(item)}
-                    {(repliesByParent[item.id] ?? []).map((reply) => commentCard(reply, true))}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center py-12 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
-                  <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <p className="mt-3 text-sm text-muted-foreground">No comments yet.</p>
-              </div>
-            )}
-          </section>
+          <CommentThread
+            journalId={journal.id}
+            comments={journal.comments ?? []}
+            currentUser={user}
+            isAuthenticated={isAuthenticated}
+            isJournalOwner={isOwner}
+            onCommentAdded={handleCommentAdded}
+            onCommentRemoved={handleCommentRemoved}
+          />
         </div>
       </main>
     </div>

@@ -28,6 +28,7 @@ interface ReportDialogProps {
   targetType: 'JOURNAL' | 'COMMENT';
   targetId: string;
   label?: string;
+  iconOnly?: boolean;
 }
 
 const REASONS = [
@@ -39,7 +40,7 @@ const REASONS = [
   { value: 'OTHER', label: 'Something else' },
 ];
 
-export default function ReportDialog({ targetType, targetId, label = 'Report' }: ReportDialogProps) {
+export default function ReportDialog({ targetType, targetId, label = 'Report', iconOnly = false }: ReportDialogProps) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('SPAM');
   const [details, setDetails] = useState('');
@@ -70,8 +71,15 @@ export default function ReportDialog({ targetType, targetId, label = 'Report' }:
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" aria-label={label || `Report ${targetType.toLowerCase()}`}>
-          <Flag className="mr-1 h-4 w-4" /> {label}
+        <Button
+          variant="ghost"
+          size={iconOnly ? 'icon' : 'sm'}
+          className={iconOnly
+            ? 'h-7 w-7 text-muted-foreground transition-colors hover:text-foreground'
+            : undefined}
+          aria-label={label || `Report ${targetType.toLowerCase()}`}
+        >
+          <Flag className={iconOnly ? 'h-3.5 w-3.5' : 'mr-1 h-4 w-4'} /> {!iconOnly && label}
         </Button>
       </DialogTrigger>
       <DialogContent>

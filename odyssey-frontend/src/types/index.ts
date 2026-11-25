@@ -48,6 +48,13 @@ export interface Location {
   placeName?: string;
 }
 
+export type CommentMediaType = 'IMAGE' | 'GIF' | 'VIDEO';
+
+export interface CommentAttachment {
+  url: string;
+  type: CommentMediaType;
+}
+
 export interface Comment {
   id: string;
   content: string;
@@ -56,6 +63,7 @@ export interface Comment {
   userName?: string;
   userAvatar?: string;
   parentId?: string | null;
+  attachments?: CommentAttachment[];
 }
 
 export interface Reaction {

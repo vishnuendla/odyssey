@@ -1,4 +1,4 @@
-import { User, JournalEntry, Comment as JournalComment, PageResponse, NotificationItem, ReportItem, AdminStats, GeocodingResult, UserStats, AiStatus, AskAnswer, SemanticSearchHit } from '@/types';
+import { User, JournalEntry, Comment as JournalComment, CommentMediaType, PageResponse, NotificationItem, ReportItem, AdminStats, GeocodingResult, UserStats, AiStatus, AskAnswer, SemanticSearchHit } from '@/types';
 
 // All backend calls go through the Vite proxy, so cookies stay first-party.
 const API_BASE_URL = '/api';
@@ -633,10 +633,29 @@ export const journalApi = {
 
 // Comment and reaction API calls
 export const socialApi = {
-  addComment: async (journalId: string, content: string, parentId?: string | null): Promise<JournalComment> => {
+  uploadCommentMedia: async (files: File[], existingTypes: CommentMediaType[] = []): Promise<string[]> => {
+    validateCommentMediaFiles(files, existingTypes);
+
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+
+    return apiRequest<string[]>('/storage/upload/comment-media', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  addComment: async (
+    journalId: string,
+    content: string,
+    parentId?: string | null,
+    attachments: string[] = []
+  ): Promise<JournalComment> => {
     return apiRequest<JournalComment>(`/journals/${journalId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content, parentId: parentId ?? null }),
+      body: JSON.stringify({ content, parentId: parentId ?? null, attachments }),
     });
   },
 
@@ -732,6 +751,46 @@ export const MAX_FILES_PER_UPLOAD = 5;
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 export const MAX_UPLOAD_SIZE = 15 * 1024 * 1024; // 15 MB total per request
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+export const MAX_COMMENT_MEDIA = 3;
+export const MAX_COMMENT_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+export const MAX_COMMENT_VIDEO_SIZE = 15 * 1024 * 1024; // 15 MB
+export const COMMENT_MEDIA_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm';
+const COMMENT_VIDEO_TYPES = ['video/mp4', 'video/webm'];
+
+export const commentMediaKind = (file: File): CommentMediaType => {
+  if (COMMENT_VIDEO_TYPES.includes(file.type)) return 'VIDEO';
+  if (file.type === 'image/gif') return 'GIF';
+  return 'IMAGE';
+};
+
+export const validateCommentMediaFiles = (
+  files: File[],
+  existingTypes: CommentMediaType[] = []
+): void => {
+  if (files.length === 0) {
+    throw new Error('Choose a photo, GIF or short video.');
+  }
+  if (existingTypes.length + files.length > MAX_COMMENT_MEDIA) {
+    throw new Error(`You can attach up to ${MAX_COMMENT_MEDIA} media files to a comment.`);
+  }
+
+  const videos = existingTypes.filter((type) => type === 'VIDEO').length
+    + files.filter((file) => COMMENT_VIDEO_TYPES.includes(file.type)).length;
+  if (videos > 1) {
+    throw new Error('You can attach one video per comment.');
+  }
+
+  files.forEach((file) => {
+    const video = COMMENT_VIDEO_TYPES.includes(file.type);
+    if (!video && !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      throw new Error('Only JPEG, PNG, GIF, WebP, MP4 and WebM files are allowed.');
+    }
+    if (file.size > (video ? MAX_COMMENT_VIDEO_SIZE : MAX_COMMENT_IMAGE_SIZE)) {
+      throw new Error(video ? 'A video must be 15 MB or smaller.' : `${file.name} is larger than 5 MB.`);
+    }
+  });
+};
 
 const validateFiles = (files: File[]) => {
   if (files.length === 0) {
