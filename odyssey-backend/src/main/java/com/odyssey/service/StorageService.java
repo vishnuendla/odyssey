@@ -1,5 +1,6 @@
 package com.odyssey.service;
 
+import com.odyssey.entity.CommentAttachment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -29,11 +30,20 @@ public class StorageService {
     public static final int MAX_FILES_PER_REQUEST = 5;
     public static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
 
+    public static final int MAX_COMMENT_MEDIA_FILES = 3;
+    public static final long MAX_VIDEO_SIZE_BYTES = 15L * 1024 * 1024;
+    public static final long MAX_COMMENT_MEDIA_TOTAL_BYTES = 18L * 1024 * 1024;
+
     private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
             "image/jpeg", ".jpg",
             "image/png", ".png",
             "image/gif", ".gif",
             "image/webp", ".webp"
+    );
+
+    private static final Map<String, String> ALLOWED_VIDEO_TYPES = Map.of(
+            "video/mp4", ".mp4",
+            "video/webm", ".webm"
     );
 
     private final Path fileStorageLocation;
@@ -57,25 +67,33 @@ public class StorageService {
                     "You can upload up to " + MAX_FILES_PER_REQUEST + " images at a time.");
         }
 
-        List<String> fileUrls = new ArrayList<>();
+        return store(files, false);
+    }
 
-        for (MultipartFile file : files) {
-            validate(file);
-
-            String extension = ALLOWED_IMAGE_TYPES.get(file.getContentType().toLowerCase(Locale.ROOT));
-            String uniqueFileName = UUID.randomUUID() + extension;
-
-            try {
-                Path targetLocation = this.fileStorageLocation.resolve(uniqueFileName);
-                Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-                fileUrls.add(FILE_URL_PREFIX + uniqueFileName);
-            } catch (IOException ex) {
-                throw new RuntimeException("Could not store uploaded file", ex);
-            }
+    /**
+     * Comment media is intentionally tighter than journal galleries: a handful
+     * of small images or one short clip, so a thread never turns into a file
+     * host and every attachment stays cheap to load on a phone.
+     */
+    public List<String> storeCommentMedia(List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("Choose a photo, GIF or short video to attach.");
+        }
+        if (files.size() > MAX_COMMENT_MEDIA_FILES) {
+            throw new IllegalArgumentException(
+                    "You can attach up to " + MAX_COMMENT_MEDIA_FILES + " media files at a time.");
         }
 
-        return fileUrls;
+        long total = files.stream().mapToLong(MultipartFile::getSize).sum();
+        if (total > MAX_COMMENT_MEDIA_TOTAL_BYTES) {
+            throw new IllegalArgumentException("The selected media is larger than 18 MB in total.");
+        }
+        long videos = files.stream().filter(this::isVideo).count();
+        if (videos > 1) {
+            throw new IllegalArgumentException("You can attach one video per comment.");
+        }
+
+        return store(files, true);
     }
 
     public Path getFileStorageLocation() {
@@ -84,6 +102,38 @@ public class StorageService {
 
     public static boolean isAllowedImageUrl(String url) {
         return url != null && url.startsWith(FILE_URL_PREFIX);
+    }
+
+    /**
+     * The client only sends URLs. The server re-derives the media type from the
+     * stored extension, which storage validation has already tied to real bytes.
+     */
+    public static CommentAttachment.MediaType classifyCommentMedia(String url) {
+        if (url == null || !url.startsWith(FILE_URL_PREFIX)) {
+            return null;
+        }
+        String fileName = url.substring(FILE_URL_PREFIX.length());
+        if (fileName.isBlank()
+                || fileName.contains("..")
+                || fileName.contains("/")
+                || fileName.contains("\\")
+                || fileName.contains("?")
+                || fileName.contains("#")) {
+            return null;
+        }
+
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".gif")) {
+            return CommentAttachment.MediaType.GIF;
+        }
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                || lower.endsWith(".png") || lower.endsWith(".webp")) {
+            return CommentAttachment.MediaType.IMAGE;
+        }
+        if (lower.endsWith(".mp4") || lower.endsWith(".webm")) {
+            return CommentAttachment.MediaType.VIDEO;
+        }
+        return null;
     }
 
     /**
@@ -108,7 +158,46 @@ public class StorageService {
         }
     }
 
-    private void validate(MultipartFile file) {
+    private List<String> store(List<MultipartFile> files, boolean allowVideo) {
+        // Validate every file before writing any bytes, so one bad pick cannot
+        // leave earlier files orphaned on disk.
+        List<String> extensions = new ArrayList<>(files.size());
+        for (MultipartFile file : files) {
+            extensions.add(validate(file, allowVideo));
+        }
+
+        List<String> fileUrls = new ArrayList<>();
+        List<Path> written = new ArrayList<>();
+
+        try {
+            for (int i = 0; i < files.size(); i++) {
+                String uniqueFileName = UUID.randomUUID() + extensions.get(i);
+                Path targetLocation = this.fileStorageLocation.resolve(uniqueFileName);
+                Files.copy(files.get(i).getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+                written.add(targetLocation);
+                fileUrls.add(FILE_URL_PREFIX + uniqueFileName);
+            }
+        } catch (IOException ex) {
+            for (Path path : written) {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                    // Best-effort cleanup before reporting the write failure.
+                }
+            }
+            throw new RuntimeException("Could not store uploaded file", ex);
+        }
+
+        return fileUrls;
+    }
+
+    private boolean isVideo(MultipartFile file) {
+        String contentType = file.getContentType();
+        return contentType != null
+                && ALLOWED_VIDEO_TYPES.containsKey(contentType.toLowerCase(Locale.ROOT));
+    }
+
+    private String validate(MultipartFile file, boolean allowVideo) {
         String originalFileName = file.getOriginalFilename();
         if (originalFileName == null || originalFileName.isBlank()) {
             throw new IllegalArgumentException("Every uploaded file needs a name.");
@@ -120,21 +209,35 @@ public class StorageService {
         }
 
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("The uploaded image is empty.");
-        }
-
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new IllegalArgumentException("Each image must be 5 MB or smaller.");
+            throw new IllegalArgumentException("The uploaded file is empty.");
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_IMAGE_TYPES.containsKey(contentType.toLowerCase(Locale.ROOT))) {
-            throw new IllegalArgumentException("Only JPEG, PNG, GIF and WebP images can be uploaded.");
+        String normalizedType = contentType == null ? "" : contentType.toLowerCase(Locale.ROOT);
+        String extension = ALLOWED_IMAGE_TYPES.get(normalizedType);
+        boolean video = false;
+        if (extension == null && allowVideo) {
+            extension = ALLOWED_VIDEO_TYPES.get(normalizedType);
+            video = extension != null;
+        }
+        if (extension == null) {
+            throw new IllegalArgumentException(allowVideo
+                    ? "Only JPEG, PNG, GIF, WebP, MP4 and WebM files can be attached."
+                    : "Only JPEG, PNG, GIF and WebP images can be uploaded.");
         }
 
-        if (!hasValidSignature(file, contentType.toLowerCase(Locale.ROOT))) {
-            throw new IllegalArgumentException("That file does not look like a valid image.");
+        long maxSize = video ? MAX_VIDEO_SIZE_BYTES : MAX_FILE_SIZE_BYTES;
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException(video
+                    ? "Each video must be 15 MB or smaller."
+                    : "Each image must be 5 MB or smaller.");
         }
+
+        if (!hasValidSignature(file, normalizedType)) {
+            throw new IllegalArgumentException("That file does not look like a valid image or video.");
+        }
+
+        return extension;
     }
 
     /**
@@ -149,7 +252,7 @@ public class StorageService {
         } catch (IOException ex) {
             return false;
         }
-        if (read < 6) {
+        if (read < 12) {
             return false;
         }
 
@@ -164,6 +267,11 @@ public class StorageService {
             case "image/webp" -> startsWith(header, read, "RIFF")
                     && read >= 12
                     && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P';
+            case "video/mp4" -> header[4] == 'f' && header[5] == 't' && header[6] == 'y' && header[7] == 'p';
+            case "video/webm" -> (header[0] & 0xFF) == 0x1A
+                    && (header[1] & 0xFF) == 0x45
+                    && (header[2] & 0xFF) == 0xDF
+                    && (header[3] & 0xFF) == 0xA3;
             default -> false;
         };
     }
@@ -181,7 +289,7 @@ public class StorageService {
     }
 
     /**
-     * Deletes stored image files once the surrounding database transaction has
+     * Deletes stored files once the surrounding database transaction has
      * committed, so a rollback never leaves rows pointing at missing files.
      */
     public void deleteFilesAfterCommit(Collection<String> fileUrls) {

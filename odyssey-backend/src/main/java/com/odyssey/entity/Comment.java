@@ -6,6 +6,8 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "comments")
@@ -38,6 +40,11 @@ public class Comment {
 
     @Column(nullable = false)
     private boolean hidden = false;
+
+    @BatchSize(size = 50)
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("position ASC")
+    private List<CommentAttachment> attachments = new ArrayList<>();
 
     // Getters and setters
     public String getId() {
@@ -94,5 +101,18 @@ public class Comment {
 
     public void setHidden(boolean hidden) {
         this.hidden = hidden;
+    }
+
+    public List<CommentAttachment> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(List<CommentAttachment> attachments) {
+        this.attachments = attachments;
+    }
+
+    public void addAttachment(CommentAttachment attachment) {
+        attachments.add(attachment);
+        attachment.setComment(this);
     }
 }

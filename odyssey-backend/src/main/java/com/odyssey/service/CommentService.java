@@ -1,7 +1,9 @@
 package com.odyssey.service;
 
+import com.odyssey.dto.CommentAttachmentDto;
 import com.odyssey.dto.CommentDto;
 import com.odyssey.entity.Comment;
+import com.odyssey.entity.CommentAttachment;
 import com.odyssey.entity.Journal;
 import com.odyssey.entity.Notification;
 import com.odyssey.entity.Report;
@@ -18,9 +20,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class CommentService {
+
+    private static final int MAX_ATTACHMENTS = StorageService.MAX_COMMENT_MEDIA_FILES;
 
     private final CommentRepository commentRepository;
     private final JournalRepository journalRepository;
@@ -28,23 +36,27 @@ public class CommentService {
     private final NotificationRepository notificationRepository;
     private final ReportRepository reportRepository;
     private final NotificationService notificationService;
+    private final StorageService storageService;
 
     public CommentService(CommentRepository commentRepository,
                           JournalRepository journalRepository,
                           UserRepository userRepository,
                           NotificationRepository notificationRepository,
                           ReportRepository reportRepository,
-                          NotificationService notificationService) {
+                          NotificationService notificationService,
+                          StorageService storageService) {
         this.commentRepository = commentRepository;
         this.journalRepository = journalRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.reportRepository = reportRepository;
         this.notificationService = notificationService;
+        this.storageService = storageService;
     }
 
     @Transactional
-    public CommentDto addComment(String journalId, String content, String parentId, String userEmail) {
+    public CommentDto addComment(String journalId, String content, String parentId,
+                                 List<String> attachmentUrls, String userEmail) {
         Journal journal = journalRepository.findById(journalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Journal not found"));
 
@@ -60,6 +72,12 @@ public class CommentService {
         }
         if (!journal.isPublic() && !isOwner && !user.isAdmin()) {
             throw new ResourceNotFoundException("Journal not found");
+        }
+
+        String text = content == null ? "" : content.trim();
+        List<AttachmentSpec> attachments = normalizeAttachments(attachmentUrls);
+        if (text.isEmpty() && attachments.isEmpty()) {
+            throw new IllegalArgumentException("Write a comment or attach a photo, GIF or video.");
         }
 
         Comment parent = null;
@@ -78,14 +96,26 @@ public class CommentService {
         }
 
         Comment comment = new Comment();
-        comment.setContent(content.trim());
+        comment.setContent(text);
         comment.setJournal(journal);
         comment.setUser(user);
         comment.setParent(parent);
         comment.setCreatedAt(LocalDateTime.now());
 
+        int position = 0;
+        for (AttachmentSpec spec : attachments) {
+            CommentAttachment attachment = new CommentAttachment();
+            attachment.setUrl(spec.url());
+            attachment.setMediaType(spec.type());
+            attachment.setPosition(position++);
+            comment.addAttachment(attachment);
+        }
+
         Comment savedComment = commentRepository.save(comment);
-        String preview = preview(savedComment.getContent());
+        List<CommentAttachment.MediaType> mediaTypes = attachments.stream()
+                .map(AttachmentSpec::type)
+                .toList();
+        String preview = preview(savedComment.getContent(), mediaTypes);
 
         if (parent != null) {
             notificationService.notify(parent.getUser(), user, Notification.Type.REPLY,
@@ -119,16 +149,53 @@ public class CommentService {
             throw new ForbiddenException("You do not have permission to delete this comment");
         }
 
-        deleteCommentTree(comment);
+        List<String> mediaUrls = new ArrayList<>();
+        deleteCommentTree(comment, mediaUrls);
+        storageService.deleteFilesAfterCommit(mediaUrls);
     }
 
-    private void deleteCommentTree(Comment comment) {
+    private void deleteCommentTree(Comment comment, List<String> mediaUrls) {
         for (Comment reply : commentRepository.findByParentIdOrderByCreatedAtAsc(comment.getId())) {
-            deleteCommentTree(reply);
+            deleteCommentTree(reply, mediaUrls);
         }
+        comment.getAttachments().forEach(attachment -> mediaUrls.add(attachment.getUrl()));
         notificationRepository.deleteByCommentId(comment.getId());
         reportRepository.deleteByTarget(Report.TargetType.COMMENT, comment.getId());
         commentRepository.delete(comment);
+    }
+
+    private List<AttachmentSpec> normalizeAttachments(List<String> attachmentUrls) {
+        if (attachmentUrls == null || attachmentUrls.isEmpty()) {
+            return List.of();
+        }
+        if (attachmentUrls.size() > MAX_ATTACHMENTS) {
+            throw new IllegalArgumentException(
+                    "You can attach up to " + MAX_ATTACHMENTS + " media files to a comment.");
+        }
+
+        Set<String> seen = new LinkedHashSet<>();
+        List<AttachmentSpec> specs = new ArrayList<>();
+        int videos = 0;
+
+        for (String rawUrl : attachmentUrls) {
+            String url = rawUrl == null ? "" : rawUrl.trim();
+            CommentAttachment.MediaType type = StorageService.classifyCommentMedia(url);
+            if (type == null) {
+                throw new IllegalArgumentException("Comment media must be uploaded through Odyssey.");
+            }
+            if (!seen.add(url)) {
+                throw new IllegalArgumentException("That media is already attached.");
+            }
+            if (type == CommentAttachment.MediaType.VIDEO) {
+                videos++;
+                if (videos > 1) {
+                    throw new IllegalArgumentException("You can attach one video per comment.");
+                }
+            }
+            specs.add(new AttachmentSpec(url, type));
+        }
+
+        return specs;
     }
 
     private CommentDto convertToDto(Comment comment) {
@@ -140,15 +207,32 @@ public class CommentService {
         dto.setUserAvatar(comment.getUser().getAvatar());
         dto.setCreatedAt(comment.getCreatedAt());
         dto.setParentId(comment.getParent() == null ? null : comment.getParent().getId());
+        dto.setAttachments(comment.getAttachments().stream()
+                .map(attachment -> new CommentAttachmentDto(
+                        attachment.getUrl(), attachment.getMediaType().name()))
+                .toList());
         return dto;
     }
 
-    private String preview(String content) {
+    private String preview(String content, List<CommentAttachment.MediaType> mediaTypes) {
+        if (content == null || content.isBlank()) {
+            if (mediaTypes.isEmpty()) {
+                return "a comment";
+            }
+            return switch (mediaTypes.get(0)) {
+                case GIF -> "a GIF";
+                case VIDEO -> "a video";
+                case IMAGE -> "a photo";
+            };
+        }
         return content.length() <= 80 ? content : content.substring(0, 77) + "...";
     }
 
     private User requireUser(String email) {
         return userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
+    }
+
+    private record AttachmentSpec(String url, CommentAttachment.MediaType type) {
     }
 }

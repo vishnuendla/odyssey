@@ -181,6 +181,103 @@ class Phase3SocialIntegrationTest {
     }
 
     @Test
+    void commentsCarryValidatedMediaAttachments() throws Exception {
+        String authorEmail = "media-author@example.com";
+        MvcResult author = register(authorEmail);
+        markVerified(authorEmail);
+        Cookie authorAccess = cookie(author, "odyssey-token");
+        String journalId = createPublicJournal(author, "Harbour Lights", "A quiet walk after sunset.");
+
+        String readerEmail = "media-reader@example.com";
+        MvcResult reader = register(readerEmail);
+        markVerified(readerEmail);
+        Cookie readerAccess = cookie(reader, "odyssey-token");
+
+        // A comment may be media-only. Types are derived from the stored URL.
+        Csrf csrfMedia = csrf();
+        MvcResult mediaComment = mockMvc.perform(post("/api/journals/" + journalId + "/comments")
+                        .cookie(csrfMedia.cookie())
+                        .header("X-XSRF-TOKEN", csrfMedia.token())
+                        .cookie(readerAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "content", "",
+                                "attachments", List.of(
+                                        "/api/storage/files/party.gif",
+                                        "/api/storage/files/beach.png")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value(""))
+                .andExpect(jsonPath("$.attachments.length()").value(2))
+                .andExpect(jsonPath("$.attachments[0].type").value("GIF"))
+                .andExpect(jsonPath("$.attachments[1].type").value("IMAGE"))
+                .andReturn();
+        String parentId = objectMapper.readTree(mediaComment.getResponse().getContentAsString())
+                .get("id").asText();
+
+        // Replies can mix text with one short video.
+        Csrf csrfReply = csrf();
+        mockMvc.perform(post("/api/journals/" + journalId + "/comments")
+                        .cookie(csrfReply.cookie())
+                        .header("X-XSRF-TOKEN", csrfReply.token())
+                        .cookie(authorAccess)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "content", "The band was unreal.",
+                                "parentId", parentId,
+                                "attachments", List.of("/api/storage/files/encore.mp4")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attachments[0].type").value("VIDEO"));
+
+        JsonNode journal = getJournal(journalId);
+        assertThat(journal.get("comments")).hasSize(2);
+        assertThat(journal.get("comments").get(0).get("attachments")).hasSize(2);
+        assertThat(journal.get("comments").get(1).get("attachments").get(0).get("type").asText())
+                .isEqualTo("VIDEO");
+
+        // External or non-media URLs never become comment attachments.
+        assertRejectedComment(journalId, readerAccess, "bad url", Map.of(
+                "content", "Look at this",
+                "attachments", List.of("https://example.com/tracker.gif")));
+        assertRejectedComment(journalId, readerAccess, "bad file", Map.of(
+                "content", "Look at this",
+                "attachments", List.of("/api/storage/files/notes.svg")));
+        assertRejectedComment(journalId, readerAccess, "two videos", Map.of(
+                "content", "Two clips",
+                "attachments", List.of("/api/storage/files/a.mp4", "/api/storage/files/b.webm")));
+        assertRejectedComment(journalId, readerAccess, "empty comment", Map.of("content", "   "));
+        assertRejectedComment(journalId, readerAccess, "too many", Map.of(
+                "content", "Many",
+                "attachments", List.of(
+                        "/api/storage/files/a.png",
+                        "/api/storage/files/b.png",
+                        "/api/storage/files/c.png",
+                        "/api/storage/files/d.png")));
+
+        // Deleting the thread removes both comments and their media rows.
+        Csrf csrfDelete = csrf();
+        mockMvc.perform(delete("/api/journals/" + journalId + "/comments/" + parentId)
+                        .cookie(csrfDelete.cookie())
+                        .header("X-XSRF-TOKEN", csrfDelete.token())
+                        .cookie(authorAccess))
+                .andExpect(status().isOk());
+        assertThat(getJournal(journalId).get("comments")).isEmpty();
+    }
+
+    private void assertRejectedComment(String journalId, Cookie access, String label, Map<String, Object> payload)
+            throws Exception {
+        Csrf csrf = csrf();
+        MvcResult result = mockMvc.perform(post("/api/journals/" + journalId + "/comments")
+                        .cookie(csrf.cookie())
+                        .header("X-XSRF-TOKEN", csrf.token())
+                        .cookie(access)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+        assertThat(result.getResponse().getContentAsString()).as(label).isNotBlank();
+    }
+
+    @Test
     void reportsRequireAdminToResolveAndHideContent() throws Exception {
         String authorEmail = "report-author@example.com";
         MvcResult author = register(authorEmail);

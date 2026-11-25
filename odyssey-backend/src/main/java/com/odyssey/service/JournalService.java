@@ -329,12 +329,15 @@ public class JournalService {
         List<String> imageUrls = journal.getImages().stream()
                 .map(Image::getUrl)
                 .collect(Collectors.toList());
+        List<String> mediaUrls = new ArrayList<>(imageUrls);
+        journal.getComments().forEach(comment -> comment.getAttachments()
+                .forEach(attachment -> mediaUrls.add(attachment.getUrl())));
         bookmarkRepository.deleteByJournalId(journal.getId());
         notificationRepository.deleteByJournalId(journal.getId());
         reportRepository.deleteByTarget(Report.TargetType.JOURNAL, journal.getId());
         journalIndexService.deleteIndex(journal.getId());
         journalRepository.delete(journal);
-        storageService.deleteFilesAfterCommit(imageUrls);
+        storageService.deleteFilesAfterCommit(mediaUrls);
     }
 
     @Transactional
@@ -461,6 +464,10 @@ public class JournalService {
                     commentDto.setUserAvatar(comment.getUser().getAvatar());
                     commentDto.setCreatedAt(comment.getCreatedAt());
                     commentDto.setParentId(comment.getParent() == null ? null : comment.getParent().getId());
+                    commentDto.setAttachments(comment.getAttachments().stream()
+                            .map(attachment -> new CommentAttachmentDto(
+                                    attachment.getUrl(), attachment.getMediaType().name()))
+                            .collect(Collectors.toList()));
                     return commentDto;
                 }).collect(Collectors.toList()));
 

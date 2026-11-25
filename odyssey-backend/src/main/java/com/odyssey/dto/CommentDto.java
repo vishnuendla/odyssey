@@ -2,6 +2,8 @@
 package com.odyssey.dto;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CommentDto {
     private String id;
@@ -12,6 +14,7 @@ public class CommentDto {
     private LocalDateTime createdAt;
     private String parentId;
     private boolean hidden;
+    private List<CommentAttachmentDto> attachments = new ArrayList<>();
 
     // Getters and setters
     public String getId() {
@@ -76,5 +79,13 @@ public class CommentDto {
 
     public void setHidden(boolean hidden) {
         this.hidden = hidden;
+    }
+
+    public List<CommentAttachmentDto> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(List<CommentAttachmentDto> attachments) {
+        this.attachments = attachments;
     }
 }

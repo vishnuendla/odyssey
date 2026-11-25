@@ -53,6 +53,7 @@ public class Journal {
 
     @BatchSize(size = 50)
     @OneToMany(mappedBy = "journal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("createdAt ASC")
     private List<Comment> comments = new ArrayList<>();
 
     @BatchSize(size = 50)
